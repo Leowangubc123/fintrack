@@ -27,7 +27,7 @@
           <div class="kpi-progress">
             <el-progress
               :percentage="Math.min(summary.completion_rate || 0, 100)"
-              :color="getProgressColor"
+              :color="PROGRESS_COLORS"
               :stroke-width="8"
               :show-text="false"
             />
@@ -79,7 +79,7 @@
               <div class="product-progress">
                 <el-progress
                   :percentage="Math.min(product.completion_rate, 100)"
-                  :color="getProgressColor"
+                  :color="PROGRESS_COLORS"
                   :stroke-width="10"
                 />
                 <span class="progress-text">{{ product.completion_rate }}%</span>
@@ -112,7 +112,7 @@
                 <div class="rank-bar">
                   <el-progress
                     :percentage="Math.min(group.completion_rate, 100)"
-                    :color="getProgressColor"
+                    :color="PROGRESS_COLORS"
                     :stroke-width="8"
                     :show-text="false"
                   />
@@ -222,7 +222,7 @@ const largeOrders = ref([])
 const alerts = ref([])
 
 // 进度条颜色
-const getProgressColor = [
+const PROGRESS_COLORS = [
   { color: '#EF4444', percentage: 25 },   // 0-25% 红色
   { color: '#F97316', percentage: 50 },   // 25-50% 橙色
   { color: '#F59E0B', percentage: 75 },   // 50-75% 黄色
@@ -315,6 +315,8 @@ function formatNumber(num) {
 }
 
 function getRateClass(rate) {
+  if (typeof rate !== 'number' || isNaN(rate)) return 'rate-danger'
+  if (rate < 0) return 'rate-danger'
   if (rate > 100) return 'rate-excellent'  // 绿色
   if (rate === 100) return 'rate-good'     // 黄色
   if (rate >= 80) return 'rate-normal'
@@ -521,8 +523,8 @@ function getStatusType(days) {
   font-weight: 600;
 }
 
-.rate-excellent { color: #059669; }
-.rate-good { color: #F59E0B; }      /* 黄色 */
+.rate-excellent { color: #10B981; }
+.rate-good { color: #F59E0B; }      /* Yellow */
 .rate-normal { color: #F97316; }
 .rate-warning { color: #EF4444; }
 .rate-danger { color: #DC2626; }
