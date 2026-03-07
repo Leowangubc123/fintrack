@@ -94,35 +94,34 @@
         <el-card class="section-card">
           <template #header>
             <div class="card-header">
-              <span class="card-title">营业部完成情况排名</span>
+              <span class="card-title">营业部完成情况</span>
             </div>
           </template>
 
-          <div class="ranking-list">
+          <div class="group-grid">
             <div
-              v-for="(group, index) in groupsRanking"
+              v-for="group in groupsRanking.slice(0, 6)"
               :key="group.id"
-              class="ranking-item"
+              class="group-card"
             >
-              <div class="rank-number" :class="`rank-${group.rank}`">
-                {{ group.rank }}
-              </div>
-              <div class="rank-info">
-                <div class="rank-name">{{ group.name }}</div>
-                <div class="rank-bar">
-                  <el-progress
-                    :percentage="Math.min(group.completion_rate, 100)"
-                    :color="PROGRESS_COLORS"
-                    :stroke-width="8"
-                    :show-text="false"
-                  />
-                </div>
-              </div>
-              <div class="rank-stats">
-                <div class="rank-sales">¥{{ formatNumber(group.sales) }}万</div>
-                <div class="rank-rate" :class="getRateClass(group.completion_rate)">
+              <div class="group-header">
+                <span class="group-name">{{ group.name }}</span>
+                <el-tag :type="getRateType(group.completion_rate)" size="small">
                   {{ group.completion_rate }}%
-                </div>
+                </el-tag>
+              </div>
+              <div class="group-leader">专员: {{ group.leader || '-' }}</div>
+              <div class="group-progress">
+                <el-progress
+                  :percentage="Math.min(group.completion_rate, 100)"
+                  :color="PROGRESS_COLORS"
+                  :stroke-width="6"
+                  :show-text="false"
+                />
+              </div>
+              <div class="group-stats">
+                <span>目标: ¥{{ formatNumber(group.target) }}万</span>
+                <span class="group-sales">完成: ¥{{ formatNumber(group.sales) }}万</span>
               </div>
             </div>
           </div>
@@ -329,6 +328,12 @@ function getStatusType(days) {
   if (days <= 7) return 'warning'
   return 'success'
 }
+
+function getRateType(rate) {
+  if (rate >= 100) return 'success'
+  if (rate >= 60) return 'warning'
+  return 'danger'
+}
 </script>
 
 <style scoped>
@@ -451,83 +456,58 @@ function getStatusType(days) {
   text-align: right;
 }
 
-.ranking-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ranking-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #F5F7FA;
-  border-radius: 8px;
-}
-
-.rank-number {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
-  background: #E4E7ED;
-  color: #606266;
-}
-
-.rank-1 {
-  background: #F0A500;
-  color: #fff;
-}
-
-.rank-2 {
-  background: #C0C0C0;
-  color: #fff;
-}
-
-.rank-3 {
-  background: #CD7F32;
-  color: #fff;
-}
-
-.rank-info {
-  flex: 1;
-}
-
-.rank-name {
-  font-weight: 600;
-  color: #1B3A6B;
-  margin-bottom: 6px;
-}
-
-.rank-bar .el-progress {
-  width: 100%;
-}
-
-.rank-stats {
-  text-align: right;
-  min-width: 80px;
-}
-
-.rank-sales {
-  font-size: 13px;
-  color: #606266;
-}
-
-.rank-rate {
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .rate-excellent { color: #10B981; }
 .rate-good { color: #F59E0B; }      /* Yellow */
 .rate-normal { color: #F97316; }
 .rate-warning { color: #EF4444; }
 .rate-danger { color: #DC2626; }
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.group-card {
+  padding: 12px;
+  background: #F5F7FA;
+  border-radius: 8px;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.group-name {
+  font-weight: 600;
+  color: #1B3A6B;
+  font-size: 14px;
+}
+
+.group-leader {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.group-progress {
+  margin-bottom: 8px;
+}
+
+.group-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #606266;
+}
+
+.group-sales {
+  font-weight: 600;
+  color: #1B3A6B;
+}
 
 .bottom-section {
   margin-bottom: 16px;
