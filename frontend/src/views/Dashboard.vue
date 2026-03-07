@@ -100,7 +100,7 @@
 
           <div class="group-grid">
             <div
-              v-for="group in groupsRanking.slice(0, 6)"
+              v-for="group in topGroups"
               :key="group.id"
               class="group-card"
             >
@@ -204,8 +204,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { dashboardApi } from '../api'
+
+const TOP_GROUPS_LIMIT = 6
+
+const topGroups = computed(() => {
+  return groupsRanking.value.slice(0, TOP_GROUPS_LIMIT)
+})
 
 const summary = ref({
   active_products: 0,
@@ -330,6 +336,7 @@ function getStatusType(days) {
 }
 
 function getRateType(rate) {
+  if (typeof rate !== 'number' || isNaN(rate)) return 'danger'
   if (rate >= 100) return 'success'
   if (rate >= 60) return 'warning'
   return 'danger'
