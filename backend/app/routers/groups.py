@@ -1,0 +1,93 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from app.database import get_db
+from app.models import Group, Member
+from app.schemas.group import GroupCreate, GroupUpdate, GroupResponse
+
+router = APIRouter(prefix="/api/groups", tags=["groups"])
+
+
+@router.get("", response_model=List[GroupResponse])
+def list_groups(db: Session = Depends(get_db)):
+    """获取所有营业部列表"""
+    groups = db.query(Group).all()
+    result = []
+    for group in groups:
+        member_count = db.query(Member).filter(Member.group_id == group.id).count()
+        group_data = GroupResponse(
+            id=group.id,
+            name=group.name,
+            leader=group.leader,
+            region=group.region,
+            remark=group.remark,
+            created_at=group.created_at,
+            member_count=member_count
+        )
+        result.append(group_data)
+    return result
+
+
+@router.post("", response_model=GroupResponse)
+def create_group(group: GroupCreate, db: Session = Depends(get_db)):
+    """创建营业部"""
+    db_group = Group(
+        name=group.name,
+        leader=group.leader,
+        region=group.region,
+        remark=group.remark
+    )
+    db.add(db_group)
+    db.commit()
+    db.refresh(db_group)
+    return GroupResponse(
+        id=db_group.id,
+        name=db_group.name,
+        leader=db_group.leader,
+        region=db_group.region,
+        remark=db_group.remark,
+        created_at=db_group.created_at,
+        member_count=0
+    )
+
+
+@router.put("/{group_id}", response_model=GroupResponse)
+def update_group(group_id: int, group: GroupUpdate, db: Session = Depends(get_db)):
+    """更新营业部"""
+    db_group = db.query(Group).filter(Group.id == group_id).first()
+    if not db_group:
+        raise HTTPException(status_code=404, detail="营业部不存在")
+    if group.name is not None:
+        db_group.name = group.name
+    if group.leader is not None:
+        db_group.leader = group.leader
+    if group.region is not None:
+        db_group.region = group.region
+    if group.remark is not None:
+        db_group.remark = group.remark
+    db.commit()
+    db.refresh(db_group)
+    member_count = db.query(Member).filter(Member.group_id == db_group.id).count()
+    return GroupResponse(
+        id=db_group.id,
+        name=db_group.name,
+        leader=db_group.leader,
+        region=db_group.region,
+        remark=db_group.remark,
+        created_at=db_group.created_at,
+        member_count=member_count
+    )
+
+
+@router.delete("/{group_id}")
+def delete_group(group_id: int, db: Session = Depends(get_db)):
+    """删除营业部"""
+    db_group = db.query(Group).filter(Group.id == group_id).first()
+    if not db_group:
+        raise HTTPException(status_code=404, detail="营业部不存在")
+    member_count = db.query(Member).filter(Member.group_id == group_id).count()
+    if member_count > 0:
+        raise HTTPException(status_code=400, detail="该营业部下存在营销人员，无法删除")
+    db.delete(db_group)
+    db.commit()
+    return {"message": "营业部已删除"}
