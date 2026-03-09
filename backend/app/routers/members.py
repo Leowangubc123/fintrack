@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from app.models import Member, Group, SalesRecord
+from app.models import Member, Group
 from app.schemas.member import MemberCreate, MemberUpdate, MemberResponse
 
 router = APIRouter(prefix="/api/members", tags=["members"])
@@ -75,10 +75,6 @@ def delete_member(member_id: int, db: Session = Depends(get_db)):
     db_member = db.query(Member).filter(Member.id == member_id).first()
     if not db_member:
         raise HTTPException(status_code=404, detail="成员不存在")
-    # Check for existing sales records
-    sales_count = db.query(SalesRecord).filter(SalesRecord.member_id == member_id).count()
-    if sales_count > 0:
-        raise HTTPException(status_code=400, detail="该成员存在销售记录，无法删除")
     db.delete(db_member)
     db.commit()
     return {"message": "成员已删除"}

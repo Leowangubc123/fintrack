@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
 from app.database import get_db
-from app.models import Product, SalesRecord
+from app.models import Product
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 
 router = APIRouter(prefix="/api/products", tags=["products"])
@@ -96,9 +96,6 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     db_product = db.query(Product).filter(Product.id == product_id).first()
     if not db_product:
         raise HTTPException(status_code=404, detail="产品不存在")
-    sales_count = db.query(SalesRecord).filter(SalesRecord.product_id == product_id).count()
-    if sales_count > 0:
-        raise HTTPException(status_code=400, detail="该产品存在销售记录，无法删除")
     db.delete(db_product)
     db.commit()
     return {"message": "产品已删除"}

@@ -20,16 +20,8 @@ class ProductCreate(ProductBase):
     pass
 
 
-class ProductUpdate(BaseModel):
-    name: Optional[str] = None
-    alias: Optional[str] = None
-    type: Optional[str] = None
-    issuer: Optional[str] = None
-    code: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    total_target: Optional[Decimal] = None
-    description: Optional[str] = None
+class ProductUpdate(ProductBase):
+    pass
 
 
 class ProductResponse(ProductBase):

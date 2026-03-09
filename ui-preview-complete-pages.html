@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinTrack - 完整页面UI预览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+    /* Apple风格玻璃拟态 */
+    .glass-sidebar {
+      background: rgba(27, 58, 107, 0.95);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-header {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* 阴影 */
+    .shadow-apple {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .shadow-apple-lg {
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 12px 40px rgba(0,0,0,0.12);
+    }
+
+    /* 进度条颜色 */
+    .progress-red { background: linear-gradient(90deg, #EF4444, #F87171); }
+    .progress-orange { background: linear-gradient(90deg, #F97316, #FB923C); }
+    .progress-yellow { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+    .progress-green { background: linear-gradient(90deg, #10B981, #34D399); }
+
+    /* 页面切换 */
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Tab内容 */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+    /* 侧边栏菜单 */
+    .nav-item {
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.08); }
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-left-color: #3B82F6;
+    }
+
+    /* 卡片悬停 */
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15);
+    }
+
+    /* 热力图颜色 */
+    .heat-0 { background: #F3F4F6; color: #9CA3AF; }
+    .heat-1 { background: #BBF7D0; color: #166534; }
+    .heat-2 { background: #86EFAC; color: #14532D; }
+    .heat-3 { background: #4ADE80; color: white; }
+    .heat-4 { background: #22C55E; color: white; }
+    .heat-5 { background: #16A34A; color: white; }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    /* 弹窗动画 */
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-animate { animation: modalIn 0.2s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <!-- 页面1: 数据看板 -->
+  <div id="page-dashboard" class="page active">
+    <div class="flex h-screen overflow-hidden">
+      <!-- 侧边栏 -->
+      <aside class="w-64 glass-sidebar text-white flex flex-col flex-shrink-0">
+        <div class="p-6 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+              <span class="text-xl">🏦</span>
+            </div>
+            <div>
+              <h1 class="font-bold text-lg tracking-tight">FinTrack</h1>
+              <p class="text-xs text-gray-400">金融产品销售管理系统</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 py-4">
+          <div class="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">主菜单</div>
+          <a href="#" class="nav-item active flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-white">
+            <span class="text-lg">📊</span><span>数据看板</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('analysis')">
+            <span class="text-lg">📈</span><span>数据分析</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('products')">
+            <span class="text-lg">📦</span><span>产品管理</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('import')">
+            <span class="text-lg">📤</span><span>数据导入</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('organization')">
+            <span class="text-lg">👥</span><span>营销人员</span>
+          </a>
+        </nav>
+      </aside>
+
+      <!-- 主内容 -->
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- 顶部导航 -->
+        <header class="glass-header h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
+          <div class="flex items-center gap-4">
+            <h2 class="text-xl font-semibold text-gray-800">数据看板</h2>
+            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">2024年</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <button class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <span class="text-xl">🔔</span>
+              <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <div class="h-8 w-px bg-gray-200"></div>
+            <span class="text-sm text-gray-500">2024年3月15日</span>
+          </div>
+        </header>
+
+        <!-- 内容区 -->
+        <div class="flex-1 overflow-y-auto p-6">
+          <!-- 关键指标 -->
+          <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-2xl p-6 shadow-apple card-hover border border-gray-100">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-2xl">📦</div>
+                <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+2 本月</span>
+              </div>
+              <div class="text-3xl font-bold text-gray-800 mb-1">3</div>
+              <div class="text-sm text-gray-500">当前在售产品</div>
+              <div class="mt-3 flex gap-2 text-xs">
+                <span class="text-blue-600">2个募集中</span>
+                <span class="text-gray-300">|</span>
+                <span class="text-orange-600">1个待开始</span>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-apple card-hover border border-gray-100">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-2xl">💰</div>
+                <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">↑ 15.3%</span>
+              </div>
+              <div class="text-3xl font-bold text-gray-800 mb-1">¥1,580万</div>
+              <div class="text-sm text-gray-500">本月销售总额</div>
+              <div class="mt-3 text-xs text-gray-400">较上月增长 ¥210万</div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-apple card-hover border border-gray-100">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl">⚠️</div>
+                <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">需关注</span>
+              </div>
+              <div class="text-3xl font-bold text-gray-800 mb-1">1</div>
+              <div class="text-sm text-gray-500">预警产品</div>
+              <div class="mt-3 text-xs text-gray-400">完成率低于50%</div>
+            </div>
+          </div>
+
+          <!-- 营业部完成情况 - 更新布局 -->
+          <div class="bg-white rounded-2xl shadow-apple border border-gray-100 mb-6">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-lg font-semibold text-gray-800">营业部完成情况</span>
+                <span class="text-sm text-gray-400">|</span>
+                <span class="text-sm text-gray-500">默认显示最近产品</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500">查看产品:</span>
+                <select class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>XX量化对冲1号 (最近)</option>
+                  <option>XX私募精选2号</option>
+                  <option>XX稳健收益3号</option>
+                </select>
+              </div>
+            </div>
+            <div class="p-6">
+              <div class="grid grid-cols-3 gap-4">
+                <!-- 营业部1 -->
+                <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-gray-800">财富一部</span>
+                    <span class="text-sm font-bold text-green-600">92%</span>
+                  </div>
+                  <div class="space-y-1 text-xs text-gray-500 mb-3">
+                    <div class="flex justify-between">
+                      <span>销量</span>
+                      <span class="font-medium text-gray-700">¥920万</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>目标</span>
+                      <span class="font-medium text-gray-700">¥1,000万</span>
+                    </div>
+                  </div>
+                  <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full progress-green rounded-full" style="width: 92%"></div>
+                  </div>
+                </div>
+
+                <!-- 营业部2 -->
+                <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-gray-800">财富二部</span>
+                    <span class="text-sm font-bold text-yellow-600">76%</span>
+                  </div>
+                  <div class="space-y-1 text-xs text-gray-500 mb-3">
+                    <div class="flex justify-between">
+                      <span>销量</span>
+                      <span class="font-medium text-gray-700">¥608万</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>目标</span>
+                      <span class="font-medium text-gray-700">¥800万</span>
+                    </div>
+                  </div>
+                  <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full progress-yellow rounded-full" style="width: 76%"></div>
+                  </div>
+                </div>
+
+                <!-- 营业部3 -->
+                <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-gray-800">机构业务部</span>
+                    <span class="text-sm font-bold text-yellow-600">65%</span>
+                  </div>
+                  <div class="space-y-1 text-xs text-gray-500 mb-3">
+                    <div class="flex justify-between">
+                      <span>销量</span>
+                      <span class="font-medium text-gray-700">¥390万</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>目标</span>
+                      <span class="font-medium text-gray-700">¥600万</span>
+                    </div>
+                  </div>
+                  <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full progress-yellow rounded-full" style="width: 65%"></div>
+                  </div>
+                </div>
+
+                <!-- 营业部4 -->
+                <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-gray-800">私募业务部</span>
+                    <span class="text-sm font-bold text-orange-600">58%</span>
+                  </div>
+                  <div class="space-y-1 text-xs text-gray-500 mb-3">
+                    <div class="flex justify-between">
+                      <span>销量</span>
+                      <span class="font-medium text-gray-700">¥290万</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>目标</span>
+                      <span class="font-medium text-gray-700">¥500万</span>
+                    </div>
+                  </div>
+                  <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full progress-orange rounded-full" style="width: 58%"></div>
+                  </div>
+                </div>
+
+                <!-- 营业部5 -->
+                <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-gray-800">互联网金融部</span>
+                    <span class="text-sm font-bold text-red-600">42%</span>
+                  </div>
+                  <div class="space-y-1 text-xs text-gray-500 mb-3">
+                    <div class="flex justify-between">
+                      <span>销量</span>
+                      <span class="font-medium text-gray-700">¥168万</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>目标</span>
+                      <span class="font-medium text-gray-700">¥400万</span>
+                    </div>
+                  </div>
+                  <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full progress-red rounded-full" style="width: 42%"></div>
+                  </div>
+                </div>
+
+                <!-- 营业部6 -->
+                <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-gray-800">综合业务部</span>
+                    <span class="text-sm font-bold text-yellow-600">68%</span>
+                  </div>
+                  <div class="space-y-1 text-xs text-gray-500 mb-3">
+                    <div class="flex justify-between">
+                      <span>销量</span>
+                      <span class="font-medium text-gray-700">¥340万</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>目标</span>
+                      <span class="font-medium text-gray-700">¥500万</span>
+                    </div>
+                  </div>
+                  <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full progress-yellow rounded-full" style="width: 68%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 大单提醒 & 预警 -->
+          <div class="grid grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100">
+              <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">🎯</span>
+                  <span class="font-semibold text-gray-800">大单提醒</span>
+                </div>
+                <span class="text-xs text-gray-500">近7天</span>
+              </div>
+              <div class="p-4 space-y-3">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <div class="font-medium text-gray-800">XX量化对冲1号</div>
+                    <div class="text-xs text-gray-500 mt-1">财富一部 · 张三 · 今天 10:23</div>
+                  </div>
+                  <div class="text-lg font-bold text-green-600">+¥200万</div>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <div class="font-medium text-gray-800">XX私募精选2号</div>
+                    <div class="text-xs text-gray-500 mt-1">财富二部 · 李四 · 昨天 15:46</div>
+                  </div>
+                  <div class="text-lg font-bold text-green-600">+¥150万</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100">
+              <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">⚠️</span>
+                  <span class="font-semibold text-gray-800">预警提醒</span>
+                </div>
+                <span class="text-xs text-gray-500">需关注</span>
+              </div>
+              <div class="p-4 space-y-3">
+                <div class="flex items-center justify-between p-3 bg-red-50 rounded-xl border-l-4 border-red-500">
+                  <div>
+                    <div class="font-medium text-gray-800">XX稳健收益3号</div>
+                    <div class="text-xs text-gray-500 mt-1">互联网金融部 · 完成率仅42%</div>
+                  </div>
+                  <span class="px-2 py-1 bg-red-500 text-white text-xs rounded-md">紧急</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-orange-50 rounded-xl border-l-4 border-orange-500">
+                  <div>
+                    <div class="font-medium text-gray-800">XX量化对冲1号</div>
+                    <div class="text-xs text-gray-500 mt-1">距离截止还有3天</div>
+                  </div>
+                  <span class="px-2 py-1 bg-orange-500 text-white text-xs rounded-md">提醒</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 页面2: 数据分析 -->
+  <div id="page-analysis" class="page">
+    <div class="flex h-screen overflow-hidden">
+      <aside class="w-64 glass-sidebar text-white flex flex-col flex-shrink-0">
+        <div class="p-6 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+              <span class="text-xl">🏦</span>
+            </div>
+            <div>
+              <h1 class="font-bold text-lg tracking-tight">FinTrack</h1>
+              <p class="text-xs text-gray-400">金融产品销售管理系统</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 py-4">
+          <div class="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">主菜单</div>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('dashboard')">
+            <span class="text-lg">📊</span><span>数据看板</span>
+          </a>
+          <a href="#" class="nav-item active flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-white">
+            <span class="text-lg">📈</span><span>数据分析</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('products')">
+            <span class="text-lg">📦</span><span>产品管理</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('import')">
+            <span class="text-lg">📤</span><span>数据导入</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('organization')">
+            <span class="text-lg">👥</span><span>营销人员</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="glass-header h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
+          <div class="flex items-center gap-4">
+            <h2 class="text-xl font-semibold text-gray-800">数据分析</h2>
+          </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+          <!-- 数据分析Tab导航 -->
+          <div class="bg-white rounded-2xl shadow-apple border border-gray-100 mb-6 p-2">
+            <div class="flex gap-1">
+              <button class="analysis-tab flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all bg-blue-50 text-blue-600" data-tab="matrix" onclick="showAnalysisTab('matrix')">产品矩阵</button>
+              <button class="analysis-tab flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all text-gray-600 hover:bg-gray-50" data-tab="personal" onclick="showAnalysisTab('personal')">个人查询</button>
+              <button class="analysis-tab flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all text-gray-600 hover:bg-gray-50" data-tab="trend" onclick="showAnalysisTab('trend')">销售趋势</button>
+              <button class="analysis-tab flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all text-gray-600 hover:bg-gray-50" data-tab="compare" onclick="showAnalysisTab('compare')">营业部对比</button>
+            </div>
+          </div>
+
+          <!-- 产品矩阵 -->
+          <div id="analysis-matrix" class="tab-content active">
+            <div class="flex gap-6">
+              <div class="w-64 flex-shrink-0">
+                <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5">
+                  <h3 class="font-semibold text-gray-800 mb-4">筛选条件</h3>
+                  <div class="mb-6">
+                    <div class="text-xs font-medium text-gray-500 uppercase mb-3">产品状态</div>
+                    <label class="flex items-center gap-2 mb-2 cursor-pointer">
+                      <input type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-blue-600">
+                      <span class="text-sm text-gray-700">募集中</span>
+                    </label>
+                    <label class="flex items-center gap-2 mb-2 cursor-pointer">
+                      <input type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-blue-600">
+                      <span class="text-sm text-gray-700">待开始</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-blue-600">
+                      <span class="text-sm text-gray-700">已结束</span>
+                    </label>
+                  </div>
+                  <button class="w-full bg-gradient-to-r from-blue-900 to-blue-700 text-white py-2.5 rounded-xl text-sm font-medium hover:shadow-lg transition-shadow">应用筛选</button>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="grid grid-cols-3 gap-4">
+                  <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                      <span class="font-semibold text-gray-800">XX量化对冲1号</span>
+                      <span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-md">募集中</span>
+                    </div>
+                    <div class="space-y-2 text-sm mb-4">
+                      <div class="flex justify-between"><span class="text-gray-500">类型</span><span class="text-gray-700">私募产品</span></div>
+                      <div class="flex justify-between"><span class="text-gray-500">发行</span><span class="text-gray-700">XX资产管理</span></div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                      <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-500">目标: ¥1,000万</span>
+                        <span class="font-bold text-green-600">85%</span>
+                      </div>
+                      <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full progress-green rounded-full" style="width: 85%"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                      <span class="font-semibold text-gray-800">XX私募精选2号</span>
+                      <span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-md">募集中</span>
+                    </div>
+                    <div class="space-y-2 text-sm mb-4">
+                      <div class="flex justify-between"><span class="text-gray-500">类型</span><span class="text-gray-700">私募产品</span></div>
+                      <div class="flex justify-between"><span class="text-gray-500">发行</span><span class="text-gray-700">XX基金管理</span></div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                      <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-500">目标: ¥2,000万</span>
+                        <span class="font-bold text-yellow-600">60%</span>
+                      </div>
+                      <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full progress-yellow rounded-full" style="width: 60%"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                      <span class="font-semibold text-gray-800">XX稳健收益3号</span>
+                      <span class="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-md">待开始</span>
+                    </div>
+                    <div class="space-y-2 text-sm mb-4">
+                      <div class="flex justify-between"><span class="text-gray-500">类型</span><span class="text-gray-700">资管产品</span></div>
+                      <div class="flex justify-between"><span class="text-gray-500">发行</span><span class="text-gray-700">XX证券资管</span></div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                      <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-500">目标: ¥500万</span>
+                        <span class="font-bold text-gray-400">未开始</span>
+                      </div>
+                      <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-gray-300 rounded-full" style="width: 0%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 个人查询 -->
+          <div id="analysis-personal" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-4 mb-6">
+              <div class="flex gap-3">
+                <select class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm w-40 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>选择营业部</option>
+                  <option>财富一部</option>
+                </select>
+                <select class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm w-48 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>选择成员</option>
+                  <option>张三</option>
+                </select>
+                <input type="text" placeholder="或输入姓名搜索..." class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:shadow-lg transition-shadow">查询</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-6 gap-4 mb-6">
+              <div class="col-span-5 bg-gradient-to-r from-blue-900 to-blue-700 rounded-2xl p-6 text-white">
+                <div class="flex items-center gap-12">
+                  <div>
+                    <div class="text-3xl font-bold mb-1">张三</div>
+                    <div class="text-blue-200">财富一部</div>
+                  </div>
+                  <div class="flex gap-12">
+                    <div><div class="text-3xl font-bold">¥370万</div><div class="text-blue-200 text-sm mt-1">个人总销量</div></div>
+                    <div><div class="text-3xl font-bold">92.5%</div><div class="text-blue-200 text-sm mt-1">综合完成率</div></div>
+                    <div><div class="text-3xl font-bold">¥61.7万</div><div class="text-blue-200 text-sm mt-1">平均每次销量</div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-4 flex flex-col items-center justify-center text-center">
+                <div class="text-5xl font-bold text-blue-600">8</div>
+                <div class="text-gray-400 text-sm">/ 68人</div>
+                <div class="mt-2 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600">全公司总排名</div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6 mb-6">
+              <h3 class="font-semibold text-gray-800 mb-4">产品完成情况明细</h3>
+              <table class="w-full">
+                <thead>
+                  <tr class="text-left text-xs font-medium text-gray-500 uppercase">
+                    <th class="pb-3">产品名称</th>
+                    <th class="pb-3">派发任务</th>
+                    <th class="pb-3">实际完成</th>
+                    <th class="pb-3">完成率</th>
+                    <th class="pb-3">状态</th>
+                  </tr>
+                </thead>
+                <tbody class="text-sm">
+                  <tr class="border-t border-gray-100">
+                    <td class="py-4 font-medium text-gray-800">XX量化对冲1号</td>
+                    <td class="py-4 text-gray-600">¥100万</td>
+                    <td class="py-4 text-gray-600">¥120万</td>
+                    <td class="py-4"><span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">120%</span></td>
+                    <td class="py-4"><span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">超额完成</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6">
+              <h3 class="font-semibold text-gray-800 mb-4">📅 2024年月度销售热力图</h3>
+              <div class="flex justify-between">
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-2 rounded-xl flex items-center justify-center text-sm font-bold">28</div><span class="text-xs text-gray-500">1月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-1 rounded-xl flex items-center justify-center text-sm font-bold">18</div><span class="text-xs text-gray-500">2月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-4 rounded-xl flex items-center justify-center text-sm font-bold">58</div><span class="text-xs text-gray-500">3月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-3 rounded-xl flex items-center justify-center text-sm font-bold">45</div><span class="text-xs text-gray-500">4月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-3 rounded-xl flex items-center justify-center text-sm font-bold">38</div><span class="text-xs text-gray-500">5月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-3 rounded-xl flex items-center justify-center text-sm font-bold">42</div><span class="text-xs text-gray-500">6月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-2 rounded-xl flex items-center justify-center text-sm font-bold">25</div><span class="text-xs text-gray-500">7月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-2 rounded-xl flex items-center justify-center text-sm font-bold">33</div><span class="text-xs text-gray-500">8月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-1 rounded-xl flex items-center justify-center text-sm font-bold">15</div><span class="text-xs text-gray-500">9月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-2 rounded-xl flex items-center justify-center text-sm font-bold">22</div><span class="text-xs text-gray-500">10月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-4 rounded-xl flex items-center justify-center text-sm font-bold">48</div><span class="text-xs text-gray-500">11月</span></div>
+                <div class="flex flex-col items-center gap-2"><div class="w-16 h-16 heat-0 rounded-xl flex items-center justify-center text-sm font-bold">-</div><span class="text-xs text-gray-500">12月</span></div>
+              </div>
+              <div class="flex items-center justify-center gap-3 mt-6">
+                <span class="text-xs text-gray-500">销量低</span>
+                <div class="flex gap-1">
+                  <div class="w-5 h-5 heat-0 rounded"></div>
+                  <div class="w-5 h-5 heat-1 rounded"></div>
+                  <div class="w-5 h-5 heat-2 rounded"></div>
+                  <div class="w-5 h-5 heat-3 rounded"></div>
+                  <div class="w-5 h-5 heat-4 rounded"></div>
+                  <div class="w-5 h-5 heat-5 rounded"></div>
+                </div>
+                <span class="text-xs text-gray-500">销量高</span>
+                <span class="text-xs text-gray-400 ml-4">单位：万元</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 销售趋势 -->
+          <div id="analysis-trend" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-4 mb-6">
+              <div class="flex gap-4 items-center">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm text-gray-500">时间范围:</span>
+                  <select class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>2024年</option>
+                  </select>
+                  <select class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>全年</option>
+                  </select>
+                </div>
+                <div class="h-6 w-px bg-gray-200"></div>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm text-gray-500">对比维度:</span>
+                  <select class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>按产品</option>
+                  </select>
+                </div>
+                <button class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium ml-auto hover:shadow-lg transition-shadow">刷新数据</button>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6 mb-6">
+              <h3 class="font-semibold text-gray-800 mb-4">销售额趋势对比</h3>
+              <div class="h-80 bg-gray-50 rounded-xl flex items-center justify-center">
+                <span class="text-gray-400">[ECharts 多折线图]</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 text-center card-hover">
+                <div class="text-sm text-gray-500 mb-2">最高销售月份</div>
+                <div class="text-3xl font-bold text-blue-600 mb-1">3月</div>
+                <div class="text-sm text-green-600">¥580万</div>
+              </div>
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 text-center card-hover">
+                <div class="text-sm text-gray-500 mb-2">月均销售额</div>
+                <div class="text-3xl font-bold text-blue-600 mb-1">¥215万</div>
+                <div class="text-sm text-green-600">↑ 12.5%</div>
+              </div>
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 text-center card-hover">
+                <div class="text-sm text-gray-500 mb-2">增长趋势</div>
+                <div class="text-3xl font-bold text-blue-600 mb-1">+23%</div>
+                <div class="text-sm text-gray-500">同比去年</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 营业部对比 -->
+          <div id="analysis-compare" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-4 mb-6">
+              <div class="flex gap-4 items-center">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm text-gray-500">统计周期:</span>
+                  <select class="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>2024年</option>
+                  </select>
+                </div>
+                <button class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium ml-auto hover:shadow-lg transition-shadow">导出报表</button>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 mb-6">
+              <div class="px-6 py-4 border-b border-gray-100">
+                <span class="font-semibold text-gray-800">营业部业绩对比</span>
+              </div>
+              <div class="p-6">
+                <table class="w-full">
+                  <thead>
+                    <tr class="text-left text-xs font-medium text-gray-500 uppercase">
+                      <th class="pb-3">排名</th>
+                      <th class="pb-3">营业部</th>
+                      <th class="pb-3">专员</th>
+                      <th class="pb-3">成员数</th>
+                      <th class="pb-3">总目标</th>
+                      <th class="pb-3">总销售</th>
+                      <th class="pb-3">完成率</th>
+                      <th class="pb-3">人均产能</th>
+                      <th class="pb-3">趋势</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-sm">
+                    <tr class="border-t border-gray-100">
+                      <td class="py-4 text-2xl">🥇</td>
+                      <td class="py-4 font-medium text-gray-800">财富一部</td>
+                      <td class="py-4 text-gray-600">张经理</td>
+                      <td class="py-4 text-gray-600">12人</td>
+                      <td class="py-4 text-gray-600">¥1,000万</td>
+                      <td class="py-4 text-gray-600">¥920万</td>
+                      <td class="py-4"><span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">92%</span></td>
+                      <td class="py-4 text-gray-600">¥76.7万</td>
+                      <td class="py-4 text-green-600">↑ 5%</td>
+                    </tr>
+                    <tr class="border-t border-gray-100">
+                      <td class="py-4 text-2xl">🥈</td>
+                      <td class="py-4 font-medium text-gray-800">财富二部</td>
+                      <td class="py-4 text-gray-600">李经理</td>
+                      <td class="py-4 text-gray-600">8人</td>
+                      <td class="py-4 text-gray-600">¥800万</td>
+                      <td class="py-4 text-gray-600">¥608万</td>
+                      <td class="py-4"><span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">76%</span></td>
+                      <td class="py-4 text-gray-600">¥76.0万</td>
+                      <td class="py-4 text-green-600">↑ 2%</td>
+                    </tr>
+                    <tr class="border-t border-gray-100">
+                      <td class="py-4 text-2xl">🥉</td>
+                      <td class="py-4 font-medium text-gray-800">机构业务部</td>
+                      <td class="py-4 text-gray-600">王经理</td>
+                      <td class="py-4 text-gray-600">6人</td>
+                      <td class="py-4 text-gray-600">¥600万</td>
+                      <td class="py-4 text-gray-600">¥390万</td>
+                      <td class="py-4"><span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">65%</span></td>
+                      <td class="py-4 text-gray-600">¥65.0万</td>
+                      <td class="py-4 text-red-600">↓ 3%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6">
+                <h3 class="font-semibold text-gray-800 mb-4">销售额对比</h3>
+                <div class="h-64 bg-gray-50 rounded-xl flex items-center justify-center">
+                  <span class="text-gray-400">[柱状图]</span>
+                </div>
+              </div>
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6">
+                <h3 class="font-semibold text-gray-800 mb-4">完成率对比</h3>
+                <div class="h-64 bg-gray-50 rounded-xl flex items-center justify-center">
+                  <span class="text-gray-400">[横向柱状图]</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 页面3: 产品管理 -->
+  <div id="page-products" class="page">
+    <div class="flex h-screen overflow-hidden">
+      <aside class="w-64 glass-sidebar text-white flex flex-col flex-shrink-0">
+        <div class="p-6 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+              <span class="text-xl">🏦</span>
+            </div>
+            <div>
+              <h1 class="font-bold text-lg tracking-tight">FinTrack</h1>
+              <p class="text-xs text-gray-400">金融产品销售管理系统</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 py-4">
+          <div class="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">主菜单</div>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('dashboard')">
+            <span class="text-lg">📊</span><span>数据看板</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('analysis')">
+            <span class="text-lg">📈</span><span>数据分析</span>
+          </a>
+          <a href="#" class="nav-item active flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-white">
+            <span class="text-lg">📦</span><span>产品管理</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('import')">
+            <span class="text-lg">📤</span><span>数据导入</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('organization')">
+            <span class="text-lg">👥</span><span>营销人员</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="glass-header h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
+          <div class="flex items-center gap-4">
+            <h2 class="text-xl font-semibold text-gray-800">产品管理</h2>
+          </div>
+          <button class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:shadow-lg transition-shadow">+ 新建产品</button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+          <div class="flex gap-2 mb-6">
+            <button class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium shadow-lg shadow-blue-200">全部</button>
+            <button class="px-4 py-2 rounded-xl bg-white text-gray-600 text-sm font-medium border border-gray-200 hover:bg-gray-50">募集中</button>
+            <button class="px-4 py-2 rounded-xl bg-white text-gray-600 text-sm font-medium border border-gray-200 hover:bg-gray-50">待开始</button>
+            <button class="px-4 py-2 rounded-xl bg-white text-gray-600 text-sm font-medium border border-gray-200 hover:bg-gray-50">已结束</button>
+            <button class="px-4 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-medium ml-auto hover:bg-gray-200">已归档 →</button>
+          </div>
+
+          <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 card-hover">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span class="font-semibold text-gray-800 flex-1">XX量化对冲1号</span>
+                <span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-md">募集中</span>
+              </div>
+              <div class="space-y-1.5 text-sm text-gray-600 mb-4">
+                <div class="flex"><span class="text-gray-400 w-16">类型</span><span>私募产品</span></div>
+                <div class="flex"><span class="text-gray-400 w-16">发行</span><span>XX资产管理有限公司</span></div>
+                <div class="flex"><span class="text-gray-400 w-16">募集期</span><span>2024/03/01 - 03/15</span></div>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                  <span class="text-gray-500">目标: ¥1,000万</span>
+                  <span class="font-bold text-green-600">85%</span>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full progress-green rounded-full" style="width: 85%"></div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button class="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">编辑产品</button>
+                <button class="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">分配任务</button>
+                <button class="flex-1 py-2 rounded-lg border border-red-200 text-red-600 text-sm hover:bg-red-50">归档</button>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 card-hover">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span class="font-semibold text-gray-800 flex-1">XX私募精选2号</span>
+                <span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-md">募集中</span>
+              </div>
+              <div class="space-y-1.5 text-sm text-gray-600 mb-4">
+                <div class="flex"><span class="text-gray-400 w-16">类型</span><span>私募产品</span></div>
+                <div class="flex"><span class="text-gray-400 w-16">发行</span><span>XX基金管理有限公司</span></div>
+                <div class="flex"><span class="text-gray-400 w-16">募集期</span><span>2024/03/01 - 03/31</span></div>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                  <span class="text-gray-500">目标: ¥2,000万</span>
+                  <span class="font-bold text-yellow-600">60%</span>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full progress-yellow rounded-full" style="width: 60%"></div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button class="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">编辑产品</button>
+                <button class="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">分配任务</button>
+                <button class="flex-1 py-2 rounded-lg border border-red-200 text-red-600 text-sm hover:bg-red-50">归档</button>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-5 card-hover">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
+                <span class="font-semibold text-gray-800 flex-1">XX稳健收益3号</span>
+                <span class="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded-md">待开始</span>
+              </div>
+              <div class="space-y-1.5 text-sm text-gray-600 mb-4">
+                <div class="flex"><span class="text-gray-400 w-16">类型</span><span>资管产品</span></div>
+                <div class="flex"><span class="text-gray-400 w-16">发行</span><span>XX证券资管</span></div>
+                <div class="flex"><span class="text-gray-400 w-16">募集期</span><span>2024/04/01 - 04/30</span></div>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                  <span class="text-gray-500">目标: ¥500万</span>
+                  <span class="font-bold text-gray-400">未分配</span>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full bg-gray-300 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button class="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">编辑产品</button>
+                <button class="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">分配任务</button>
+                <button class="flex-1 py-2 rounded-lg border border-gray-200 text-gray-400 text-sm cursor-not-allowed" disabled>归档</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-gray-200 pt-8">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">📁</span>
+                <span class="font-semibold text-gray-600">已归档产品</span>
+              </div>
+              <button class="text-sm text-gray-500 hover:text-gray-700">查看全部 →</button>
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+              <div class="bg-gray-50 rounded-xl p-4 opacity-70">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-medium text-gray-600">XX量化对冲2023号</span>
+                  <span class="px-2 py-0.5 bg-gray-200 text-gray-500 text-xs rounded">已结束</span>
+                </div>
+                <div class="text-xs text-gray-500 mb-3">私募产品 | XX资产</div>
+                <div class="flex gap-4 text-center">
+                  <div>
+                    <div class="text-lg font-bold text-green-600">¥1,200万</div>
+                    <div class="text-xs text-gray-500">实际募集</div>
+                  </div>
+                  <div>
+                    <div class="text-lg font-bold text-green-600">120%</div>
+                    <div class="text-xs text-gray-500">完成率</div>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 opacity-70">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-medium text-gray-600">XX私募精选2023号</span>
+                  <span class="px-2 py-0.5 bg-gray-200 text-gray-500 text-xs rounded">已结束</span>
+                </div>
+                <div class="text-xs text-gray-500 mb-3">私募产品 | XX基金</div>
+                <div class="flex gap-4 text-center">
+                  <div>
+                    <div class="text-lg font-bold text-yellow-600">¥850万</div>
+                    <div class="text-xs text-gray-500">实际募集</div>
+                  </div>
+                  <div>
+                    <div class="text-lg font-bold text-yellow-600">85%</div>
+                    <div class="text-xs text-gray-500">完成率</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 页面4: 数据导入 -->
+  <div id="page-import" class="page">
+    <div class="flex h-screen overflow-hidden">
+      <aside class="w-64 glass-sidebar text-white flex flex-col flex-shrink-0">
+        <div class="p-6 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+              <span class="text-xl">🏦</span>
+            </div>
+            <div>
+              <h1 class="font-bold text-lg tracking-tight">FinTrack</h1>
+              <p class="text-xs text-gray-400">金融产品销售管理系统</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 py-4">
+          <div class="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">主菜单</div>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('dashboard')">
+            <span class="text-lg">📊</span><span>数据看板</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('analysis')">
+            <span class="text-lg">📈</span><span>数据分析</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('products')">
+            <span class="text-lg">📦</span><span>产品管理</span>
+          </a>
+          <a href="#" class="nav-item active flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-white">
+            <span class="text-lg">📤</span><span>数据导入</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('organization')">
+            <span class="text-lg">👥</span><span>营销人员</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="glass-header h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
+          <div class="flex items-center gap-4">
+            <h2 class="text-xl font-semibold text-gray-800">数据导入</h2>
+          </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+          <div class="max-w-3xl mx-auto">
+            <div class="flex items-center justify-center mb-8">
+              <div class="flex items-center">
+                <div class="flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">1</div>
+                  <span class="text-xs text-blue-600 mt-2 font-medium">上传文件</span>
+                </div>
+                <div class="w-20 h-0.5 bg-gray-200 mx-2"></div>
+                <div class="flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold">2</div>
+                  <span class="text-xs text-gray-500 mt-2">预览数据</span>
+                </div>
+                <div class="w-20 h-0.5 bg-gray-200 mx-2"></div>
+                <div class="flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold">3</div>
+                  <span class="text-xs text-gray-500 mt-2">确认导入</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-12 text-center">
+              <div class="w-20 h-20 mx-auto mb-6 bg-blue-50 rounded-2xl flex items-center justify-center text-4xl">📁</div>
+              <h3 class="text-lg font-semibold text-gray-800 mb-2">点击或拖拽Excel文件至此处上传</h3>
+              <p class="text-sm text-gray-500 mb-6">支持 .xlsx, .xls 格式，单个文件不超过10MB</p>
+              <button class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-shadow">选择文件</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-6">
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6 text-center card-hover cursor-pointer">
+                <div class="w-12 h-12 mx-auto mb-3 bg-green-50 rounded-xl flex items-center justify-center text-2xl">📥</div>
+                <div class="font-medium text-gray-800 mb-1">销售数据导入模板</div>
+                <div class="text-xs text-gray-500">包含标准字段格式</div>
+              </div>
+              <div class="bg-white rounded-2xl shadow-apple border border-gray-100 p-6 text-center card-hover cursor-pointer">
+                <div class="w-12 h-12 mx-auto mb-3 bg-blue-50 rounded-xl flex items-center justify-center text-2xl">📥</div>
+                <div class="font-medium text-gray-800 mb-1">产品信息导入模板</div>
+                <div class="text-xs text-gray-500">包含产品字段格式</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 页面5: 营销人员 -->
+  <div id="page-organization" class="page">
+    <div class="flex h-screen overflow-hidden">
+      <aside class="w-64 glass-sidebar text-white flex flex-col flex-shrink-0">
+        <div class="p-6 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+              <span class="text-xl">🏦</span>
+            </div>
+            <div>
+              <h1 class="font-bold text-lg tracking-tight">FinTrack</h1>
+              <p class="text-xs text-gray-400">金融产品销售管理系统</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 py-4">
+          <div class="px-4 mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">主菜单</div>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('dashboard')">
+            <span class="text-lg">📊</span><span>数据看板</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('analysis')">
+            <span class="text-lg">📈</span><span>数据分析</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('products')">
+            <span class="text-lg">📦</span><span>产品管理</span>
+          </a>
+          <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-gray-300" onclick="showPage('import')">
+            <span class="text-lg">📤</span><span>数据导入</span>
+          </a>
+          <a href="#" class="nav-item active flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm text-white">
+            <span class="text-lg">👥</span><span>营销人员</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="glass-header h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
+          <div class="flex items-center gap-4">
+            <h2 class="text-xl font-semibold text-gray-800">营销人员</h2>
+          </div>
+          <div class="flex gap-3">
+            <input type="text" placeholder="搜索成员姓名..." class="px-4 py-2 rounded-lg border border-gray-200 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:shadow-lg transition-shadow">+ 添加成员</button>
+          </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+          <div class="space-y-4">
+            <!-- 财富一部 -->
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 bg-gradient-to-r from-blue-900 to-blue-700 text-white">
+                <div class="flex items-center justify-between">
+                  <span class="text-lg font-semibold">财富一部</span>
+                  <div class="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full">
+                    <span>👤</span>
+                    <span class="text-sm">产品专员: 张经理</span>
+                  </div>
+                </div>
+              </div>
+              <div class="p-6">
+                <div class="grid grid-cols-8 gap-3">
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">张</div>
+                    <span class="text-sm font-medium">张三</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">李</div>
+                    <span class="text-sm font-medium">李四</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">王</div>
+                    <span class="text-sm font-medium">王五</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">赵</div>
+                    <span class="text-sm font-medium">赵六</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">陈</div>
+                    <span class="text-sm font-medium">陈七</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">刘</div>
+                    <span class="text-sm font-medium">刘八</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">周</div>
+                    <span class="text-sm font-medium">周九</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">吴</div>
+                    <span class="text-sm font-medium">吴十</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 财富二部 -->
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 bg-gradient-to-r from-blue-900 to-blue-700 text-white">
+                <div class="flex items-center justify-between">
+                  <span class="text-lg font-semibold">财富二部</span>
+                  <div class="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full">
+                    <span>👤</span>
+                    <span class="text-sm">产品专员: 李经理</span>
+                  </div>
+                </div>
+              </div>
+              <div class="p-6">
+                <div class="grid grid-cols-8 gap-3">
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">孙</div>
+                    <span class="text-sm font-medium">孙一</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">钱</div>
+                    <span class="text-sm font-medium">钱二</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">杨</div>
+                    <span class="text-sm font-medium">杨三</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">朱</div>
+                    <span class="text-sm font-medium">朱四</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">秦</div>
+                    <span class="text-sm font-medium">秦五</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">尤</div>
+                    <span class="text-sm font-medium">尤六</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 其他部门 -->
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 bg-gradient-to-r from-blue-800 to-blue-600 text-white">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <span class="text-lg font-semibold">机构业务部</span>
+                    <span class="text-sm text-blue-200">产品专员: 王经理 · 4人</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 bg-gradient-to-r from-blue-800 to-blue-600 text-white">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <span class="text-lg font-semibold">私募业务部</span>
+                    <span class="text-sm text-blue-200">产品专员: 马经理 · 3人</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 bg-gradient-to-r from-blue-800 to-blue-600 text-white">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <span class="text-lg font-semibold">互联网金融部</span>
+                    <span class="text-sm text-blue-200">产品专员: 郑经理 · 4人</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-apple border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 bg-gradient-to-r from-blue-800 to-blue-600 text-white">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <span class="text-lg font-semibold">综合业务部</span>
+                    <span class="text-sm text-blue-200">产品专员: 冯经理 · 3人</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // 页面切换
+    function showPage(pageName) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById('page-' + pageName).classList.add('active');
+    }
+
+    // 数据分析Tab切换
+    function showAnalysisTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.getElementById('analysis-' + tabName).classList.add('active');
+
+      document.querySelectorAll('.analysis-tab').forEach(tab => {
+        tab.classList.remove('bg-blue-50', 'text-blue-600');
+        tab.classList.add('text-gray-600', 'hover:bg-gray-50');
+      });
+      event.target.classList.remove('text-gray-600', 'hover:bg-gray-50');
+      event.target.classList.add('bg-blue-50', 'text-blue-600');
+    }
+  </script>
+</body>
+</html>

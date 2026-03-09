@@ -6,8 +6,6 @@ from datetime import datetime
 class GroupBase(BaseModel):
     name: str
     leader: Optional[str] = None
-    region: Optional[str] = None
-    remark: Optional[str] = None
 
 
 class GroupCreate(GroupBase):
@@ -25,10 +23,3 @@ class GroupResponse(GroupBase):
 
     class Config:
         from_attributes = True
-
-
-class GroupUpdate(BaseModel):
-    name: Optional[str] = None
-    leader: Optional[str] = None
-    region: Optional[str] = None
-    remark: Optional[str] = None

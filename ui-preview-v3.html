@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinTrack - UI设计预览 V3</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #1B3A6B;
+      --primary-light: #2C4A7C;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --orange: #F97316;
+      --bg-gray: #F5F7FA;
+      --border: #E4E7ED;
+      --text: #303133;
+      --text-secondary: #606266;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    .preview-container { max-width: 1600px; margin: 0 auto; }
+    h1 { text-align: center; color: var(--primary); margin-bottom: 10px; font-size: 28px; }
+    .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 30px; }
+    .page-section {
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .page-header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 24px;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-content { padding: 24px; }
+    .layout { display: flex; min-height: 700px; }
+    .sidebar {
+      width: 200px;
+      background: #1B3A6B;
+      padding: 20px 0;
+    }
+    .logo {
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 0 20px 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 20px;
+    }
+    .nav-item {
+      color: rgba(255,255,255,0.7);
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .nav-item:hover, .nav-item.active { color: white; background: rgba(255,255,255,0.1); }
+    .nav-item.active { border-left: 3px solid #409EFF; }
+    .main-content { flex: 1; background: var(--bg-gray); padding: 20px; overflow: auto; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title { font-size: 16px; font-weight: 600; color: var(--primary); }
+    .card-body { padding: 20px; }
+
+    /* 分段进度条 */
+    .progress-bar { height: 10px; background: #E4E7ED; border-radius: 5px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 5px; }
+    .progress-red { background: var(--danger); }
+    .progress-orange { background: var(--orange); }
+    .progress-yellow { background: var(--warning); }
+    .progress-green { background: var(--success); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--text-secondary); font-size: 14px; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+    /* 个人档案 - 新布局 */
+    .profile-section {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .profile-main-card {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 28px 32px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .profile-left { flex: 1; }
+    .profile-name { font-size: 28px; font-weight: bold; margin-bottom: 8px; }
+    .profile-dept { font-size: 15px; opacity: 0.9; }
+    .profile-stats-row {
+      display: flex;
+      gap: 48px;
+      margin-top: 24px;
+    }
+    .profile-stat { text-align: center; }
+    .profile-stat-value { font-size: 32px; font-weight: bold; margin-bottom: 4px; }
+    .profile-stat-label { font-size: 13px; opacity: 0.8; }
+    .profile-rank-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .rank-number { font-size: 56px; font-weight: bold; color: var(--primary); line-height: 1; margin-bottom: 8px; }
+    .rank-total { font-size: 16px; color: var(--text-secondary); margin-bottom: 12px; }
+    .rank-label { font-size: 14px; color: var(--text-secondary); background: var(--bg-gray); padding: 6px 16px; border-radius: 20px; display: inline-block; }
+
+    /* 热力图 - 新布局 */
+    .heatmap-wrapper {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .heatmap-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 20px;
+    }
+    .heatmap-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .heatmap-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .heatmap-month-label {
+      width: 40px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+    .heatmap-cells {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
+    .heatmap-cell {
+      flex: 1;
+      height: 32px;
+      border-radius: 4px;
+      background: #E4E7ED;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .heatmap-cell.level-0 { background: #E4E7ED; color: var(--text-secondary); }
+    .heatmap-cell.level-1 { background: #BBF7D0; }
+    .heatmap-cell.level-2 { background: #86EFAC; }
+    .heatmap-cell.level-3 { background: #4ADE80; }
+    .heatmap-cell.level-4 { background: #22C55E; color: white; }
+    .heatmap-cell.level-5 { background: #16A34A; color: white; }
+
+    /* 数据表格 */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table th { background: var(--bg-gray); font-weight: 600; color: var(--text-secondary); font-size: 14px; }
+    .rate-cell { font-weight: 600; padding: 4px 12px; border-radius: 4px; display: inline-block; }
+    .rate-green { color: #059669; background: #D1FAE5; }
+    .rate-yellow { color: #D97706; background: #FEF3C7; }
+    .rate-red { color: #DC2626; background: #FEE2E2; }
+    .tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .tag-success { background: #F0F9EB; color: var(--success); }
+
+    /* 人员选择器 */
+    .member-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--bg-gray);
+      border-radius: 8px;
+    }
+    select, input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .btn {
+      padding: 8px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    /* 图表占位 */
+    .chart-box {
+      height: 300px;
+      background: var(--bg-gray);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    /* 任务分配 */
+    .task-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+    }
+    .task-sidebar {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .task-list-item {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-list-item:hover { background: var(--bg-gray); }
+    .task-list-item.active { background: #ECF5FF; color: #409EFF; }
+
+    /* 对比卡片 */
+    .compare-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .compare-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <h1>🏦 FinTrack UI设计预览 V3</h1>
+    <p class="subtitle">更新：个人档案布局优化 + 销售趋势 + 营业部对比 + 任务分配</p>
+
+    <!-- Page 1: 个人查询（已优化） -->
+    <div class="page-section">
+      <div class="page-header"><span>👤</span> 页面1: 个人查询（优化版）</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item active"><span>📈</span> 数据分析</div>
+            <div class="nav-item"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">数据分析</span>
+              </div>
+              <div class="card-body">
+                <div class="tabs">
+                  <div class="tab">产品矩阵</div>
+                  <div class="tab active">个人查询</div>
+                  <div class="tab">销售趋势</div>
+                  <div class="tab">营业部对比</div>
+                </div>
+
+                <!-- 人员选择器 -->
+                <div class="member-selector">
+                  <select style="width: 150px;"><option>选择营业部</option><option>财富一部</option></select>
+                  <select style="width: 200px;"><option>选择成员</option><option>张三</option></select>
+                  <input type="text" placeholder="或输入姓名搜索..." style="flex: 1;" />
+                  <button class="btn">查询</button>
+                </div>
+
+                <!-- 个人档案头部 - 新布局 -->
+                <div class="profile-section">
+                  <div class="profile-main-card">
+                    <div class="profile-left">
+                      <div class="profile-name">张三</div>
+                      <div class="profile-dept">财富一部</div>
+                      <div class="profile-stats-row">
+                        <div class="profile-stat">
+                          <div class="profile-stat-value">¥370万</div>
+                          <div class="profile-stat-label">本年度销售额</div>
+                        </div>
+                        <div class="profile-stat">
+                          <div class="profile-stat-value">92.5%</div>
+                          <div class="profile-stat-label">综合完成率</div>
+                        </div>
+                        <div class="profile-stat">
+                          <div class="profile-stat-value">¥61.7万</div>
+                          <div class="profile-stat-label">平均每次任务销量</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="profile-rank-card">
+                    <div class="rank-number">8</div>
+                    <div class="rank-total">/ 68人</div>
+                    <div class="rank-label">全公司总销量排名</div>
+                  </div>
+                </div>
+
+                <!-- 产品完成情况 -->
+                <div class="card" style="margin-bottom: 24px;">
+                  <div class="card-header">
+                    <span class="card-title">产品完成情况明细</span>
+                  </div>
+                  <div class="card-body">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>产品名称</th>
+                          <th>派发任务</th>
+                          <th>实际完成</th>
+                          <th>完成率</th>
+                          <th>状态</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>XX量化对冲1号</strong></td>
+                          <td>¥100万</td>
+                          <td>¥120万</td>
+                          <td><span class="rate-cell rate-green">120%</span></td>
+                          <td><span class="tag tag-success">超额完成</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>XX私募精选2号</strong></td>
+                          <td>¥80万</td>
+                          <td>¥85万</td>
+                          <td><span class="rate-cell rate-green">106%</span></td>
+                          <td><span class="tag tag-success">超额完成</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>XX稳健收益3号</strong></td>
+                          <td>¥60万</td>
+                          <td>¥45万</td>
+                          <td><span class="rate-cell rate-red">75%</span></td>
+                          <td><span class="tag" style="background: #FDF6EC; color: #E6A23C;">进行中</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 月度销售热力图 - 新布局 -->
+                <div class="heatmap-wrapper">
+                  <div class="heatmap-title">📅 2024年月度销售热力图</div>
+                  <div class="heatmap-container">
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">1月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-2">28万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">2月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-1">18万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">3月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-5">58万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">4月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-4">45万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">5月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-3">38万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">6月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-4">42万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">7月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-2">25万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">8月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-3">35万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">9月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-1">15万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">10月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-2">22万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">11月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-4">48万</div>
+                      </div>
+                    </div>
+                    <div class="heatmap-row">
+                      <div class="heatmap-month-label">12月</div>
+                      <div class="heatmap-cells">
+                        <div class="heatmap-cell level-0">-</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-secondary);">
+                    <span>销量低</span>
+                    <div class="heatmap-cell level-0" style="width: 24px; height: 24px;"></div>
+                    <div class="heatmap-cell level-1" style="width: 24px; height: 24px;"></div>
+                    <div class="heatmap-cell level-2" style="width: 24px; height: 24px;"></div>
+                    <div class="heatmap-cell level-3" style="width: 24px; height: 24px;"></div>
+                    <div class="heatmap-cell level-4" style="width: 24px; height: 24px;"></div>
+                    <div class="heatmap-cell level-5" style="width: 24px; height: 24px;"></div>
+                    <span>销量高</span>
+                  </div>
+                </div>
+
+                <!-- 年度销售趋势 -->
+                <div class="card">
+                  <div class="card-header">
+                    <span class="card-title">📈 年度销售趋势</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-box">[ECharts 折线图：月度销售额走势 + 目标线对比]</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 2: 销售趋势 -->
+    <div class="page-section">
+      <div class="page-header"><span>📈</span> 页面2: 销售趋势分析</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item active"><span>📈</span> 数据分析</div>
+            <div class="nav-item"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">数据分析</span>
+              </div>
+              <div class="card-body">
+                <div class="tabs">
+                  <div class="tab">产品矩阵</div>
+                  <div class="tab">个人查询</div>
+                  <div class="tab active">销售趋势</div>
+                  <div class="tab">营业部对比</div>
+                </div>
+
+                <!-- 筛选栏 -->
+                <div class="member-selector">
+                  <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: var(--text-secondary);">时间范围:</span>
+                    <select><option>2024年</option></select>
+                    <select><option>全年</option><option>Q1</option><option>Q2</option></select>
+                  </div>
+                  <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: var(--text-secondary);">对比维度:</span>
+                    <select><option>按产品</option><option>按营业部</option><option>按个人</option></select>
+                  </div>
+                  <button class="btn">刷新数据</button>
+                </div>
+
+                <!-- 销售趋势图表 -->
+                <div class="card" style="margin-bottom: 20px;">
+                  <div class="card-header">
+                    <span class="card-title">销售额趋势对比</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-box" style="height: 350px;">[ECharts 多折线图：各产品/营业部月度销售走势]</div>
+                  </div>
+                </div>
+
+                <!-- 关键指标 -->
+                <div class="three-col">
+                  <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">最高销售月份</div>
+                      <div style="font-size: 28px; font-weight: bold; color: var(--primary);">3月</div>
+                      <div style="font-size: 14px; color: var(--success); margin-top: 4px;">¥580万</div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">月均销售额</div>
+                      <div style="font-size: 28px; font-weight: bold; color: var(--primary);">¥215万</div>
+                      <div style="font-size: 14px; color: var(--success); margin-top: 4px;">↑ 12.5%</div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">增长趋势</div>
+                      <div style="font-size: 28px; font-weight: bold; color: var(--primary);">+23%</div>
+                      <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">同比去年</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 3: 营业部对比 -->
+    <div class="page-section">
+      <div class="page-header"><span>📊</span> 页面3: 营业部对比分析</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item active"><span>📈</span> 数据分析</div>
+            <div class="nav-item"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">数据分析</span>
+              </div>
+              <div class="card-body">
+                <div class="tabs">
+                  <div class="tab">产品矩阵</div>
+                  <div class="tab">个人查询</div>
+                  <div class="tab">销售趋势</div>
+                  <div class="tab active">营业部对比</div>
+                </div>
+
+                <!-- 筛选栏 -->
+                <div class="member-selector">
+                  <div style="display: flex; gap: 12px; align-items: center;">
+                    <span style="color: var(--text-secondary);">统计周期:</span>
+                    <select><option>2024年</option></select>
+                    <select><option>全年</option></select>
+                    <select><option>全部产品</option></select>
+                  </div>
+                  <button class="btn">导出报表</button>
+                </div>
+
+                <!-- 对比表格 -->
+                <div class="card">
+                  <div class="card-header">
+                    <span class="card-title">营业部业绩对比</span>
+                  </div>
+                  <div class="card-body">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>排名</th>
+                          <th>营业部</th>
+                          <th>专员</th>
+                          <th>成员数</th>
+                          <th>总目标</th>
+                          <th>总销售</th>
+                          <th>完成率</th>
+                          <th>人均产能</th>
+                          <th>趋势</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span style="font-size: 18px;">🥇</span></td>
+                          <td><strong>财富一部</strong></td>
+                          <td>张经理</td>
+                          <td>12人</td>
+                          <td>¥1,000万</td>
+                          <td>¥920万</td>
+                          <td><span class="rate-cell rate-green">92%</span></td>
+                          <td>¥76.7万</td>
+                          <td><span style="color: var(--success);">↑ 5%</span></td>
+                        </tr>
+                        <tr>
+                          <td><span style="font-size: 18px;">🥈</span></td>
+                          <td><strong>财富二部</strong></td>
+                          <td>李经理</td>
+                          <td>8人</td>
+                          <td>¥800万</td>
+                          <td>¥608万</td>
+                          <td><span class="rate-cell rate-yellow">76%</span></td>
+                          <td>¥76.0万</td>
+                          <td><span style="color: var(--success);">↑ 2%</span></td>
+                        </tr>
+                        <tr>
+                          <td><span style="font-size: 18px;">🥉</span></td>
+                          <td><strong>机构业务部</strong></td>
+                          <td>王经理</td>
+                          <td>6人</td>
+                          <td>¥600万</td>
+                          <td>¥390万</td>
+                          <td><span class="rate-cell rate-yellow">65%</span></td>
+                          <td>¥65.0万</td>
+                          <td><span style="color: var(--danger);">↓ 3%</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 图表对比 -->
+                <div class="two-col" style="margin-top: 20px;">
+                  <div class="card">
+                    <div class="card-header">
+                      <span class="card-title">销售额对比</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="chart-box">[ECharts 柱状图：各营业部销售额]</div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-header">
+                      <span class="card-title">完成率对比</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="chart-box">[ECharts 横向柱状图：各营业部完成率]</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 4: 产品管理 - 任务分配 -->
+    <div class="page-section">
+      <div class="page-header"><span>📦</span> 页面4: 产品管理 - 任务分配（重点）</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item"><span>📈</span> 数据分析</div>
+            <div class="nav-item active"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">产品管理</span>
+                <div style="display: flex; gap: 8px;">
+                  <button style="padding: 8px 16px; background: #409EFF; color: white; border: none; border-radius: 4px; cursor: pointer;">+ 新建产品</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <!-- 筛选标签 -->
+                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                  <button style="padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">全部</button>
+                  <button style="padding: 8px 16px; background: white; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">募集中</button>
+                  <button style="padding: 8px 16px; background: white; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">待开始</button>
+                  <button style="padding: 8px 16px; background: white; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">已结束</button>
+                  <button style="padding: 8px 16px; background: #F5F7FA; color: #909399; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">已归档 →</button>
+                </div>
+
+                <!-- 任务分配界面 -->
+                <div class="task-grid">
+                  <!-- 左侧：产品列表 -->
+                  <div class="task-sidebar">
+                    <div style="font-weight: 600; color: var(--primary); margin-bottom: 16px;">选择产品</div>
+                    <div class="task-list-item active">
+                      <div>
+                        <div style="font-weight: 600;">XX量化对冲1号</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">目标: ¥1,000万 | 募集中</div>
+                      </div>
+                    </div>
+                    <div class="task-list-item">
+                      <div>
+                        <div style="font-weight: 600;">XX私募精选2号</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">目标: ¥2,000万 | 募集中</div>
+                      </div>
+                    </div>
+                    <div class="task-list-item">
+                      <div>
+                        <div style="font-weight: 600;">XX稳健收益3号</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">目标: ¥500万 | 待开始</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 右侧：任务分配详情 -->
+                  <div>
+                    <!-- 产品信息 -->
+                    <div class="card" style="margin-bottom: 20px;">
+                      <div class="card-header">
+                        <span class="card-title">XX量化对冲1号 - 任务分配</span>
+                        <div>
+                          <button style="padding: 6px 12px; background: white; border: 1px solid var(--border); border-radius: 4px; margin-right: 8px; cursor: pointer;">批量分配</button>
+                          <button style="padding: 6px 12px; background: var(--success); color: white; border: none; border-radius: 4px; cursor: pointer;">保存分配</button>
+                        </div>
+                      </div>
+                      <div class="card-body">
+                        <!-- 分配概览 -->
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; padding: 16px; background: var(--bg-gray); border-radius: 8px;">
+                          <div style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">产品总目标</div>
+                            <div style="font-size: 20px; font-weight: bold; color: var(--primary);">¥1,000万</div>
+                          </div>
+                          <div style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">已分配</div>
+                            <div style="font-size: 20px; font-weight: bold; color: var(--success);">¥950万</div>
+                          </div>
+                          <div style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">未分配</div>
+                            <div style="font-size: 20px; font-weight: bold; color: var(--warning);">¥50万</div>
+                          </div>
+                          <div style="text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">分配进度</div>
+                            <div style="font-size: 20px; font-weight: bold; color: var(--primary);">95%</div>
+                          </div>
+                        </div>
+
+                        <!-- 分配方式切换 -->
+                        <div style="display: flex; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="assignType" checked />
+                            <span>按营业部分配</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="assignType" />
+                            <span>按个人分配</span>
+                          </label>
+                        </div>
+
+                        <!-- 营业部分配表格 -->
+                        <table class="data-table">
+                          <thead>
+                            <tr>
+                              <th style="width: 40px;"><input type="checkbox" /></th>
+                              <th>营业部</th>
+                              <th>成员数</th>
+                              <th>分配任务</th>
+                              <th>人均任务</th>
+                              <th>已完成</th>
+                              <th>完成率</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><input type="checkbox" checked /></td>
+                              <td><strong>财富一部</strong></td>
+                              <td>12人</td>
+                              <td><input type="text" value="300" style="width: 80px; text-align: right;" /> 万</td>
+                              <td>25万/人</td>
+                              <td>¥280万</td>
+                              <td><span class="rate-cell rate-green">93%</span></td>
+                            </tr>
+                            <tr>
+                              <td><input type="checkbox" checked /></td>
+                              <td><strong>财富二部</strong></td>
+                              <td>8人</td>
+                              <td><input type="text" value="250" style="width: 80px; text-align: right;" /> 万</td>
+                              <td>31万/人</td>
+                              <td>¥180万</td>
+                              <td><span class="rate-cell rate-yellow">72%</span></td>
+                            </tr>
+                            <tr>
+                              <td><input type="checkbox" checked /></td>
+                              <td><strong>机构业务部</strong></td>
+                              <td>6人</td>
+                              <td><input type="text" value="200" style="width: 80px; text-align: right;" /> 万</td>
+                              <td>33万/人</td>
+                              <td>¥120万</td>
+                              <td><span class="rate-cell rate-yellow">60%</span></td>
+                            </tr>
+                            <tr>
+                              <td><input type="checkbox" /></td>
+                              <td><strong>私募业务部</strong></td>
+                              <td>5人</td>
+                              <td><input type="text" value="0" style="width: 80px; text-align: right;" /> 万</td>
+                              <td>-</td>
+                              <td>¥0</td>
+                              <td><span class="rate-cell" style="background: #E4E7ED; color: var(--text-secondary);">未分配</span></td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <!-- 快捷操作 -->
+                        <div style="margin-top: 20px; padding: 16px; background: #F0F9FF; border-radius: 8px; border-left: 4px solid #409EFF;">
+                          <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">💡 快捷分配工具</div>
+                          <div style="display: flex; gap: 12px; align-items: center;">
+                            <span style="font-size: 14px;">按人数平均分配:</span>
+                            <button style="padding: 6px 12px; background: #409EFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">执行分配</button>
+                            <span style="color: var(--text-secondary); font-size: 13px;">|</span>
+                            <span style="font-size: 14px;">按历史业绩分配:</span>
+                            <button style="padding: 6px 12px; background: #409EFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">执行分配</button>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

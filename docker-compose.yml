@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: fintrack-backend
+    volumes:
+      - ./data:/app/data
+      - ./backup:/app/backup
+    environment:
+      - DATABASE_URL=sqlite:///data/fintrack.db
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: fintrack-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

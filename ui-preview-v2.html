@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinTrack - UI设计预览 V2</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #1B3A6B;
+      --primary-light: #2C4A7C;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --orange: #F97316;
+      --bg-gray: #F5F7FA;
+      --border: #E4E7ED;
+      --text: #303133;
+      --text-secondary: #606266;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    .preview-container { max-width: 1600px; margin: 0 auto; }
+    h1 { text-align: center; color: var(--primary); margin-bottom: 10px; font-size: 28px; }
+    .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 30px; }
+    .page-section {
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .page-header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 24px;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-content { padding: 24px; }
+    .layout { display: flex; min-height: 700px; }
+    .sidebar {
+      width: 200px;
+      background: #1B3A6B;
+      padding: 20px 0;
+    }
+    .logo {
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 0 20px 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 20px;
+    }
+    .nav-item {
+      color: rgba(255,255,255,0.7);
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .nav-item:hover, .nav-item.active { color: white; background: rgba(255,255,255,0.1); }
+    .nav-item.active { border-left: 3px solid #409EFF; }
+    .main-content { flex: 1; background: var(--bg-gray); padding: 20px; overflow: auto; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title { font-size: 16px; font-weight: 600; color: var(--primary); }
+    .card-body { padding: 20px; }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .kpi-title { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+    .kpi-value { font-size: 36px; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
+    .kpi-sub { font-size: 13px; color: var(--success); }
+    .progress-bar {
+      height: 10px;
+      background: #E4E7ED;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    /* 分段进度条颜色 */
+    .progress-fill { height: 100%; border-radius: 5px; }
+    .progress-red { background: var(--danger); }
+    .progress-orange { background: var(--orange); }
+    .progress-yellow { background: var(--warning); }
+    .progress-green { background: var(--success); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+
+    /* 营业部完成情况 - 6个卡片 */
+    .group-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .group-stat-card {
+      background: var(--bg-gray);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .group-stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .group-stat-name { font-weight: 600; color: var(--primary); font-size: 14px; }
+    .group-stat-numbers {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .product-item {
+      background: var(--bg-gray);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .product-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .product-name { font-weight: 600; color: var(--primary); }
+    .tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .tag-danger { background: #FEF0F0; color: var(--danger); }
+    .tag-success { background: #F0F9EB; color: var(--success); }
+    .product-stats { display: flex; gap: 20px; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+
+    /* 大单提醒 */
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: #FEF3C7;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--warning);
+    }
+    .order-product { font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+    .order-meta { font-size: 13px; color: var(--text-secondary); }
+    .order-amount { font-size: 18px; font-weight: bold; color: var(--danger); }
+
+    /* 预警 */
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .alert-error { background: #FEE2E2; border-left: 4px solid var(--danger); }
+    .alert-warning { background: #FEF3C7; border-left: 4px solid var(--warning); }
+    .alert-title { font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+    .alert-desc { font-size: 13px; color: var(--text-secondary); }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+    /* 产品矩阵 - 折叠模式 */
+    .matrix-filter {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--bg-gray);
+      border-radius: 8px;
+    }
+    .filter-group { display: flex; gap: 12px; align-items: center; }
+    .filter-label { font-size: 14px; color: var(--text-secondary); }
+    select, input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .toggle-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .toggle-btn {
+      padding: 8px 16px;
+      background: white;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .toggle-btn.active { background: var(--primary); color: white; }
+
+    /* 矩阵表格 */
+    .matrix-container {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .matrix-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .matrix-table th, .matrix-table td {
+      padding: 10px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .matrix-table th {
+      background: var(--bg-gray);
+      font-weight: 600;
+      color: var(--text-secondary);
+      position: sticky;
+      top: 0;
+    }
+    .matrix-table .fixed-left {
+      position: sticky;
+      left: 0;
+      background: white;
+      z-index: 10;
+    }
+    .matrix-table .fixed-left-header {
+      position: sticky;
+      left: 0;
+      background: var(--bg-gray);
+      z-index: 11;
+    }
+    .matrix-table .fixed-right {
+      position: sticky;
+      right: 0;
+      background: white;
+      z-index: 10;
+    }
+    .matrix-table .fixed-right-header {
+      position: sticky;
+      right: 0;
+      background: var(--bg-gray);
+      z-index: 11;
+    }
+
+    /* 营业部分组行 */
+    .group-row {
+      background: #E8F4FF !important;
+      font-weight: 600;
+      color: var(--primary);
+      text-align: left !important;
+      cursor: pointer;
+    }
+    .group-row td { padding: 12px !important; }
+    .member-row { display: none; }
+    .member-row.expanded { display: table-row; }
+    .expand-icon { margin-right: 8px; font-size: 12px; }
+
+    /* 完成率颜色 */
+    .rate-cell { font-weight: 600; padding: 4px 8px; border-radius: 4px; }
+    .rate-green { color: #059669; background: #D1FAE5; }
+    .rate-yellow { color: #D97706; background: #FEF3C7; }
+    .rate-red { color: #DC2626; background: #FEE2E2; }
+
+    /* 个人查询页面 */
+    .profile-header {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .profile-card {
+      flex: 1;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+    }
+    .profile-name { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+    .profile-info { font-size: 14px; opacity: 0.9; margin-bottom: 20px; }
+    .profile-stats { display: flex; gap: 40px; }
+    .profile-stat { text-align: center; }
+    .profile-stat-value { font-size: 32px; font-weight: bold; margin-bottom: 4px; }
+    .profile-stat-label { font-size: 13px; opacity: 0.8; }
+    .profile-kpi-card {
+      width: 280px;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      text-align: center;
+    }
+    .kpi-big-value { font-size: 48px; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
+    .kpi-big-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+
+    /* 热力图 */
+    .heatmap-container {
+      margin-top: 24px;
+    }
+    .heatmap-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+    .heatmap {
+      display: flex;
+      gap: 4px;
+    }
+    .heatmap-month {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .heatmap-month-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .heatmap-cell {
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      background: #E4E7ED;
+    }
+    .heatmap-cell.level-1 { background: #BBF7D0; }
+    .heatmap-cell.level-2 { background: #86EFAC; }
+    .heatmap-cell.level-3 { background: #4ADE80; }
+    .heatmap-cell.level-4 { background: #22C55E; }
+    .heatmap-cell.level-5 { background: #16A34A; }
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* 图表占位 */
+    .chart-placeholder {
+      height: 200px;
+      background: var(--bg-gray);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      margin-top: 16px;
+    }
+
+    /* 产品表格 */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table th { background: var(--bg-gray); font-weight: 600; color: var(--text-secondary); font-size: 14px; }
+
+    /* 人员选择器 */
+    .member-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--bg-gray);
+      border-radius: 8px;
+    }
+    .search-input { flex: 1; }
+
+    .icon::before { display: inline-block; width: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <h1>🏦 FinTrack UI设计预览 V2</h1>
+    <p class="subtitle">更新：分段进度条 | 营业部完成情况 | 产品矩阵折叠 | 个人销售档案</p>
+
+    <!-- Page 1: Dashboard -->
+    <div class="page-section">
+      <div class="page-header"><span>📊</span> 页面1: Dashboard（更新进度条颜色、营业部完成情况）</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item active"><span>📊</span> Dashboard</div>
+            <div class="nav-item"><span>📈</span> 数据分析</div>
+            <div class="nav-item"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <!-- KPI -->
+            <div class="kpi-row">
+              <div class="kpi-card">
+                <div class="kpi-title">本月在售产品</div>
+                <div class="kpi-value">5</div>
+                <div class="kpi-sub">个产品募集中</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-title">整体销售额</div>
+                <div class="kpi-value">¥2,580万</div>
+                <div class="kpi-sub">↑ 近7日 ¥580万</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-title">整体完成率</div>
+                <div class="kpi-value" style="color: #10B981;">68.5%</div>
+                <div class="progress-bar" style="margin-top: 12px;">
+                  <div class="progress-fill progress-yellow" style="width: 68.5%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Middle Section -->
+            <div class="two-col">
+              <!-- 在售产品明细 - 分段进度条 -->
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">在售产品明细</span>
+                  <span style="color: #409EFF; font-size: 14px;">查看全部 →</span>
+                </div>
+                <div class="card-body">
+                  <div class="product-item">
+                    <div class="product-header">
+                      <span class="product-name">XX量化对冲1号</span>
+                      <span class="tag tag-danger">剩2天</span>
+                    </div>
+                    <div class="product-stats">
+                      <span>目标: ¥1,000万</span>
+                      <span>已完成: ¥850万</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div class="progress-bar" style="flex: 1;">
+                        <div class="progress-fill progress-green" style="width: 85%"></div>
+                      </div>
+                      <span style="font-weight: 600; color: #10B981;">85%</span>
+                    </div>
+                  </div>
+                  <div class="product-item">
+                    <div class="product-header">
+                      <span class="product-name">XX稳健收益3号</span>
+                      <span class="tag tag-success">剩20天</span>
+                    </div>
+                    <div class="product-stats">
+                      <span>目标: ¥500万</span>
+                      <span>已完成: ¥95万</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div class="progress-bar" style="flex: 1;">
+                        <div class="progress-fill progress-red" style="width: 19%"></div>
+                      </div>
+                      <span style="font-weight: 600; color: #EF4444;">19%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 营业部完成情况 - 6个卡片 -->
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">营业部完成情况</span>
+                </div>
+                <div class="card-body">
+                  <div class="group-stats-grid">
+                    <div class="group-stat-card">
+                      <div class="group-stat-header">
+                        <span class="group-stat-name">财富一部</span>
+                        <span style="color: #10B981; font-weight: 600;">92%</span>
+                      </div>
+                      <div class="group-stat-numbers">
+                        <span>目标: ¥1,000万</span>
+                        <span>销售: ¥920万</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill progress-green" style="width: 92%"></div>
+                      </div>
+                    </div>
+                    <div class="group-stat-card">
+                      <div class="group-stat-header">
+                        <span class="group-stat-name">财富二部</span>
+                        <span style="color: #F59E0B; font-weight: 600;">76%</span>
+                      </div>
+                      <div class="group-stat-numbers">
+                        <span>目标: ¥800万</span>
+                        <span>销售: ¥608万</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill progress-yellow" style="width: 76%"></div>
+                      </div>
+                    </div>
+                    <div class="group-stat-card">
+                      <div class="group-stat-header">
+                        <span class="group-stat-name">机构业务部</span>
+                        <span style="color: #F59E0B; font-weight: 600;">65%</span>
+                      </div>
+                      <div class="group-stat-numbers">
+                        <span>目标: ¥600万</span>
+                        <span>销售: ¥390万</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill progress-yellow" style="width: 65%"></div>
+                      </div>
+                    </div>
+                    <div class="group-stat-card">
+                      <div class="group-stat-header">
+                        <span class="group-stat-name">私募业务部</span>
+                        <span style="color: #F97316; font-weight: 600;">48%</span>
+                      </div>
+                      <div class="group-stat-numbers">
+                        <span>目标: ¥500万</span>
+                        <span>销售: ¥240万</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill progress-orange" style="width: 48%"></div>
+                      </div>
+                    </div>
+                    <div class="group-stat-card">
+                      <div class="group-stat-header">
+                        <span class="group-stat-name">互联网金融部</span>
+                        <span style="color: #EF4444; font-weight: 600;">32%</span>
+                      </div>
+                      <div class="group-stat-numbers">
+                        <span>目标: ¥400万</span>
+                        <span>销售: ¥128万</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill progress-red" style="width: 32%"></div>
+                      </div>
+                    </div>
+                    <div class="group-stat-card">
+                      <div class="group-stat-header">
+                        <span class="group-stat-name">综合业务部</span>
+                        <span style="color: #10B981; font-weight: 600;">88%</span>
+                      </div>
+                      <div class="group-stat-numbers">
+                        <span>目标: ¥700万</span>
+                        <span>销售: ¥616万</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill progress-green" style="width: 88%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom: 大单 + 预警 -->
+            <div class="two-col">
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">📈 大单提醒（≥50万）</span>
+                  <span class="tag" style="background: #FDF6EC; color: #E6A23C;">3笔</span>
+                </div>
+                <div class="card-body">
+                  <div class="order-item">
+                    <div>
+                      <div class="order-product">XX量化对冲1号</div>
+                      <div class="order-meta">张三 | 财富一部 | 2024-03-05</div>
+                    </div>
+                    <div class="order-amount">¥100万</div>
+                  </div>
+                  <div class="order-item">
+                    <div>
+                      <div class="order-product">XX量化对冲1号</div>
+                      <div class="order-meta">李四 | 财富二部 | 2024-03-04</div>
+                    </div>
+                    <div class="order-amount">¥80万</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">⚠️ 预警提醒</span>
+                </div>
+                <div class="card-body">
+                  <div class="alert-item alert-error">
+                    <span>⚠️</span>
+                    <div>
+                      <div class="alert-title">XX量化对冲1号 即将截止</div>
+                      <div class="alert-desc">距离募集结束仅剩 2 天，当前完成率 85%</div>
+                    </div>
+                  </div>
+                  <div class="alert-item alert-warning">
+                    <span>⚡</span>
+                    <div>
+                      <div class="alert-title">XX稳健收益3号 进度落后</div>
+                      <div class="alert-desc">当前完成率仅 19%，请加快募集进度</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 2: 数据分析 - 产品矩阵 -->
+    <div class="page-section">
+      <div class="page-header"><span>📈</span> 页面2: 数据分析 - 产品矩阵（折叠模式+时间筛选）</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item active"><span>📈</span> 数据分析</div>
+            <div class="nav-item"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">数据分析</span>
+                <div style="display: flex; gap: 8px;">
+                  <span style="color: #409EFF; font-size: 14px;">导出Excel</span>
+                  <span style="color: #409EFF; font-size: 14px;">导出PDF</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                  <div class="tab active">产品矩阵</div>
+                  <div class="tab">个人查询</div>
+                  <div class="tab">销售趋势</div>
+                  <div class="tab">营业部对比</div>
+                </div>
+
+                <!-- 筛选栏 -->
+                <div class="matrix-filter">
+                  <div class="filter-group">
+                    <span class="filter-label">时间范围:</span>
+                    <select><option>2024年</option><option>2023年</option></select>
+                    <select><option>全年</option><option>第一季度</option><option>第二季度</option><option>第三季度</option><option>第四季度</option></select>
+                    <select><option>全部月份</option><option>1月</option><option>2月</option><option>3月</option></select>
+                  </div>
+                  <div class="toggle-group">
+                    <button class="toggle-btn active">实际销量</button>
+                    <button class="toggle-btn">完成率</button>
+                  </div>
+                </div>
+
+                <!-- 产品矩阵表格 -->
+                <div class="matrix-container">
+                  <table class="matrix-table">
+                    <thead>
+                      <tr>
+                        <th class="fixed-left-header" style="width: 120px;">营业部/成员</th>
+                        <th>XX量化对冲1号</th>
+                        <th>XX私募精选2号</th>
+                        <th>XX稳健收益3号</th>
+                        <th>XX债券增强4号</th>
+                        <th>XX多策略5号</th>
+                        <th style="min-width: 200px;">...</th>
+                        <th class="fixed-right-header" style="width: 100px;">汇总</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- 财富一部 - 展开 -->
+                      <tr class="group-row">
+                        <td class="fixed-left" colspan="8">
+                          <span class="expand-icon">▼</span> 财富一部 (12人)
+                        </td>
+                      </tr>
+                      <tr class="member-row expanded">
+                        <td class="fixed-left" style="padding-left: 32px;">张三</td>
+                        <td><span class="rate-cell rate-green">120万</span></td>
+                        <td><span class="rate-cell rate-green">85万</span></td>
+                        <td><span class="rate-cell rate-yellow">45万</span></td>
+                        <td><span class="rate-cell rate-green">92万</span></td>
+                        <td><span class="rate-cell rate-red">28万</span></td>
+                        <td>...</td>
+                        <td class="fixed-right"><strong>370万</strong></td>
+                      </tr>
+                      <tr class="member-row expanded">
+                        <td class="fixed-left" style="padding-left: 32px;">李四</td>
+                        <td><span class="rate-cell rate-yellow">78万</span></td>
+                        <td><span class="rate-cell rate-green">95万</span></td>
+                        <td><span class="rate-cell rate-green">88万</span></td>
+                        <td><span class="rate-cell rate-yellow">65万</span></td>
+                        <td><span class="rate-cell rate-yellow">52万</span></td>
+                        <td>...</td>
+                        <td class="fixed-right"><strong>378万</strong></td>
+                      </tr>
+                      <tr class="member-row expanded">
+                        <td class="fixed-left" style="padding-left: 32px;">王五</td>
+                        <td><span class="rate-cell rate-green">105万</span></td>
+                        <td><span class="rate-cell rate-red">35万</span></td>
+                        <td><span class="rate-cell rate-yellow">62万</span></td>
+                        <td><span class="rate-cell rate-green">110万</span></td>
+                        <td><span class="rate-cell rate-yellow">48万</span></td>
+                        <td>...</td>
+                        <td class="fixed-right"><strong>360万</strong></td>
+                      </tr>
+                      <!-- 财富二部 - 折叠 -->
+                      <tr class="group-row">
+                        <td class="fixed-left" colspan="8">
+                          <span class="expand-icon">▶</span> 财富二部 (8人)
+                        </td>
+                      </tr>
+                      <!-- 机构业务部 - 折叠 -->
+                      <tr class="group-row">
+                        <td class="fixed-left" colspan="8">
+                          <span class="expand-icon">▶</span> 机构业务部 (6人)
+                        </td>
+                      </tr>
+                      <!-- 其他营业部... -->
+                    </tbody>
+                  </table>
+                </div>
+                <div style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                  💡 提示: 点击营业部名称展开/折叠成员数据，左右两侧列固定，中间区域可横向滚动
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 3: 数据分析 - 个人查询 -->
+    <div class="page-section">
+      <div class="page-header"><span>👤</span> 页面3: 数据分析 - 个人销售档案</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item active"><span>📈</span> 数据分析</div>
+            <div class="nav-item"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">数据分析</span>
+              </div>
+              <div class="card-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                  <div class="tab">产品矩阵</div>
+                  <div class="tab active">个人查询</div>
+                  <div class="tab">销售趋势</div>
+                  <div class="tab">营业部对比</div>
+                </div>
+
+                <!-- 人员选择器 -->
+                <div class="member-selector">
+                  <select style="width: 150px;">
+                    <option>选择营业部</option>
+                    <option>财富一部</option>
+                    <option>财富二部</option>
+                  </select>
+                  <select style="width: 200px;">
+                    <option>选择成员</option>
+                    <option>张三</option>
+                    <option>李四</option>
+                  </select>
+                  <input type="text" class="search-input" placeholder="或输入姓名搜索...">
+                  <button style="padding: 8px 20px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;">查询</button>
+                </div>
+
+                <!-- 个人档案头部 -->
+                <div class="profile-header">
+                  <div class="profile-card">
+                    <div class="profile-name">张三</div>
+                    <div class="profile-info">财富一部 | 入职时间: 2022-03-15</div>
+                    <div class="profile-stats">
+                      <div class="profile-stat">
+                        <div class="profile-stat-value">¥370万</div>
+                        <div class="profile-stat-label">本年度销售额</div>
+                      </div>
+                      <div class="profile-stat">
+                        <div class="profile-stat-value">92.5%</div>
+                        <div class="profile-stat-label">综合完成率</div>
+                      </div>
+                      <div class="profile-stat">
+                        <div class="profile-stat-value">12笔</div>
+                        <div class="profile-stat-label">大单数量(≥50万)</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="profile-kpi-card">
+                    <div class="kpi-big-value" style="color: #10B981;">No.3</div>
+                    <div class="kpi-big-label">部门排名</div>
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 12px;">
+                      部门平均完成率: 85.2%
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 产品完成情况 -->
+                <div class="card" style="margin-top: 20px;">
+                  <div class="card-header">
+                    <span class="card-title">产品完成情况明细</span>
+                  </div>
+                  <div class="card-body">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>产品名称</th>
+                          <th>派发任务</th>
+                          <th>实际完成</th>
+                          <th>完成率</th>
+                          <th>状态</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>XX量化对冲1号</strong></td>
+                          <td>¥100万</td>
+                          <td>¥120万</td>
+                          <td><span class="rate-cell rate-green">120%</span></td>
+                          <td><span class="tag tag-success">超额完成</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>XX私募精选2号</strong></td>
+                          <td>¥80万</td>
+                          <td>¥85万</td>
+                          <td><span class="rate-cell rate-green">106%</span></td>
+                          <td><span class="tag tag-success">超额完成</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>XX稳健收益3号</strong></td>
+                          <td>¥60万</td>
+                          <td>¥45万</td>
+                          <td><span class="rate-cell rate-red">75%</span></td>
+                          <td><span class="tag" style="background: #FDF6EC; color: #E6A23C;">进行中</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>XX债券增强4号</strong></td>
+                          <td>¥80万</td>
+                          <td>¥92万</td>
+                          <td><span class="rate-cell rate-green">115%</span></td>
+                          <td><span class="tag tag-success">超额完成</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 月度销售热力图 -->
+                <div class="heatmap-container">
+                  <div class="heatmap-title">📅 2024年月度销售热力图</div>
+                  <div class="heatmap">
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">1月</div>
+                      <div class="heatmap-cell level-3" title="35万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">2月</div>
+                      <div class="heatmap-cell level-2" title="22万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">3月</div>
+                      <div class="heatmap-cell level-5" title="58万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">4月</div>
+                      <div class="heatmap-cell level-4" title="45万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">5月</div>
+                      <div class="heatmap-cell level-3" title="38万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">6月</div>
+                      <div class="heatmap-cell level-4" title="42万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">7月</div>
+                      <div class="heatmap-cell level-2" title="28万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">8月</div>
+                      <div class="heatmap-cell level-3" title="33万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">9月</div>
+                      <div class="heatmap-cell level-1" title="15万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">10月</div>
+                      <div class="heatmap-cell level-2" title="25万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">11月</div>
+                      <div class="heatmap-cell level-4" title="48万"></div>
+                    </div>
+                    <div class="heatmap-month">
+                      <div class="heatmap-month-label">12月</div>
+                      <div class="heatmap-cell" style="background: #E4E7ED;" title="暂无数据"></div>
+                    </div>
+                  </div>
+                  <div class="heatmap-legend">
+                    <span>少</span>
+                    <div class="heatmap-cell" style="width: 16px; height: 16px;"></div>
+                    <div class="heatmap-cell level-1" style="width: 16px; height: 16px;"></div>
+                    <div class="heatmap-cell level-2" style="width: 16px; height: 16px;"></div>
+                    <div class="heatmap-cell level-3" style="width: 16px; height: 16px;"></div>
+                    <div class="heatmap-cell level-4" style="width: 16px; height: 16px;"></div>
+                    <div class="heatmap-cell level-5" style="width: 16px; height: 16px;"></div>
+                    <span>多</span>
+                  </div>
+                </div>
+
+                <!-- 年度销售趋势图 -->
+                <div style="margin-top: 24px;">
+                  <div class="heatmap-title">📈 年度销售趋势</div>
+                  <div class="chart-placeholder">
+                    [ECharts 折线图：月度销售额走势 + 目标线对比]
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 4: 产品管理 - 已归档 -->
+    <div class="page-section">
+      <div class="page-header"><span>📦</span> 页面4: 产品管理 - 已归档（按年度区分）</div>
+      <div class="page-content">
+        <div class="layout">
+          <div class="sidebar">
+            <div class="logo">🏦 FinTrack</div>
+            <div class="nav-item"><span>📊</span> Dashboard</div>
+            <div class="nav-item"><span>📈</span> 数据分析</div>
+            <div class="nav-item active"><span>📦</span> 产品管理</div>
+            <div class="nav-item"><span>📤</span> 数据导入</div>
+            <div class="nav-item"><span>👥</span> 营销人员</div>
+          </div>
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">产品管理</span>
+                <button style="padding: 8px 16px; background: #409EFF; color: white; border: none; border-radius: 4px; cursor: pointer;">+ 新建产品</button>
+              </div>
+              <div class="card-body">
+                <!-- 筛选标签 -->
+                <div class="toggle-group" style="margin-bottom: 20px;">
+                  <button class="toggle-btn active">全部</button>
+                  <button class="toggle-btn">募集中</button>
+                  <button class="toggle-btn">待开始</button>
+                  <button class="toggle-btn">已结束</button>
+                  <button class="toggle-btn" style="background: #F5F7FA; color: #909399;">已归档 →</button>
+                </div>
+
+                <!-- 说明：全部中只展示募集中、待开始、已结束 -->
+                <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                  <p>"全部"标签只显示募集中、待开始、已结束的产品</p>
+                  <p style="margin-top: 12px;">已归档产品需点击"已归档"标签查看</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 已归档页面 -->
+            <div class="card" style="margin-top: 20px;">
+              <div class="card-header">
+                <span class="card-title">已归档产品</span>
+                <select>
+                  <option>2024年</option>
+                  <option>2023年</option>
+                  <option>2022年</option>
+                </select>
+              </div>
+              <div class="card-body">
+                <!-- 2024年归档产品 -->
+                <div style="margin-bottom: 24px;">
+                  <div style="font-size: 18px; font-weight: 600; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--primary);">
+                    2024年
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                    <div style="border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: #FAFAFA;">
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #909399;"></span>
+                        <span style="flex: 1; font-weight: 600; color: var(--primary);">XX量化对冲1号</span>
+                        <span class="tag" style="background: #F4F4F5; color: #909399;">已归档</span>
+                      </div>
+                      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">归档时间: 2024-03-15</div>
+                      <div style="font-size: 13px; color: var(--text-secondary);">最终完成: 108%</div>
+                    </div>
+                    <div style="border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: #FAFAFA;">
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #909399;"></span>
+                        <span style="flex: 1; font-weight: 600; color: var(--primary);">XX私募精选2号</span>
+                        <span class="tag" style="background: #F4F4F5; color: #909399;">已归档</span>
+                      </div>
+                      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">归档时间: 2024-03-31</div>
+                      <div style="font-size: 13px; color: var(--text-secondary);">最终完成: 95%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Design Summary -->
+    <div class="page-section">
+      <div class="page-header"><span>🎨</span> 更新说明</div>
+      <div class="page-content">
+        <div class="three-col">
+          <div class="card">
+            <div class="card-header"><span class="card-title">进度条颜色规则</span></div>
+            <div class="card-body">
+              <div style="margin-bottom: 8px;"><span style="display: inline-block; width: 40px; height: 10px; background: #EF4444; border-radius: 2px; margin-right: 8px;"></span> 0-25% 红色</div>
+              <div style="margin-bottom: 8px;"><span style="display: inline-block; width: 40px; height: 10px; background: #F97316; border-radius: 2px; margin-right: 8px;"></span> 25-50% 橙色</div>
+              <div style="margin-bottom: 8px;"><span style="display: inline-block; width: 40px; height: 10px; background: #F59E0B; border-radius: 2px; margin-right: 8px;"></span> 50-75% 黄色</div>
+              <div><span style="display: inline-block; width: 40px; height: 10px; background: #10B981; border-radius: 2px; margin-right: 8px;"></span> 75-100% 绿色</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">产品矩阵完成率颜色</span></div>
+            <div class="card-body">
+              <div style="margin-bottom: 8px;"><span class="rate-cell rate-green">120%</span> >100% 绿色</div>
+              <div style="margin-bottom: 8px;"><span class="rate-cell rate-yellow">100%</span> =100% 黄色</div>
+              <div><span class="rate-cell rate-red">85%</span> <100% 红色</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">功能更新清单</span></div>
+            <div class="card-body">
+              <div style="margin-bottom: 6px;">✅ Dashboard 分段进度条</div>
+              <div style="margin-bottom: 6px;">✅ 营业部完成情况(6个)</div>
+              <div style="margin-bottom: 6px;">✅ 导航顺序更新</div>
+              <div style="margin-bottom: 6px;">✅ 产品矩阵折叠+滚动</div>
+              <div style="margin-bottom: 6px;">✅ 时间筛选(年/季/月)</div>
+              <div style="margin-bottom: 6px;">✅ 个人销售档案</div>
+              <div>✅ 已归档产品</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
