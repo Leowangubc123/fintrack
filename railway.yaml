@@ -1,0 +1,28 @@
+version: 3
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - 8000
+    env:
+      - DATABASE_URL=sqlite:///./data/fintrack.db
+      - ALLOWED_ORIGINS=*
+    volumes:
+      - data:/app/data
+    healthcheck:
+      path: /health
+      port: 8000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - 80
+    env:
+      - VITE_API_BASE_URL=${{backend.url}}
+
+volumes:
+  data:
