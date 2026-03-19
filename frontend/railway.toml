@@ -1,0 +1,11 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckPort = 80
+restartPolicyType = "ON_FAILURE"
+
+# 环境变量会在Railway控制台手动设置
+# VITE_API_BASE_URL = "https://你的backend地址"
