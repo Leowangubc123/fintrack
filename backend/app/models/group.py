@@ -13,3 +13,4 @@ class Group(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     members = relationship("Member", back_populates="group", cascade="all, delete-orphan")
+    targets = relationship("ProductTarget", back_populates="group")

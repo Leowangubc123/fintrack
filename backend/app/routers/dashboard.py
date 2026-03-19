@@ -14,6 +14,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     """获取Dashboard汇总数据"""
     today = date.today()
     month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
 
     # 在售产品数
     active_products = db.query(Product).filter(
@@ -21,9 +22,20 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         Product.is_archived == False
     ).count()
 
-    # 本月整体销售额
+    # 本年度已发售重点产品数
+    year_products = db.query(Product).filter(
+        Product.start_date >= year_start,
+        Product.is_archived == False
+    ).count()
+
+    # 本年度销售额：本年度发售的所有产品的累积销售额总和
+    year_product_ids = db.query(Product.id).filter(
+        Product.start_date >= year_start,
+        Product.is_archived == False
+    ).subquery()
+
     total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-        SalesRecord.sale_date >= month_start
+        SalesRecord.product_id.in_(year_product_ids)
     ).scalar() or 0
 
     # 本月整体目标（简化计算，使用产品总目标）
@@ -52,6 +64,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
 
     return {
         "active_products": active_products,
+        "year_products": year_products,
         "total_sales": float(total_sales),
         "total_target": float(total_target),
         "completion_rate": round(completion_rate, 1),
@@ -65,12 +78,12 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
 
 @router.get("/products")
 def get_active_products_summary(db: Session = Depends(get_db)):
-    """获取在售产品明细"""
+    """获取在售产品明细，按募集期开始日期排序（最近的在前）"""
     today = date.today()
     products = db.query(Product).filter(
         Product.status == "募集中",
         Product.is_archived == False
-    ).all()
+    ).order_by(Product.start_date.desc()).all()
 
     result = []
     for product in products:
@@ -99,6 +112,7 @@ def get_active_products_summary(db: Session = Depends(get_db)):
             "sales": float(total_sales),
             "completion_rate": round(float(total_sales) / float(product.total_target) * 100, 1) if product.total_target > 0 else 0,
             "days_left": days_left,
+            "start_date": product.start_date.isoformat() if product.start_date else None,
             "group_stats": [{"name": g.name, "sales": float(g.sales)} for g in group_stats]
         })
 
@@ -106,41 +120,54 @@ def get_active_products_summary(db: Session = Depends(get_db)):
 
 
 @router.get("/groups-ranking")
-def get_groups_ranking(db: Session = Depends(get_db)):
-    """获取营业部排名"""
-    today = date.today()
-    month_start = today.replace(day=1)
+def get_groups_ranking(product_id: int = None, db: Session = Depends(get_db)):
+    """获取营业部排名，支持按产品筛选"""
+    from app.models import ProductTarget
 
     groups = db.query(Group).all()
     result = []
 
     for group in groups:
-        # 销售额
-        sales = db.query(func.sum(SalesRecord.amount)).filter(
-            SalesRecord.group_id == group.id,
-            SalesRecord.sale_date >= month_start
-        ).scalar() or 0
+        if product_id:
+            # 按特定产品统计
+            # 从 ProductTarget 获取该营业部在该产品上的目标
+            target = db.query(func.sum(ProductTarget.target_amount)).filter(
+                ProductTarget.product_id == product_id,
+                ProductTarget.group_id == group.id,
+                ProductTarget.member_id == None  # 只取营业部级别的目标
+            ).scalar() or 0
 
-        # 目标（简化：使用产品总目标的比例）
-        target = float(group.members.__len__()) * 100 if group.members else 0
+            # 获取该营业部在该产品上的实际销量
+            sales = db.query(func.sum(SalesRecord.amount)).filter(
+                SalesRecord.product_id == product_id,
+                SalesRecord.group_id == group.id
+            ).scalar() or 0
+            completion_rate = (float(sales) / float(target) * 100) if target > 0 else 0
+        else:
+            # 全部产品：统计所有有目标分配的产品
+            # 获取该营业部的总目标
+            target = db.query(func.sum(ProductTarget.target_amount)).filter(
+                ProductTarget.group_id == group.id,
+                ProductTarget.member_id == None
+            ).scalar() or 0
 
-        completion_rate = (float(sales) / target * 100) if target > 0 else 0
+            # 获取该营业部的总销量
+            sales = db.query(func.sum(SalesRecord.amount)).filter(
+                SalesRecord.group_id == group.id
+            ).scalar() or 0
+            completion_rate = (float(sales) / float(target) * 100) if target > 0 else 0
 
         result.append({
             "id": group.id,
             "name": group.name,
             "leader": group.leader,
-            "target": target,
+            "target": float(target),
             "sales": float(sales),
             "completion_rate": round(completion_rate, 1)
         })
 
-    # 按销售额排序
-    result.sort(key=lambda x: x['sales'], reverse=True)
-
-    # 添加排名
-    for i, item in enumerate(result):
-        item['rank'] = i + 1
+    # 按完成率排序
+    result.sort(key=lambda x: x['completion_rate'], reverse=True)
 
     return result
 

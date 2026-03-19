@@ -54,10 +54,10 @@ import { DataLine, UserFilled, Box, Upload, TrendCharts } from '@element-plus/ic
 
 const menuItems = ref([
   { path: '/', title: '数据看板', icon: DataLine },
-  { path: '/organization', title: '营销人员', icon: UserFilled },
-  { path: '/products', title: '产品管理', icon: Box },
-  { path: '/import', title: '数据导入', icon: Upload },
   { path: '/analysis', title: '数据分析', icon: TrendCharts },
+  { path: '/products', title: '产品管理', icon: Box },
+  { path: '/organization', title: '营销人员', icon: UserFilled },
+  { path: '/import', title: '数据导入', icon: Upload },
 ])
 </script>
 

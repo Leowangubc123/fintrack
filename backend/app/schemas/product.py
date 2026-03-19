@@ -29,6 +29,8 @@ class ProductResponse(ProductBase):
     status: str
     is_archived: bool
     created_at: datetime
+    raised_amount: Optional[float] = 0  # 已募集金额
+    assigned_count: Optional[int] = 0   # 已分配人数
 
     class Config:
         from_attributes = True

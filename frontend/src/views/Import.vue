@@ -48,6 +48,11 @@
         <div v-if="currentStep === 1" class="wizard-step-content active">
           <div class="step-title">上传Excel文件</div>
           <div class="step-desc">支持 .xlsx, .xls, .csv 格式，文件大小不超过 10MB</div>
+          <div v-if="selectedProductInfo" class="selected-product-info">
+            <div class="selected-product-label">当前导入产品</div>
+            <div class="selected-product-name">{{ selectedProductInfo.name }}</div>
+            <div class="selected-product-code">{{ selectedProductInfo.issuer }} | {{ selectedProductInfo.code }}</div>
+          </div>
           <el-upload
             class="upload-area"
             drag
@@ -62,6 +67,13 @@
             <div class="upload-text">点击或拖拽文件到此处上传</div>
             <div class="upload-hint">支持 .xlsx, .xls, .csv 格式</div>
           </el-upload>
+          <div class="template-download">
+            <el-button link type="primary" @click="downloadTemplate">
+              <el-icon><Download /></el-icon>
+              下载导入模板
+            </el-button>
+            <span class="template-tip">请使用标准模板格式导入数据</span>
+          </div>
           <div class="wizard-actions">
             <el-button @click="prevStep">上一步</el-button>
             <el-button
@@ -79,6 +91,11 @@
         <div v-if="currentStep === 2" class="wizard-step-content active">
           <div class="step-title">字段映射确认</div>
           <div class="step-desc">系统已自动识别Excel列与系统字段的映射关系，请确认是否正确</div>
+          <div v-if="selectedProductInfo" class="selected-product-info">
+            <div class="selected-product-label">当前导入产品</div>
+            <div class="selected-product-name">{{ selectedProductInfo.name }}</div>
+            <div class="selected-product-code">{{ selectedProductInfo.issuer }} | {{ selectedProductInfo.code }}</div>
+          </div>
           <div class="validation-result">
             <div class="validation-title">
               <el-icon><Check /></el-icon>
@@ -100,18 +117,24 @@
         <div v-if="currentStep === 3" class="wizard-step-content active">
           <div class="step-title">数据预览</div>
           <div class="step-desc">共 {{ previewData.length }} 条数据，请检查是否正确</div>
+          <div v-if="selectedProductInfo" class="selected-product-info">
+            <div class="selected-product-label">当前导入产品</div>
+            <div class="selected-product-name">{{ selectedProductInfo.name }}</div>
+            <div class="selected-product-code">{{ selectedProductInfo.issuer }} | {{ selectedProductInfo.code }}</div>
+          </div>
           <div class="preview-table-container">
             <el-table :data="previewData" height="350">
               <el-table-column type="index" label="序号" width="60" />
-              <el-table-column prop="member_name" label="成员姓名" />
-              <el-table-column prop="group_name" label="营业部" />
-              <el-table-column prop="amount" label="销售金额" />
-              <el-table-column prop="sale_date" label="日期" />
+              <el-table-column prop="销售人员" label="销售人员" />
+              <el-table-column prop="所属营业部" label="所属营业部" />
+              <el-table-column prop="销售金额" label="销售金额" />
+              <el-table-column prop="交易日期" label="交易日期" />
+              <el-table-column prop="备注" label="备注" />
             </el-table>
           </div>
           <div class="wizard-actions">
             <el-button @click="prevStep">上一步</el-button>
-            <el-button type="primary" @click="nextStep">下一步</el-button>
+            <el-button type="primary" @click="executeImport" :loading="importing">确认导入</el-button>
           </div>
         </div>
 
@@ -121,7 +144,7 @@
             <div class="success-icon">✓</div>
             <div class="success-title">导入成功！</div>
             <div class="success-desc">
-              成功导入 {{ previewData.length }} 条销售记录
+              成功导入 {{ previewData.length }} 条销售记录到产品 <strong v-if="selectedProductInfo">{{ selectedProductInfo.name }} ({{ selectedProductInfo.code }})</strong>
             </div>
             <el-button type="primary" @click="resetWizard">完成</el-button>
           </div>
@@ -132,14 +155,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { productsApi, importApi } from '../api'
-import { Upload, Check } from '@element-plus/icons-vue'
+import { Upload, Check, Download } from '@element-plus/icons-vue'
 
 const currentStep = ref(0)
 const selectedProduct = ref(null)
 const products = ref([])
+
+// 获取选中的产品信息
+const selectedProductInfo = computed(() => {
+  return products.value.find(p => p.id === selectedProduct.value)
+})
 const uploadFileRaw = ref(null)
 const uploading = ref(false)
 const importing = ref(false)
@@ -148,10 +176,11 @@ const previewData = ref([])
 const steps = ['选择产品', '上传文件', '字段映射', '数据预览', '完成']
 
 const columnMapping = ref([
-  { systemField: '成员姓名', excelColumn: '销售人员', matched: true },
-  { systemField: '所属营业部', excelColumn: '所属团队', matched: true },
-  { systemField: '销售金额', excelColumn: '认购金额', matched: true },
-  { systemField: '销售日期', excelColumn: '交易日期', matched: true },
+  { systemField: '销售人员', excelColumn: '销售人员', matched: true },
+  { systemField: '所属营业部', excelColumn: '所属营业部', matched: true },
+  { systemField: '销售金额', excelColumn: '销售金额', matched: true },
+  { systemField: '交易日期', excelColumn: '交易日期', matched: true },
+  { systemField: '备注', excelColumn: '备注', matched: true },
 ])
 
 onMounted(() => {
@@ -160,7 +189,8 @@ onMounted(() => {
 
 async function loadProducts() {
   try {
-    const res = await productsApi.list({ status: '募集中' })
+    // 加载所有产品，包括已结束的，以便可以导入历史数据
+    const res = await productsApi.list()
     products.value = res
   } catch (error) {
     console.error('加载产品失败:', error)
@@ -175,11 +205,60 @@ async function uploadFile() {
   if (!uploadFileRaw.value) return
   uploading.value = true
   try {
+    console.log('[DEBUG] Uploading file:', uploadFileRaw.value.name, 'size:', uploadFileRaw.value.size)
+    console.log('[DEBUG] Selected product:', selectedProduct.value)
     const res = await importApi.preview(selectedProduct.value, uploadFileRaw.value)
-    previewData.value = res.preview || []
+    const mapping = res.suggested_mapping || {}
+    const rawPreview = res.preview || []
+
+    // 将原始数据映射到系统字段
+    previewData.value = rawPreview.map(row => {
+      const mappedRow = {}
+      // 使用中文列名直接映射
+      if (mapping.member_name && row[mapping.member_name] !== undefined) {
+        mappedRow['销售人员'] = row[mapping.member_name]
+      }
+      if (mapping.group_name && row[mapping.group_name] !== undefined) {
+        mappedRow['所属营业部'] = row[mapping.group_name]
+      }
+      if (mapping.amount !== undefined && row[mapping.amount] !== undefined) {
+        mappedRow['销售金额'] = row[mapping.amount]
+      }
+      if (mapping.sale_date && row[mapping.sale_date] !== undefined) {
+        mappedRow['交易日期'] = row[mapping.sale_date]
+      }
+      if (mapping.remark && row[mapping.remark] !== undefined) {
+        mappedRow['备注'] = row[mapping.remark]
+      }
+
+      // 如果没有匹配到映射，尝试直接匹配列名
+      if (!mappedRow['销售人员'] && row['销售人员'] !== undefined) {
+        mappedRow['销售人员'] = row['销售人员']
+      }
+      if (!mappedRow['所属营业部'] && row['所属营业部'] !== undefined) {
+        mappedRow['所属营业部'] = row['所属营业部']
+      }
+      if (mappedRow['销售金额'] === undefined && row['销售金额'] !== undefined) {
+        mappedRow['销售金额'] = row['销售金额']
+      }
+      if (!mappedRow['交易日期'] && row['交易日期'] !== undefined) {
+        mappedRow['交易日期'] = row['交易日期']
+      }
+      if (!mappedRow['备注'] && row['备注'] !== undefined) {
+        mappedRow['备注'] = row['备注']
+      }
+
+      return mappedRow
+    })
+
     nextStep()
   } catch (error) {
-    ElMessage.error('上传失败')
+    console.error('[DEBUG] Upload error:', error)
+    console.error('[DEBUG] Error response:', error.response)
+    console.error('[DEBUG] Error data:', error.response?.data)
+    const detail = error.response?.data?.detail || error.message || '上传失败'
+    console.error('[DEBUG] Error detail:', JSON.stringify(detail, null, 2))
+    ElMessage.error(`上传失败: ${JSON.stringify(detail)}`)
   } finally {
     uploading.value = false
   }
@@ -192,14 +271,28 @@ async function loadPreviewData() {
 async function executeImport() {
   importing.value = true
   try {
-    await importApi.execute({
+    // 将预览数据转换为后端需要的格式
+    const records = previewData.value.map(row => ({
+      member_name: String(row['销售人员'] || ''),
+      group_name: String(row['所属营业部'] || ''),
+      amount: String(row['销售金额'] || ''),
+      sale_date: String(row['交易日期'] || ''),
+      remark: String(row['备注'] || '')
+    }))
+
+    console.log('[DEBUG] Executing import:', { product_id: selectedProduct.value, records_count: records.length })
+
+    const res = await importApi.execute({
       product_id: selectedProduct.value,
-      records: previewData.value
+      records: records
     })
-    ElMessage.success('导入成功！')
+    ElMessage.success(`导入成功！成功${res.success}条，失败${res.failed}条`)
     nextStep()
   } catch (error) {
-    ElMessage.error('导入失败')
+    console.error('[DEBUG] Import error:', error)
+    console.error('[DEBUG] Error response:', error.response)
+    const detail = error.response?.data?.detail || error.message || '导入失败'
+    ElMessage.error(`导入失败: ${JSON.stringify(detail)}`)
   } finally {
     importing.value = false
   }
@@ -222,6 +315,31 @@ function prevStep() {
   if (currentStep.value > 0) {
     currentStep.value--
   }
+}
+
+function downloadTemplate() {
+  const templateData = [
+    ['销售人员', '所属营业部', '销售金额', '交易日期', '备注'],
+    ['张三', '北京营业部', '100000', '2024-01-15', ''],
+    ['李四', '上海营业部', '500000', '2024-01-16', '大单'],
+    ['王五', '深圳营业部', '200000', '2024-01-17', '']
+  ]
+
+  let csvContent = '\uFEFF'
+  templateData.forEach(row => {
+    csvContent += row.join(',') + '\n'
+  })
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', '销售数据导入模板.csv')
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  ElMessage.success('模板下载成功')
 }
 </script>
 
@@ -324,6 +442,35 @@ function prevStep() {
   margin-bottom: 28px;
 }
 
+.selected-product-info {
+  background: #F5F5F7;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border-left: 4px solid #007AFF;
+}
+
+.selected-product-label {
+  font-size: 12px;
+  color: #6E6E73;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.selected-product-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 4px;
+}
+
+.selected-product-code {
+  font-size: 13px;
+  color: #007AFF;
+  font-weight: 500;
+}
+
 .product-select-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -372,6 +519,22 @@ function prevStep() {
 .upload-hint {
   font-size: 13px;
   color: #6E6E73;
+}
+
+.template-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #F5F5F7;
+  border-radius: 8px;
+}
+
+.template-tip {
+  font-size: 12px;
+  color: #8E8E93;
 }
 
 .wizard-actions {

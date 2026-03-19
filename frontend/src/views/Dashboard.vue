@@ -5,13 +5,18 @@
       <div class="kpi-card">
         <div class="kpi-label">本月在售产品</div>
         <div class="kpi-value">{{ summary.active_products || 0 }}</div>
-        <div class="kpi-sub">个产品</div>
+        <div class="kpi-sub">个产品募集中</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">整体销售额</div>
-        <div class="kpi-value">¥{{ formatNumber(summary.total_sales) }}</div>
+        <div class="kpi-label">本年度已发售重点产品</div>
+        <div class="kpi-value">{{ summary.year_products || 0 }}</div>
+        <div class="kpi-sub">个重点产品</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">本年度销售额</div>
+        <div class="kpi-value">¥{{ summary.total_sales.toFixed(1) }}万元</div>
         <div class="kpi-sub" v-if="summary.week_sales > 0">
-          <span class="trend-up">↑</span> 近7日 ¥{{ formatNumber(summary.week_sales) }}
+          <span class="trend-up">↑</span> 近7日 ¥{{ summary.week_sales.toFixed(1) }}万元
         </div>
       </div>
       <div class="kpi-card">
@@ -21,23 +26,10 @@
         </div>
         <div class="progress-container">
           <div class="progress-bar">
-            <div class="progress-segment progress-red" :style="{ width: getProgressWidth(summary.completion_rate, 0, 25) }"></div>
-            <div class="progress-segment progress-orange" :style="{ width: getProgressWidth(summary.completion_rate, 25, 50) }"></div>
-            <div class="progress-segment progress-yellow" :style="{ width: getProgressWidth(summary.completion_rate, 50, 75) }"></div>
-            <div class="progress-segment progress-green" :style="{ width: getProgressWidth(summary.completion_rate, 75, 100) }"></div>
+            <div class="progress-segment" :class="getProgressColor(summary.completion_rate)" :style="{ width: Math.min(summary.completion_rate || 0, 100) + '%' }"></div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- 预警信息 -->
-    <div v-if="summary.nearest_deadline?.days !== null" class="alert-section">
-      <el-alert
-        :title="`【预警】${summary.nearest_deadline.product_name} 距离募集截止还有 ${summary.nearest_deadline.days} 天`"
-        :type="summary.nearest_deadline.days <= 3 ? 'error' : 'warning'"
-        show-icon
-        :closable="false"
-      />
     </div>
 
     <!-- 在售产品 + 营业部完成情况 -->
@@ -46,7 +38,11 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <el-icon :size="22"><Box /></el-icon>
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
             在售产品明细
           </div>
           <el-button text @click="$router.push('/products')">查看全部</el-button>
@@ -83,7 +79,10 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">
-            <el-icon :size="22"><OfficeBuilding /></el-icon>
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
             营业部完成情况
           </div>
           <select v-model="selectedProduct" class="filter-select">
@@ -100,8 +99,8 @@
                   {{ group.completion_rate }}%
                 </span>
               </div>
-              <div class="group-stat-target">目标: ¥{{ formatNumber(group.target) }}万</div>
-              <div class="group-stat-sales">完成: ¥{{ formatNumber(group.sales) }}万</div>
+              <div class="group-stat-target">目标 ¥{{ formatNumber(group.target) }}万</div>
+              <div class="group-stat-sales">销量 ¥{{ formatNumber(group.sales) }}万</div>
               <div class="progress-bar">
                 <div class="progress-segment"
                      :class="getProgressColor(group.completion_rate)"
@@ -115,69 +114,12 @@
       </div>
     </div>
 
-    <!-- 大单提醒 + 预警提醒 -->
-    <div class="two-col">
-      <!-- 大单提醒 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <el-icon :size="22"><TrendCharts /></el-icon>
-            大单提醒（≥50万）
-            <el-tag type="warning" size="small" style="margin-left: 8px;">{{ largeOrders.length }}笔</el-tag>
-          </div>
-        </div>
-        <div class="card-body">
-          <div v-if="largeOrders.length > 0" class="order-list">
-            <div v-for="order in largeOrders" :key="order.id" class="order-item">
-              <div class="order-info">
-                <div class="order-product">{{ order.product_name }}</div>
-                <div class="order-meta">
-                  <span>{{ order.member_name }}</span>
-                  <span class="divider">|</span>
-                  <span>{{ order.group_name }}</span>
-                  <span class="divider">|</span>
-                  <span class="order-date">{{ order.sale_date }}</span>
-                </div>
-              </div>
-              <div class="order-amount">¥{{ formatNumber(order.amount) }}万</div>
-            </div>
-          </div>
-          <el-empty v-else description="暂无大单记录" />
-        </div>
-      </div>
-
-      <!-- 预警提醒 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <el-icon :size="22"><Warning /></el-icon>
-            预警提醒
-          </div>
-        </div>
-        <div class="card-body">
-          <div v-if="alerts.length > 0" class="alert-list">
-            <div v-for="alert in alerts" :key="alert.id" class="alert-item" :class="alert.type">
-              <el-icon :size="20">
-                <Warning v-if="alert.type === 'error'" />
-                <WarningFilled v-else />
-              </el-icon>
-              <div class="alert-content">
-                <div class="alert-title">{{ alert.title }}</div>
-                <div class="alert-desc">{{ alert.description }}</div>
-              </div>
-            </div>
-          </div>
-          <el-empty v-else description="暂无预警信息" />
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { dashboardApi } from '../api'
-import { Box, OfficeBuilding, TrendCharts, Warning, WarningFilled } from '@element-plus/icons-vue'
 
 const summary = ref({
   active_products: 0,
@@ -189,12 +131,16 @@ const summary = ref({
 })
 const activeProducts = ref([])
 const groupsRanking = ref([])
-const largeOrders = ref([])
-const alerts = ref([])
 const selectedProduct = ref('')
 const productsList = ref([])
 
 const topGroups = computed(() => groupsRanking.value.slice(0, 6))
+
+// 监听产品选择变化，重新加载营业部数据
+import { watch } from 'vue'
+watch(selectedProduct, (newVal) => {
+  loadGroupsRanking(newVal || null)
+})
 
 onMounted(async () => {
   await loadData()
@@ -202,64 +148,35 @@ onMounted(async () => {
 
 async function loadData() {
   try {
-    const [summaryRes, productsRes, rankingRes] = await Promise.all([
+    const [summaryRes, productsRes] = await Promise.all([
       dashboardApi.summary(),
-      dashboardApi.products(),
-      dashboardApi.groupsRanking()
+      dashboardApi.products()
     ])
 
     summary.value = summaryRes
     activeProducts.value = productsRes
     productsList.value = productsRes
-    groupsRanking.value = rankingRes
 
-    await loadLargeOrders()
-    generateAlerts()
+    // 默认选择最近的产品（第一个，因为API已按start_date desc排序）
+    if (productsRes.length > 0) {
+      selectedProduct.value = productsRes[0].id
+      await loadGroupsRanking(productsRes[0].id)
+    } else {
+      await loadGroupsRanking(null)
+    }
+
   } catch (error) {
     console.error('加载数据失败:', error)
   }
 }
 
-async function loadLargeOrders() {
+async function loadGroupsRanking(productId) {
   try {
-    const res = await dashboardApi.largeOrders(50)
-    largeOrders.value = res
+    const rankingRes = await dashboardApi.groupsRanking(productId)
+    groupsRanking.value = rankingRes
   } catch (error) {
-    console.error('加载大单数据失败:', error)
+    console.error('加载营业部排名失败:', error)
   }
-}
-
-function generateAlerts() {
-  const alertList = []
-
-  activeProducts.value.forEach(product => {
-    if (product.days_left <= 3) {
-      alertList.push({
-        id: `deadline-${product.id}`,
-        type: 'error',
-        title: `${product.name} 即将截止`,
-        description: `距离募集结束仅剩 ${product.days_left} 天，当前完成率 ${product.completion_rate}%`
-      })
-    } else if (product.days_left <= 7) {
-      alertList.push({
-        id: `deadline-${product.id}`,
-        type: 'warning',
-        title: `${product.name} 临近截止`,
-        description: `距离募集结束还有 ${product.days_left} 天`
-      })
-    }
-
-    if (product.completion_rate < 30 && product.days_left <= 10) {
-      alertList.push({
-        id: `progress-${product.id}`,
-        type: 'warning',
-        title: `${product.name} 进度落后`,
-        description: `当前完成率仅 ${product.completion_rate}%，请加快募集进度`
-      })
-    }
-  })
-
-  alerts.value = alertList
 }
 
 function formatNumber(num) {
@@ -311,7 +228,7 @@ function getProgressWidth(rate, min, max) {
 /* KPI 卡片 */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -359,9 +276,10 @@ function getProgressWidth(rate, min, max) {
   font-weight: 700;
 }
 
-/* 进度条 - 4色分段 */
+/* 进度条 - 单色进度 */
 .progress-container {
   margin-top: 12px;
+  padding: 0 20px;
 }
 
 .progress-bar {
@@ -375,6 +293,7 @@ function getProgressWidth(rate, min, max) {
 .progress-segment {
   height: 100%;
   transition: width 0.3s ease;
+  border-radius: 4px;
 }
 
 .progress-red { background: #FF3B30; }
@@ -413,6 +332,12 @@ function getProgressWidth(rate, min, max) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.card-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
 }
 
 .card-body {
@@ -521,6 +446,8 @@ function getProgressWidth(rate, min, max) {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .group-stat-card {
@@ -572,93 +499,5 @@ function getProgressWidth(rate, min, max) {
 
 .group-stat-card .progress-bar {
   height: 6px;
-}
-
-/* 大单提醒 */
-.order-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.order-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%);
-  border-radius: 12px;
-  border-left: 4px solid #FFCC00;
-}
-
-.order-product {
-  font-weight: 600;
-  color: #1D1D1F;
-  margin-bottom: 4px;
-}
-
-.order-meta {
-  font-size: 13px;
-  color: #6E6E73;
-}
-
-.order-meta .divider {
-  margin: 0 8px;
-  color: #DCDFE6;
-}
-
-.order-date {
-  color: #909399;
-}
-
-.order-amount {
-  font-size: 20px;
-  font-weight: 700;
-  color: #FF3B30;
-}
-
-/* 预警提醒 */
-.alert-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.alert-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
-}
-
-.alert-item.error {
-  background: #FEE2E2;
-  border-left: 4px solid #FF3B30;
-}
-
-.alert-item.warning {
-  background: #FEF3C7;
-  border-left: 4px solid #FFCC00;
-}
-
-.alert-title {
-  font-weight: 600;
-  color: #1D1D1F;
-  margin-bottom: 4px;
-}
-
-.alert-desc {
-  font-size: 13px;
-  color: #6E6E73;
-}
-
-/* 预警信息区域 */
-.alert-section {
-  margin-bottom: 20px;
-}
-
-:deep(.el-alert) {
-  border-radius: 12px;
 }
 </style>

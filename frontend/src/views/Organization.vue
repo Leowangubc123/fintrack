@@ -25,8 +25,30 @@
             <div class="group-info">
               <div class="group-name">{{ group.name }}</div>
               <div class="group-meta">
-                专员: {{ group.leader || '未设置' }} | 成员: {{ group.member_count || 0 }}人
+                <span class="leader-badge" :class="{ 'has-leader': group.leader }">
+                  <el-icon :size="12"><User /></el-icon>
+                  {{ group.leader || '未设专员' }}
+                </span>
+                <span class="member-count">成员 {{ group.member_count || 0 }}人</span>
               </div>
+            </div>
+            <div class="group-actions" @click.stop>
+              <el-dropdown trigger="click">
+                <el-icon :size="16" class="more-icon"><More /></el-icon>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="openGroupDialog(group)">
+                      <el-icon><Edit /></el-icon>编辑营业部
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="openLeaderDialog(group)">
+                      <el-icon><User /></el-icon>任命专员
+                    </el-dropdown-item>
+                    <el-dropdown-item divided @click="deleteGroup(group)" class="delete-item">
+                      <el-icon><Delete /></el-icon>删除营业部
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </div>
 
@@ -41,13 +63,23 @@
       <!-- 右侧成员列表 -->
       <div class="card" v-if="selectedGroup">
         <div class="card-header">
-          <div>
+          <div class="header-title-section">
             <span class="group-title">{{ selectedGroup.name }}</span>
             <span class="group-subtitle">
-              专员: {{ selectedGroup.leader || '未设置' }} | 成员: {{ selectedGroupMembers.length }}人
+              <span class="leader-tag" :class="{ 'has-leader': selectedGroup.leader }">
+                <el-icon :size="14"><User /></el-icon>
+                {{ selectedGroup.leader || '未设专员' }}
+              </span>
+              <span class="divider">|</span>
+              <span>成员 {{ selectedGroupMembers.length }}人</span>
             </span>
           </div>
-          <button class="btn btn-primary" @click="openMemberDialog()">+ 添加成员</button>
+          <div class="header-actions">
+            <el-button type="primary" link @click="openLeaderDialog(selectedGroup)">
+              <el-icon><User /></el-icon>任命专员
+            </el-button>
+            <button class="btn btn-primary" @click="openMemberDialog()">+ 添加成员</button>
+          </div>
         </div>
 
         <div class="card-body">
@@ -63,8 +95,16 @@
               <tr v-for="member in selectedGroupMembers" :key="member.id">
                 <td>
                   <div class="member-name">
-                    <div class="member-avatar">{{ member.name.charAt(0) }}</div>
-                    <span>{{ member.name }}</span>
+                    <div class="avatar-wrapper">
+                      <div class="member-avatar">{{ member.name.charAt(0) }}</div>
+                      <div v-if="selectedGroup.leader === member.name" class="leader-crown">
+                        <el-icon :size="10"><User /></el-icon>
+                      </div>
+                    </div>
+                    <div class="member-info">
+                      <span class="name-text" :class="{ 'is-leader': selectedGroup.leader === member.name }">{{ member.name }}</span>
+                      <span v-if="selectedGroup.leader === member.name" class="leader-label">专员</span>
+                    </div>
                   </div>
                 </td>
                 <td>{{ member.phone ? maskPhone(member.phone) : '-' }}</td>
@@ -159,13 +199,46 @@
         <el-button type="primary" @click="confirmTransfer">确认转组</el-button>
       </template>
     </el-dialog>
+
+    <!-- 任命专员弹窗 -->
+    <el-dialog
+      v-model="showLeaderDialog"
+      title="任命营业部专员"
+      width="400px"
+    >
+      <p style="margin-bottom: 16px;">
+        为 <strong>{{ editingGroup?.name }}</strong> 任命专员:
+      </p>
+      <el-select
+        v-model="leaderForm.leader"
+        placeholder="请选择或输入专员姓名"
+        style="width: 100%;"
+        filterable
+        allow-create
+        default-first-option
+      >
+        <el-option
+          v-for="member in editingGroupMembers"
+          :key="member.id"
+          :label="member.name"
+          :value="member.name"
+        />
+      </el-select>
+      <p style="margin-top: 12px; color: #6E6E73; font-size: 13px;">
+        提示: 可以直接输入姓名任命，或从当前营业部成员中选择
+      </p>
+      <template #footer>
+        <el-button @click="showLeaderDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveLeader">确认任命</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { groupsApi, membersApi } from '../api'
-import { OfficeBuilding, Folder, InfoFilled } from '@element-plus/icons-vue'
+import { OfficeBuilding, Folder, InfoFilled, More, Edit, User, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
@@ -177,14 +250,17 @@ const selectedGroupMembers = ref([])
 const showGroupDialog = ref(false)
 const showMemberDialog = ref(false)
 const showTransferDialog = ref(false)
+const showLeaderDialog = ref(false)
 const editingGroup = ref(null)
 const editingMember = ref(null)
 const transferringMember = ref(null)
 const targetGroupId = ref('')
+const editingGroupMembers = ref([])
 
 // 表单
 const groupForm = ref({ name: '', leader: '', region: '', remark: '' })
 const memberForm = ref({ name: '', phone: '' })
+const leaderForm = ref({ leader: '' })
 const groupFormRef = ref()
 const memberFormRef = ref()
 
@@ -328,6 +404,69 @@ function maskPhone(phone) {
   if (!phone || phone.length < 7) return phone
   return phone.slice(0, 3) + '****' + phone.slice(-4)
 }
+
+// 打开任命专员弹窗
+async function openLeaderDialog(group) {
+  editingGroup.value = group
+  leaderForm.value = { leader: group.leader || '' }
+
+  // 获取该营业部的成员列表
+  try {
+    const res = await membersApi.list(group.id)
+    editingGroupMembers.value = res
+  } catch (error) {
+    editingGroupMembers.value = []
+  }
+
+  showLeaderDialog.value = true
+}
+
+// 保存专员任命
+async function saveLeader() {
+  if (!editingGroup.value) return
+
+  try {
+    await groupsApi.update(editingGroup.value.id, {
+      name: editingGroup.value.name,
+      leader: leaderForm.value.leader
+    })
+    ElMessage.success('专员任命成功')
+    showLeaderDialog.value = false
+    loadGroups()
+  } catch (error) {
+    ElMessage.error('任命失败')
+  }
+}
+
+// 删除营业部
+async function deleteGroup(group) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除营业部 "${group.name}" 吗？\n删除后该营业部的成员将被清空，相关销售数据将保留但不再关联营业部。`,
+      '删除确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消'
+      }
+    )
+
+    await groupsApi.delete(group.id)
+    ElMessage.success('营业部已删除')
+
+    // 如果删除的是当前选中的营业部，清空选择
+    if (selectedGroup.value?.id === group.id) {
+      selectedGroup.value = null
+      selectedGroupMembers.value = []
+    }
+
+    loadGroups()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.response?.data?.detail || '删除失败')
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -359,6 +498,12 @@ function maskPhone(phone) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .card-title {
@@ -422,6 +567,64 @@ function maskPhone(phone) {
 .group-meta {
   font-size: 12px;
   color: #6E6E73;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.leader-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #F5F5F7;
+  color: #8E8E93;
+  border: 1px solid transparent;
+}
+
+.leader-badge.has-leader {
+  background: linear-gradient(135deg, #E3F5E8, #D1F2D9);
+  color: #059669;
+  border-color: #34C759;
+}
+
+.member-count {
+  font-size: 11px;
+  color: #6E6E73;
+}
+
+.group-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.group-card:hover .group-actions {
+  opacity: 1;
+}
+
+.more-icon {
+  color: #6E6E73;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.more-icon:hover {
+  background: #E5E5EA;
+  color: #1D1D1F;
+}
+
+.delete-item {
+  color: #FF3B30;
+}
+
+.delete-item:hover {
+  color: #FF3B30;
+  background: #FFE5E3;
 }
 
 .group-summary {
@@ -461,6 +664,38 @@ function maskPhone(phone) {
 .group-subtitle {
   font-size: 13px;
   color: #6E6E73;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leader-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #F5F5F7;
+  color: #8E8E93;
+  border: 1px solid transparent;
+}
+
+.leader-tag.has-leader {
+  background: linear-gradient(135deg, #E3F5E8, #D1F2D9);
+  color: #059669;
+  border-color: #34C759;
+}
+
+.divider {
+  color: #D1D5DB;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 /* 按钮 */
@@ -513,17 +748,69 @@ function maskPhone(phone) {
   gap: 10px;
 }
 
+.member-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
 .member-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, #007AFF, #5856D6);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+}
+
+.leader-crown {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  background: #34C759;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: 2px solid white;
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name-text {
+  font-size: 14px;
+  color: #1D1D1F;
+  font-weight: 500;
+}
+
+.name-text.is-leader {
+  font-weight: 600;
+}
+
+.leader-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #059669;
+  background: #E3F5E8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #34C759;
 }
 
 .member-actions {

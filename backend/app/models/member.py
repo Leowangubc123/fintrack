@@ -12,3 +12,5 @@ class Member(Base):
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
 
     group = relationship("Group", back_populates="members")
+    sales_records = relationship("SalesRecord", back_populates="member", cascade="all, delete-orphan")
+    targets = relationship("ProductTarget", back_populates="member")

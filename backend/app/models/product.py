@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Numeric, Date, Boolean, Text, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -19,3 +20,8 @@ class Product(Base):
     is_archived = Column(Boolean, default=False)
     description = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships - cascade delete
+    sales_records = relationship("SalesRecord", back_populates="product", cascade="all, delete-orphan")
+    import_logs = relationship("ImportLog", back_populates="product", cascade="all, delete-orphan")
+    targets = relationship("ProductTarget", back_populates="product", cascade="all, delete-orphan")

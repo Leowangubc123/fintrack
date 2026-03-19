@@ -1,9 +1,20 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.database import engine, Base
-from app.routers import groups, members, products, import_data, dashboard
+from app.routers import groups, members, products, import_data, dashboard, analysis
 
 app = FastAPI(title="FinTrack API", version="1.0.0")
+
+# 全局异常处理 - 捕获验证错误
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(f"[ERROR] Validation error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "message": "参数验证失败"}
+    )
 
 # CORS配置
 app.add_middleware(
@@ -23,6 +34,7 @@ app.include_router(members.router)
 app.include_router(products.router)
 app.include_router(import_data.router)
 app.include_router(dashboard.router)
+app.include_router(analysis.router)
 
 
 @app.get("/health")

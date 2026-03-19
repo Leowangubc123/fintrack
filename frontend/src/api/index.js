@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+// 根据环境选择 API 基础地址
+const baseURL = import.meta.env.VITE_API_BASE_URL
+  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+  : '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
@@ -11,7 +16,10 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 可以在这里添加token等
+    // 如果是 FormData，删除 Content-Type 让浏览器自动设置
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
     return config
   },
   (error) => {
@@ -26,6 +34,10 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Error:', error)
+    if (error.response) {
+      console.error('Error status:', error.response.status)
+      console.error('Error data:', error.response.data)
+    }
     return Promise.reject(error)
   }
 )
@@ -56,27 +68,45 @@ export const productsApi = {
   create: (data) => api.post('/products', data),
   update: (id, data) => api.put(`/products/${id}`, data),
   delete: (id) => api.delete(`/products/${id}`),
-  archive: (id) => api.post(`/products/${id}/archive`)
+  archive: (id) => api.post(`/products/${id}/archive`),
+  unarchive: (id) => api.post(`/products/${id}/unarchive`),
+  clearSales: (id) => api.post(`/products/${id}/clear-sales`),
+  getGroupAssignments: (id) => api.get(`/products/${id}/assignments/groups`),
+  saveGroupAssignments: (id, data) => api.post(`/products/${id}/assignments/groups`, data),
+  getMemberAssignments: (id, groupId) => api.get(`/products/${id}/assignments/members`, { params: { group_id: groupId } }),
+  saveMemberAssignments: (id, data) => api.post(`/products/${id}/assignments/members`, data)
 }
 
 // 导入API
 export const importApi = {
   preview: (productId, file) => {
     const formData = new FormData()
-    formData.append('product_id', productId)
     formData.append('file', file)
-    return api.post('/import/preview', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    // 不设置 Content-Type，让浏览器自动设置正确的 boundary
+    return api.post(`/import/preview?product_id=${productId}`, formData)
   },
-  execute: (data) => api.post('/import/execute', data)
+  execute: (data) => api.post(`/import/execute?product_id=${data.product_id}`, data.records)
 }
 
 // Dashboard API
 export const dashboardApi = {
   summary: () => api.get('/dashboard/summary'),
   products: () => api.get('/dashboard/products'),
-  groupsRanking: () => api.get('/dashboard/groups-ranking'),
+  groupsRanking: (productId) => api.get('/dashboard/groups-ranking', { params: productId ? { product_id: productId } : {} }),
   matrix: () => api.get('/dashboard/matrix'),
   largeOrders: (minAmount = 50) => api.get('/dashboard/large-orders', { params: { min_amount: minAmount } })
+}
+
+// 数据分析API
+export const analysisApi = {
+  memberSales: (params) => api.get('/analysis/member-sales', { params }),
+  groupSales: (params) => api.get('/analysis/group-sales', { params }),
+  memberSummary: (memberId) => api.get(`/analysis/member-summary/${memberId}`),
+  groupComparison: (timeRange) => api.get('/analysis/group-comparison', { params: { time_range: timeRange } }),
+  groupTrend: () => api.get('/analysis/group-trend'),
+  groupMembers: (groupId, timeRange) => api.get(`/analysis/group-members/${groupId}`, { params: { time_range: timeRange } }),
+  salesTrend: (params) => api.get('/analysis/sales-trend', { params }),
+  salesTrendStats: (params) => api.get('/analysis/sales-trend/stats', { params }),
+  productContribution: (year) => api.get('/analysis/product-contribution', { params: { year } }),
+  matrix: () => api.get('/analysis/matrix')
 }
