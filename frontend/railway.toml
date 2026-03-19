@@ -4,7 +4,6 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/"
-healthcheckPort = 80
 restartPolicyType = "ON_FAILURE"
 
 # 环境变量会在Railway控制台手动设置
