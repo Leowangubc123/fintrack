@@ -11,6 +11,10 @@ services:
         value: 3.11.0
       - key: ALLOWED_ORIGINS
         value: "*"
+    disk:
+      name: sqlite-data
+      mountPath: /opt/render/project/src/backend
+      sizeGB: 1
 
   # 前端静态网站 - 后部署这个
   - type: web
