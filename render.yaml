@@ -16,7 +16,6 @@ services:
   - type: web
     name: fintrack-web
     runtime: static
-    plan: free
     buildCommand: |
       cd frontend && \
       echo "VITE_API_BASE_URL=https://fintrack-api.onrender.com" > .env.production && \
