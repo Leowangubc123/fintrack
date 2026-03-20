@@ -7,6 +7,15 @@ from app.routers import groups, members, products, import_data, dashboard, analy
 
 app = FastAPI(title="FinTrack API", version="1.0.0")
 
+# CORS配置 - 必须在其他中间件之前
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # 全局异常处理 - 捕获验证错误
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -15,15 +24,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={"detail": exc.errors(), "message": "参数验证失败"}
     )
-
-# CORS配置
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # 创建数据表
 Base.metadata.create_all(bind=engine)
