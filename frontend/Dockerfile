@@ -7,8 +7,11 @@ RUN npm install
 
 COPY . .
 
-# 构建时从环境变量读取 VITE_API_BASE_URL
-RUN export VITE_API_BASE_URL=$(printenv VITE_API_BASE_URL 2>/dev/null || echo "") && npm run build
+# 接收构建参数（Railway 会通过 --build-arg 传递）
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+RUN npm run build
 
 # 生产镜像
 FROM nginx:alpine
