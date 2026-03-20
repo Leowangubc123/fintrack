@@ -16,13 +16,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 全局异常处理 - 捕获验证错误
+# 全局异常处理 - 捕获验证错误（添加 CORS 头）
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     print(f"[ERROR] Validation error: {exc.errors()}")
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors(), "message": "参数验证失败"}
+        content={"detail": exc.errors(), "message": "参数验证失败"},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+# 处理其他异常，确保也有 CORS 头
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    print(f"[ERROR] {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "message": "服务器内部错误"},
+        headers={"Access-Control-Allow-Origin": "*"}
     )
 
 # 创建数据表
