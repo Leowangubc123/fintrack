@@ -142,10 +142,6 @@
               <div class="profile-name">{{ selectedMember.name }}</div>
               <div class="profile-department">{{ selectedMember.group_name || '' }}</div>
             </div>
-            <div class="profile-completion">
-              <div class="profile-completion-value">{{ memberStats.completion_rate }}%</div>
-              <div class="profile-completion-label">综合完成率</div>
-            </div>
           </div>
           <div class="profile-stats-row">
             <div class="profile-stat-item">
@@ -291,6 +287,43 @@
         </div>
       </div>
 
+      <!-- 全年销售走势 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-section">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span class="card-title">全年销售走势</span>
+          </div>
+          <div class="trend-total-badge">
+            全年总销售 <strong>¥{{ formatNumber(dashboardYearTotal) }} 万</strong>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="annual-chart-wrap">
+            <div class="annual-bars">
+              <div v-for="pt in dashboardChartPoints" :key="pt.month" class="annual-bar-col">
+                <div class="annual-bar-value" v-if="pt.amount > 0">{{ formatNumber(pt.amount) }}</div>
+                <div class="annual-bar-fill" :style="{ height: pt.barPct + '%' }"></div>
+                <div class="annual-bar-label">{{ pt.month }}月</div>
+              </div>
+            </div>
+            <svg class="annual-trend-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path :d="trendLinePath" fill="none" stroke="#FF9500" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle v-for="(pt, i) in dashboardChartPoints.filter(p => p.amount > 0)" :key="i"
+                :cx="((dashboardChartPoints.indexOf(pt)) / 11 * 100).toFixed(2)"
+                :cy="(100 - (pt.amount / Math.max(...dashboardChartPoints.map(p=>p.amount),1)) * 92).toFixed(2)"
+                r="1.5" fill="#FF9500" stroke="white" stroke-width="0.5"/>
+            </svg>
+          </div>
+          <div class="annual-chart-legend">
+            <span class="legend-bar-item"><span class="legend-bar-dot" style="background:#007AFF"></span>月销售额（万元）</span>
+            <span class="legend-bar-item"><span class="legend-line-dot" style="background:#FF9500"></span>走势线</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 产品发售甘特图 -->
       <div class="card">
         <div class="card-header">
@@ -350,7 +383,7 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-            <span class="card-title">营业部战队排行</span>
+            <span class="card-title">营业部排名</span>
           </div>
           <span class="ranking-subtitle">按全年总销售额排序 · 点击展开成员明细</span>
         </div>
@@ -369,10 +402,7 @@
                   </div>
                 </div>
                 <div class="team-sales-col">¥{{ formatNumber(group.sales) }}<span class="unit">万</span></div>
-                <div class="team-percap-col">人均 <strong>¥{{ formatNumber(group.per_capita) }}</strong><span class="unit">万</span></div>
-                <div class="team-stars-col">
-                  <span v-for="s in 5" :key="s" class="star-icon" :class="{ lit: s <= getEfficiencyStars(index, dashboardGroups.length) }">★</span>
-                </div>
+                <div class="team-percap-col">人均产能 <strong>¥{{ formatNumber(group.per_capita) }}</strong><span class="unit">万</span></div>
                 <div class="team-expand-col">
                   <span class="expand-chevron" :class="{ open: expandedDashboardGroups.includes(group.id) }">›</span>
                 </div>
@@ -406,14 +436,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { dashboardApi, productsApi, membersApi, groupsApi, analysisApi } from '../api'
+import { productsApi, membersApi, groupsApi, analysisApi } from '../api'
 
 // Tab配置
 const activeTab = ref('matrix')
 const tabs = [
   { key: 'matrix', label: '产品矩阵' },
-  { key: 'personal', label: '个人查询' },
-  { key: 'dashboard', label: '年度看板' }
+  { key: 'dashboard', label: '年度看板' },
+  { key: 'personal', label: '个人查询' }
 ]
 
 // 数据
@@ -455,6 +485,7 @@ const dashboardQuarter = ref('all')
 const dashboardCompareGroups = ref([])
 const expandedDashboardGroups = ref([])
 const dashboardMembersData = ref({})
+const dashboardTrendData = ref([])
 
 onMounted(() => {
   loadData()
@@ -473,10 +504,11 @@ async function loadData() {
     members.value = membersRes
 
     // 加载分析数据
-    const [matrixRes, trendRes, dashboardRes] = await Promise.all([
+    const [matrixRes, trendRes, dashboardRes, dashTrendRes] = await Promise.all([
       analysisApi.matrix(),
       analysisApi.salesTrend({ year: new Date().getFullYear(), group_by: 'month' }),
-      analysisApi.groupComparison('year')
+      analysisApi.groupComparison('year'),
+      analysisApi.salesTrend({ year: dashboardYear.value, group_by: 'month' })
     ])
 
     // 初始化产品矩阵数据
@@ -499,6 +531,7 @@ async function loadData() {
 
     // 初始化年度看板数据
     dashboardCompareGroups.value = dashboardRes
+    dashboardTrendData.value = dashTrendRes
 
     // 初始化个人产品数据为空，选择成员后加载
     personalProducts.value = []
@@ -662,6 +695,29 @@ const maxGroupSales = computed(() => {
   return Math.max(...dashboardGroups.value.map(g => g.sales)) || 1
 })
 
+const dashboardYearTotal = computed(() =>
+  dashboardTrendData.value.reduce((s, d) => s + d.amount, 0)
+)
+
+const dashboardChartPoints = computed(() => {
+  const maxAmt = Math.max(...dashboardTrendData.value.map(d => d.amount), 1)
+  return Array.from({ length: 12 }, (_, i) => {
+    const item = dashboardTrendData.value.find(d => d.month === i + 1)
+    const amount = item?.amount || 0
+    return { month: i + 1, amount, barPct: (amount / maxAmt) * 100 }
+  })
+})
+
+const trendLinePath = computed(() => {
+  const pts = dashboardChartPoints.value
+  const maxAmt = Math.max(...pts.map(p => p.amount), 1)
+  return pts.map((p, i) => {
+    const x = (i / 11) * 100
+    const y = 100 - (p.amount / maxAmt) * 92
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
+  }).join(' ')
+})
+
 // ── 年度看板方法 ──
 function getGanttBarStyle(product) {
   const { start: vs, end: ve } = ganttViewRange.value
@@ -676,13 +732,6 @@ function getGanttBarStyle(product) {
   return { left: left + '%', width: width + '%', background: colors[product.status] || '#5856D6' }
 }
 
-function getEfficiencyStars(rankIndex, total) {
-  if (total <= 1) return 5
-  const sorted = [...dashboardGroups.value].sort((a, b) => b.per_capita - a.per_capita)
-  const group = dashboardGroups.value[rankIndex]
-  const pcRank = sorted.findIndex(g => g.id === group.id)
-  return Math.round(5 - (pcRank / (total - 1)) * 4)
-}
 
 async function toggleDashboardGroup(groupId) {
   const idx = expandedDashboardGroups.value.indexOf(groupId)
@@ -693,7 +742,8 @@ async function toggleDashboardGroup(groupId) {
     if (!dashboardMembersData.value[groupId]) {
       try {
         const res = await analysisApi.groupMembers(groupId, 'year')
-        dashboardMembersData.value = { ...dashboardMembersData.value, [groupId]: res.members || [] }
+        const sorted = (res.members || []).sort((a, b) => b.sales - a.sales)
+        dashboardMembersData.value = { ...dashboardMembersData.value, [groupId]: sorted }
       } catch {
         dashboardMembersData.value = { ...dashboardMembersData.value, [groupId]: [] }
       }
@@ -734,7 +784,12 @@ async function setDashboardYear(year) {
   dashboardMembersData.value = {}
   expandedDashboardGroups.value = []
   try {
-    dashboardCompareGroups.value = await analysisApi.groupComparison('year')
+    const [compareRes, trendRes] = await Promise.all([
+      analysisApi.groupComparison('year'),
+      analysisApi.salesTrend({ year, group_by: 'month' })
+    ])
+    dashboardCompareGroups.value = compareRes
+    dashboardTrendData.value = trendRes
   } catch (e) {
     console.error('加载看板数据失败:', e)
   }
@@ -872,9 +927,9 @@ function getMemberOverallRate(memberId) {
 }
 
 function formatNumber(num) {
-  if (!num) return '0'
-  const rounded = Math.round(Number(num) * 100) / 100
-  return rounded.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+  if (!num && num !== 0) return '0'
+  const rounded = Math.round(Number(num) * 10) / 10
+  return rounded.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
 }
 
 function getRateClass(rate) {
@@ -2425,5 +2480,91 @@ function getRateClass(rate) {
 .balance-hint {
   font-size: 12px;
   color: #8E8E93;
+}
+
+/* 全年销售走势图 */
+.trend-total-badge {
+  font-size: 13px;
+  color: #6E6E73;
+}
+.trend-total-badge strong {
+  color: #007AFF;
+  font-size: 15px;
+}
+.annual-chart-wrap {
+  position: relative;
+  height: 200px;
+  margin-bottom: 12px;
+}
+.annual-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  gap: 4px;
+  padding: 24px 0 28px 0;
+}
+.annual-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  position: relative;
+}
+.annual-bar-value {
+  font-size: 10px;
+  color: #007AFF;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-bottom: 3px;
+  line-height: 1;
+}
+.annual-bar-fill {
+  width: 70%;
+  background: linear-gradient(180deg, #5AC8FA 0%, #007AFF 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease;
+  min-height: 2px;
+}
+.annual-bar-label {
+  position: absolute;
+  bottom: 0;
+  font-size: 11px;
+  color: #8E8E93;
+  white-space: nowrap;
+}
+.annual-trend-svg {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 52px);
+  pointer-events: none;
+  overflow: visible;
+}
+.annual-chart-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  font-size: 12px;
+  color: #6E6E73;
+}
+.legend-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-bar-dot {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.legend-line-dot {
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+  display: inline-block;
 }
 </style>

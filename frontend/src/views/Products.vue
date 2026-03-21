@@ -121,13 +121,13 @@
                 <span class="archived-product-name">{{ product.name }}</span>
                 <span class="archived-tag">已归档</span>
               </div>
-              <div class="archived-date">
-                <span class="archived-date-label">归档日期</span>
-                {{ formatDate(product.archived_at || product.end_date) }}
+              <div class="archived-meta">
+                <span v-if="product.code" class="archived-code-tag">{{ product.code }}</span>
+                <span class="archived-period">{{ formatDate(product.start_date) }} — {{ formatDate(product.end_date) }}</span>
               </div>
               <div class="archived-stats">
                 <div class="archived-stat">
-                  <div class="archived-stat-value">¥{{ formatNumber(product.actual_amount || 0) }}万</div>
+                  <div class="archived-stat-value">¥{{ formatNumber(product.raised_amount || 0) }}万</div>
                   <div class="archived-stat-label">实际募集</div>
                 </div>
                 <div class="archived-stat">
@@ -138,7 +138,6 @@
                 </div>
               </div>
               <div class="archived-actions">
-                <button class="btn-link" @click="handleEdit(product)">编辑</button>
                 <button class="btn-link" style="color: #34C759;" @click="handleUnarchive(product)">解除归档</button>
                 <button class="btn-link btn-danger" @click="handleDelete(product)">删除</button>
               </div>
@@ -1122,8 +1121,9 @@ function getCompletionRateColor(product) {
 }
 
 function formatNumber(num) {
-  if (!num) return '0'
-  return Number(num).toLocaleString()
+  if (!num && num !== 0) return '0'
+  const rounded = Math.round(Number(num) * 10) / 10
+  return rounded.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
 }
 
 function formatDate(date) {
@@ -1596,6 +1596,25 @@ async function handleClearSalesData(product) {
   font-weight: 600;
 }
 
+.archived-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.archived-code-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5856D6;
+  background: #EEEEFF;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.archived-period {
+  font-size: 12px;
+  color: #6E6E73;
+}
 .archived-date {
   font-size: 13px;
   color: #1D1D1F;

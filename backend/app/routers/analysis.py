@@ -166,16 +166,16 @@ def get_group_comparison(
             ProductTarget.member_id == None
         ).scalar() or 0
 
-        if target > 0:
-            # 该营业部在所有产品上的总销量
-            total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.group_id == group.id
-            ).scalar() or 0
+        # 该营业部成员的总销量（通过 member_id 查询，避免 group_id 不一致问题）
+        total_sales = db.query(func.sum(SalesRecord.amount)).filter(
+            SalesRecord.member_id.in_(member_ids),
+            SalesRecord.sale_date >= start_date
+        ).scalar() or 0 if member_ids else 0
 
-            # 完成率
+        # 完成率
+        if target > 0:
             completion_rate = (float(total_sales) / float(target) * 100)
         else:
-            total_sales = 0
             completion_rate = 0
 
         # 人均销售额
@@ -210,8 +210,8 @@ def get_group_comparison(
             "trend": trend
         })
 
-    # 按完成率排序
-    result.sort(key=lambda x: x["completion_rate"], reverse=True)
+    # 按总销售额排序
+    result.sort(key=lambda x: x["sales"], reverse=True)
 
     return result
 
