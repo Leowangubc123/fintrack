@@ -269,226 +269,138 @@
       </div>
     </div>
 
-    <!-- 销售趋势 -->
-    <div v-show="activeTab === 'trends'" class="tab-panel">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-            <span class="card-title">销售趋势分析</span>
-          </div>
-          <div class="trend-filter-group">
-            <div class="toggle-group">
-              <button class="toggle-btn" :class="{ active: trendTimeRange === 'month' }" @click="trendTimeRange = 'month'">本月</button>
-              <button class="toggle-btn" :class="{ active: trendTimeRange === 'quarter' }" @click="trendTimeRange = 'quarter'">本季</button>
-              <button class="toggle-btn" :class="{ active: trendTimeRange === 'year' }" @click="trendTimeRange = 'year'">本年</button>
-            </div>
-          </div>
-        </div>
-        <div class="card-body">
-          <!-- KPI 卡片 -->
-          <div class="trend-kpi-row">
-            <div class="trend-kpi-card">
-              <div class="trend-kpi-value">¥{{ formatNumber(trendStats.max_daily) }}万</div>
-              <div class="trend-kpi-label">最高日销售额</div>
-              <div class="trend-kpi-sub">{{ trendStats.max_daily_date || '-' }}</div>
-            </div>
-            <div class="trend-kpi-card">
-              <div class="trend-kpi-value">¥{{ formatNumber(trendStats.avg_daily) }}万</div>
-              <div class="trend-kpi-label">平均日销售额</div>
-              <div class="trend-kpi-sub">本年度累计</div>
-            </div>
-            <div class="trend-kpi-card">
-              <div class="trend-kpi-value" :class="trendStats.mom_growth >= 0 ? 'text-green' : 'text-red'">
-                {{ trendStats.mom_growth >= 0 ? '↗' : '↘' }} {{ Math.abs(trendStats.mom_growth) }}%
-              </div>
-              <div class="trend-kpi-label">环比增长</div>
-              <div class="trend-kpi-sub">较上月</div>
-            </div>
-          </div>
-
-          <!-- 趋势图 -->
-          <div class="trend-chart-section">
-            <div class="chart-header">
-              <span class="chart-title">销售额趋势（万元）</span>
-              <div class="chart-toggle">
-                <button class="chart-toggle-btn" :class="{ active: trendGroupBy === 'month' }" @click="trendGroupBy = 'month'; loadTrendData()">按月查看</button>
-                <button class="chart-toggle-btn" :class="{ active: trendGroupBy === 'week' }" @click="trendGroupBy = 'week'; loadTrendData()">按周查看</button>
-              </div>
-            </div>
-            <div class="trend-chart">
-              <div v-for="(item, index) in trendChartData" :key="index" class="trend-chart-item">
-                <div class="trend-bar-top-value" v-if="item.amount > 0">¥{{ formatNumber(item.amount) }}万</div>
-                <div class="trend-bar-wrapper">
-                  <div class="trend-bar" :style="{ height: item.amount > 0 ? Math.min((item.amount / Math.max(...trendChartData.map(d => d.amount))) * 120, 120) + 'px' : '0px' }"></div>
-                </div>
-                <div class="trend-bar-label">{{ item.label }}</div>
-              </div>
-              <div v-if="trendChartData.length === 0" class="chart-empty">暂无数据</div>
-            </div>
-          </div>
-
-          <!-- 产品贡献度 -->
-          <div class="contribution-section">
-            <div class="chart-title">产品贡献度</div>
-            <div class="contribution-list">
-              <div v-for="(item, index) in productContribution.slice(0, 5)" :key="index" class="contribution-item">
-                <div class="contribution-info">
-                  <span class="contribution-name">{{ item.product_name }}</span>
-                  <span class="contribution-percent">{{ item.percentage }}%</span>
-                </div>
-                <div class="contribution-bar-wrapper">
-                  <div class="contribution-bar" :style="{ width: item.percentage + '%' }"></div>
-                </div>
-                <div class="contribution-amount">¥{{ formatNumber(item.amount) }}万</div>
-              </div>
-              <div v-if="productContribution.length === 0" class="chart-empty">暂无数据</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 营业部对比 -->
-    <div v-show="activeTab === 'compare'" class="tab-panel">
-      <!-- 营业部完成率趋势图 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#5856D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-            <span class="card-title">营业部完成率趋势</span>
-          </div>
+    <!-- 年度经营看板 -->
+    <div v-show="activeTab === 'dashboard'" class="tab-panel">
+      <!-- 顶部控制栏 -->
+      <div class="dashboard-controls">
+        <div class="control-group">
+          <span class="control-label">年份</span>
           <div class="toggle-group">
-            <button class="toggle-btn" :class="{ active: compareTimeRange === 'month' }" @click="compareTimeRange = 'month'; loadCompareData()">本月</button>
-            <button class="toggle-btn" :class="{ active: compareTimeRange === 'quarter' }" @click="compareTimeRange = 'quarter'; loadCompareData()">本季</button>
-            <button class="toggle-btn" :class="{ active: compareTimeRange === 'year' }" @click="compareTimeRange = 'year'; loadCompareData()">本年</button>
+            <button v-for="y in yearOptions" :key="y" class="toggle-btn" :class="{ active: dashboardYear === y }" @click="setDashboardYear(y)">{{ y }}</button>
           </div>
         </div>
-        <div class="card-body">
-          <div class="group-trend-chart">
-            <div v-for="(group, index) in sortedCompareGroups.slice(0, 6)" :key="group.id" class="group-trend-item">
-              <div class="group-trend-name">{{ group.name }}</div>
-              <div class="group-trend-line">
-                <div v-for="(point, idx) in (groupTrendData[group.id]?.trend || [])" :key="idx" class="trend-point-wrapper">
-                  <div class="trend-point" :class="point.completion_rate >= 100 ? 'success' : (point.completion_rate >= 50 ? 'warning' : 'danger')" :style="{ height: Math.min(point.completion_rate, 100) + '%' }"></div>
-                  <div class="trend-point-label">{{ point.label?.split('月')[0]?.split('年')[1] || idx + 1 }}月</div>
+        <div class="control-group">
+          <span class="control-label">季度</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" :class="{ active: dashboardQuarter === 'all' }" @click="dashboardQuarter = 'all'">全年</button>
+            <button class="toggle-btn" :class="{ active: dashboardQuarter === 'Q1' }" @click="dashboardQuarter = 'Q1'">Q1</button>
+            <button class="toggle-btn" :class="{ active: dashboardQuarter === 'Q2' }" @click="dashboardQuarter = 'Q2'">Q2</button>
+            <button class="toggle-btn" :class="{ active: dashboardQuarter === 'Q3' }" @click="dashboardQuarter = 'Q3'">Q3</button>
+            <button class="toggle-btn" :class="{ active: dashboardQuarter === 'Q4' }" @click="dashboardQuarter = 'Q4'">Q4</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 产品发售甘特图 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-section">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span class="card-title">产品发售时间轴</span>
+          </div>
+          <div class="gantt-header-right">
+            <span class="gantt-count-badge">{{ ganttProducts.length }} 个产品</span>
+            <div class="gantt-legend">
+              <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#007AFF"></span>募集中</span>
+              <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#FF9500"></span>即将开始</span>
+              <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#8E8E93"></span>已结束</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body" style="padding: 0; overflow: hidden;">
+          <div class="gantt-wrapper">
+            <div class="gantt-header-row">
+              <div class="gantt-name-col gantt-header-cell">产品名称</div>
+              <div class="gantt-timeline-area gantt-header-cells">
+                <div v-for="col in ganttColumns" :key="col.key" class="gantt-col-header" :style="{ width: col.widthPct + '%' }">{{ col.label }}</div>
+              </div>
+            </div>
+            <div class="gantt-rows-wrapper">
+              <div v-for="(product, idx) in ganttProducts" :key="product.id" class="gantt-row-item" :class="{ 'gantt-row-alt': idx % 2 === 1 }">
+                <div class="gantt-name-col" :title="product.name">{{ product.name }}</div>
+                <div class="gantt-timeline-area gantt-timeline-row">
+                  <div v-for="col in ganttColumns" :key="col.key" class="gantt-grid-col" :style="{ width: col.widthPct + '%' }"></div>
+                  <div
+                    class="gantt-bar"
+                    :style="getGanttBarStyle(product)"
+                    :title="`${product.name}\n募集期：${product.start_date} → ${product.end_date}`"
+                  >
+                    <span class="gantt-bar-text">{{ product.name }}</span>
+                  </div>
                 </div>
               </div>
-              <div class="group-trend-current">{{ group.completion_rate }}%</div>
+              <div v-if="ganttProducts.length === 0" class="gantt-empty">该时间段暂无产品发售</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="card" style="margin-top: 20px;">
+      <!-- 营业部战队排行 -->
+      <div class="card">
         <div class="card-header">
           <div class="card-title-section">
             <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#5856D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-            <span class="card-title">营业部业绩对比</span>
+            <span class="card-title">营业部战队排行</span>
           </div>
+          <span class="ranking-subtitle">按全年总销售额排序 · 点击展开成员明细</span>
         </div>
         <div class="card-body" style="padding: 0;">
-          <table class="compare-table">
-            <thead>
-              <tr>
-                <th style="width: 60px; text-align: center;">排名</th>
-                <th>营业部</th>
-                <th style="text-align: center;">成员数</th>
-                <th style="text-align: right;">总销售</th>
-                <th style="text-align: center;">完成率</th>
-                <th style="text-align: right;">人均产能</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(group, index) in sortedCompareGroups" :key="group.id">
-                <td style="text-align: center;">
-                  <div class="rank-badge" :class="`rank-${index + 1}`">{{ index + 1 }}</div>
-                </td>
-                <td style="font-weight: 600; cursor: pointer; color: #007AFF;" @click="openGroupMembersModal(group)">{{ group.name }}</td>
-                <td style="text-align: center;">{{ group.member_count || 0 }}</td>
-                <td style="text-align: right; color: #007AFF; font-weight: 600;">¥{{ formatNumber(group.sales) }}万</td>
-                <td style="text-align: center;">
-                  <span class="rate-badge" :class="getRateClass(group.completion_rate)">{{ group.completion_rate }}%</span>
-                </td>
-                <td style="text-align: right;">¥{{ formatNumber(group.per_capita) }}万</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 完成率对比图 -->
-      <div class="card" style="margin-top: 20px;">
-        <div class="card-header">
-          <span class="card-title">完成率对比</span>
-        </div>
-        <div class="card-body">
-          <div class="completion-chart">
-            <div v-for="(group, index) in sortedCompareGroups.slice(0, 6)" :key="group.id" class="completion-bar-item">
-              <span class="completion-label">{{ group.name }}</span>
-              <div class="completion-bar-wrapper">
-                <div class="completion-bar-bg"></div>
-                <div class="completion-bar" :style="{ width: Math.min(group.completion_rate, 100) + '%', background: getBarColor(group.completion_rate) }"></div>
-                <div class="completion-bar-avg" :style="{ left: Math.min(avgCompletionRate, 100) + '%' }"></div>
+          <div v-if="dashboardGroups.length === 0" class="gantt-empty">暂无数据</div>
+          <div class="team-ranking-list">
+            <div v-for="(group, index) in dashboardGroups" :key="group.id" class="team-item">
+              <div class="team-main-row" @click="toggleDashboardGroup(group.id)">
+                <div class="team-rank-col">
+                  <div class="rank-medal" :class="'medal-' + (index + 1)">{{ index + 1 }}</div>
+                </div>
+                <div class="team-name-col">{{ group.name }}</div>
+                <div class="team-bar-col">
+                  <div class="team-sales-track">
+                    <div class="team-sales-fill" :style="{ width: (maxGroupSales > 0 ? group.sales / maxGroupSales * 100 : 0) + '%' }"></div>
+                  </div>
+                </div>
+                <div class="team-sales-col">¥{{ formatNumber(group.sales) }}<span class="unit">万</span></div>
+                <div class="team-percap-col">人均 <strong>¥{{ formatNumber(group.per_capita) }}</strong><span class="unit">万</span></div>
+                <div class="team-stars-col">
+                  <span v-for="s in 5" :key="s" class="star-icon" :class="{ lit: s <= getEfficiencyStars(index, dashboardGroups.length) }">★</span>
+                </div>
+                <div class="team-expand-col">
+                  <span class="expand-chevron" :class="{ open: expandedDashboardGroups.includes(group.id) }">›</span>
+                </div>
               </div>
-              <span class="completion-value">{{ group.completion_rate }}%</span>
+              <div v-if="expandedDashboardGroups.includes(group.id)" class="team-members-panel">
+                <div v-if="!dashboardMembersData[group.id]" class="panel-loading">加载中...</div>
+                <template v-else>
+                  <div v-for="member in dashboardMembersData[group.id]" :key="member.id" class="member-contrib-row">
+                    <span class="member-contrib-name">{{ member.name }}</span>
+                    <div class="member-contrib-track">
+                      <div class="member-contrib-fill" :style="{ width: getMemberPct(group.id, member) + '%' }"></div>
+                    </div>
+                    <span class="member-contrib-amount">¥{{ formatNumber(member.sales) }}万</span>
+                    <span class="member-contrib-pct">{{ getMemberPct(group.id, member) }}%</span>
+                  </div>
+                  <div class="team-balance-row">
+                    <span class="balance-label">均衡指数</span>
+                    <span class="balance-tag" :class="getBalanceClass(group.id)">{{ getBalanceText(group.id) }}</span>
+                    <span class="balance-hint">最高成员占比 {{ getTopMemberPct(group.id) }}%</span>
+                  </div>
+                </template>
+              </div>
             </div>
-            <div v-if="sortedCompareGroups.length === 0" class="chart-empty">暂无数据</div>
-          </div>
-          <div v-if="sortedCompareGroups.length > 0" class="chart-legend">
-            <div class="legend-item"><span class="legend-color" style="background: #34C759;"></span>完成率</div>
-            <div class="legend-item"><span class="legend-line"></span>平均值({{ avgCompletionRate.toFixed(1) }}%)</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 营业部成员明细弹窗 -->
-      <div v-if="groupMembersModalVisible" class="modal-overlay" @click="closeGroupMembersModal">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3 class="modal-title">{{ selectedGroupForModal?.name }} - 成员明细</h3>
-            <button class="modal-close" @click="closeGroupMembersModal">×</button>
-          </div>
-          <div class="modal-body">
-            <table class="members-table">
-              <thead>
-                <tr>
-                  <th style="text-align: center;">排名</th>
-                  <th>成员姓名</th>
-                  <th style="text-align: right;">目标</th>
-                  <th style="text-align: right;">销售</th>
-                  <th style="text-align: center;">完成率</th>
-                  <th style="text-align: center;">记录数</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(member, index) in groupMembersData" :key="member.id">
-                  <td style="text-align: center;">{{ index + 1 }}</td>
-                  <td>{{ member.name }}</td>
-                  <td style="text-align: right;">¥{{ formatNumber(member.target) }}万</td>
-                  <td style="text-align: right; color: #007AFF;">¥{{ formatNumber(member.sales) }}万</td>
-                  <td style="text-align: center;">
-                    <span class="rate-badge" :class="getRateClass(member.completion_rate)">{{ member.completion_rate }}%</span>
-                  </td>
-                  <td style="text-align: center;">{{ member.record_count }}</td>
-                </tr>
-                <tr v-if="groupMembersData.length === 0">
-                  <td colspan="6" style="text-align: center; padding: 40px; color: #8E8E93;">暂无数据</td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -501,8 +413,7 @@ const activeTab = ref('matrix')
 const tabs = [
   { key: 'matrix', label: '产品矩阵' },
   { key: 'personal', label: '个人查询' },
-  { key: 'trends', label: '销售趋势' },
-  { key: 'compare', label: '营业部对比' }
+  { key: 'dashboard', label: '年度看板' }
 ]
 
 // 数据
@@ -538,28 +449,12 @@ const memberStats = ref({
 })
 const heatmapData = ref([])
 
-// 销售趋势
-const trendProduct = ref('')
-const trendTimeRange = ref('month')  // month, quarter, year - 用于筛选销售记录
-const trendGroupBy = ref('month')    // month, week - 用于图表聚合
-const trendStats = ref({
-  max_daily: 0,
-  max_daily_date: null,
-  avg_daily: 0,
-  yoy_growth: 0,      // 同比
-  mom_growth: 0,      // 环比
-  current_year_total: 0
-})
-const trendChartData = ref([])        // 趋势图数据
-const productContribution = ref([])   // 产品贡献度数据
-
-// 营业部对比
-const compareGroups = ref([])
-const compareTimeRange = ref('month') // month, quarter, year
-const groupTrendData = ref({})        // 营业部趋势数据
-const selectedGroupForModal = ref(null)
-const groupMembersModalVisible = ref(false)
-const groupMembersData = ref([])
+// 年度经营看板
+const dashboardYear = ref(new Date().getFullYear())
+const dashboardQuarter = ref('all')
+const dashboardCompareGroups = ref([])
+const expandedDashboardGroups = ref([])
+const dashboardMembersData = ref({})
 
 onMounted(() => {
   loadData()
@@ -578,12 +473,10 @@ async function loadData() {
     members.value = membersRes
 
     // 加载分析数据
-    const [matrixRes, comparisonRes, trendRes, trendStatRes, contributionRes] = await Promise.all([
+    const [matrixRes, trendRes, dashboardRes] = await Promise.all([
       analysisApi.matrix(),
-      analysisApi.groupComparison('month'),
       analysisApi.salesTrend({ year: new Date().getFullYear(), group_by: 'month' }),
-      analysisApi.salesTrendStats({ year: new Date().getFullYear() }),
-      analysisApi.productContribution(new Date().getFullYear())
+      analysisApi.groupComparison('year')
     ])
 
     // 初始化产品矩阵数据
@@ -594,8 +487,6 @@ async function loadData() {
     }))
     matrixSalesData.value = matrixRes.sales_data
     matrixTargetData.value = matrixRes.target_data || []
-    console.log('[DEBUG] matrixTargetData:', matrixTargetData.value)
-    console.log('[DEBUG] matrixSalesData:', matrixSalesData.value)
     expandedGroups.value = groupsRes.map(g => g.id)
 
     // 初始化个人查询数据
@@ -603,20 +494,11 @@ async function loadData() {
       selectedGroupId.value = groupsRes[0].id
     }
 
-    // 初始化营业部对比数据（使用真实数据）
-    compareGroups.value = comparisonRes
-
-    // 初始化销售趋势数据
-    trendChartData.value = trendRes
-    trendStats.value = trendStatRes
-    productContribution.value = contributionRes.contribution || []
-
     // 初始化热力图数据（使用真实月度趋势）
     heatmapData.value = trendRes
 
-    // 加载营业部趋势数据
-    const groupTrendRes = await analysisApi.groupTrend()
-    groupTrendData.value = groupTrendRes
+    // 初始化年度看板数据
+    dashboardCompareGroups.value = dashboardRes
 
     // 初始化个人产品数据为空，选择成员后加载
     personalProducts.value = []
@@ -731,18 +613,134 @@ async function loadMemberDetail(memberId) {
   }
 }
 
-// 计算属性
-const avgCompletionRate = computed(() => {
-  if (!compareGroups.value || compareGroups.value.length === 0) return 0
-  const sum = compareGroups.value.reduce((acc, g) => acc + (g.completion_rate || 0), 0)
-  return sum / compareGroups.value.length
+// ── 年度看板计算属性 ──
+const yearOptions = computed(() => {
+  const y = new Date().getFullYear()
+  return [y - 1, y, y + 1]
 })
 
-const sortedCompareGroups = computed(() => {
-  if (!compareGroups.value) return []
-  return [...compareGroups.value].sort((a, b) => b.completion_rate - a.completion_rate)
+const ganttViewRange = computed(() => {
+  const y = dashboardYear.value
+  const map = {
+    all: { start: new Date(y, 0, 1),  end: new Date(y, 11, 31) },
+    Q1:  { start: new Date(y, 0, 1),  end: new Date(y, 2, 31)  },
+    Q2:  { start: new Date(y, 3, 1),  end: new Date(y, 5, 30)  },
+    Q3:  { start: new Date(y, 6, 1),  end: new Date(y, 8, 30)  },
+    Q4:  { start: new Date(y, 9, 1),  end: new Date(y, 11, 31) },
+  }
+  return map[dashboardQuarter.value]
 })
 
+const ganttProducts = computed(() => {
+  if (!products.value.length) return []
+  const { start, end } = ganttViewRange.value
+  return products.value
+    .filter(p => {
+      if (!p.start_date) return false
+      const d = new Date(p.start_date)
+      return d >= start && d <= end
+    })
+    .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+})
+
+const ganttColumns = computed(() => {
+  const { start } = ganttViewRange.value
+  if (dashboardQuarter.value === 'all') {
+    return Array.from({ length: 12 }, (_, i) => ({ key: i + 1, label: `${i + 1}月`, widthPct: 100 / 12 }))
+  }
+  const sm = start.getMonth()
+  return Array.from({ length: 3 }, (_, i) => ({ key: sm + i + 1, label: `${sm + i + 1}月`, widthPct: 100 / 3 }))
+})
+
+const dashboardGroups = computed(() => {
+  if (!dashboardCompareGroups.value.length) return []
+  return [...dashboardCompareGroups.value].sort((a, b) => b.sales - a.sales)
+})
+
+const maxGroupSales = computed(() => {
+  if (!dashboardGroups.value.length) return 1
+  return Math.max(...dashboardGroups.value.map(g => g.sales)) || 1
+})
+
+// ── 年度看板方法 ──
+function getGanttBarStyle(product) {
+  const { start: vs, end: ve } = ganttViewRange.value
+  const totalMs = ve.getTime() - vs.getTime() + 86400000
+  const ps = new Date(product.start_date)
+  const pe = product.end_date ? new Date(product.end_date) : ps
+  const cs = Math.max(ps.getTime(), vs.getTime())
+  const ce = Math.min(pe.getTime() + 86400000, ve.getTime() + 86400000)
+  const left = Math.max(0, (cs - vs.getTime()) / totalMs * 100)
+  const width = Math.max(0.8, (ce - cs) / totalMs * 100)
+  const colors = { '募集中': '#007AFF', '即将开始': '#FF9500', '已结束': '#8E8E93' }
+  return { left: left + '%', width: width + '%', background: colors[product.status] || '#5856D6' }
+}
+
+function getEfficiencyStars(rankIndex, total) {
+  if (total <= 1) return 5
+  const sorted = [...dashboardGroups.value].sort((a, b) => b.per_capita - a.per_capita)
+  const group = dashboardGroups.value[rankIndex]
+  const pcRank = sorted.findIndex(g => g.id === group.id)
+  return Math.round(5 - (pcRank / (total - 1)) * 4)
+}
+
+async function toggleDashboardGroup(groupId) {
+  const idx = expandedDashboardGroups.value.indexOf(groupId)
+  if (idx > -1) {
+    expandedDashboardGroups.value.splice(idx, 1)
+  } else {
+    expandedDashboardGroups.value.push(groupId)
+    if (!dashboardMembersData.value[groupId]) {
+      try {
+        const res = await analysisApi.groupMembers(groupId, 'year')
+        dashboardMembersData.value = { ...dashboardMembersData.value, [groupId]: res.members || [] }
+      } catch {
+        dashboardMembersData.value = { ...dashboardMembersData.value, [groupId]: [] }
+      }
+    }
+  }
+}
+
+function getMemberPct(groupId, member) {
+  const list = dashboardMembersData.value[groupId] || []
+  const total = list.reduce((s, m) => s + m.sales, 0)
+  return total ? Math.round(member.sales / total * 100) : 0
+}
+
+function getTopMemberPct(groupId) {
+  const list = dashboardMembersData.value[groupId] || []
+  if (!list.length) return 0
+  const total = list.reduce((s, m) => s + m.sales, 0)
+  const top = Math.max(...list.map(m => m.sales))
+  return total ? Math.round(top / total * 100) : 0
+}
+
+function getBalanceClass(groupId) {
+  const p = getTopMemberPct(groupId)
+  if (p < 25) return 'balance-excellent'
+  if (p < 40) return 'balance-good'
+  return 'balance-warning'
+}
+
+function getBalanceText(groupId) {
+  const p = getTopMemberPct(groupId)
+  if (p < 25) return '优秀'
+  if (p < 40) return '良好'
+  return '注意'
+}
+
+async function setDashboardYear(year) {
+  dashboardYear.value = year
+  dashboardMembersData.value = {}
+  expandedDashboardGroups.value = []
+  try {
+    dashboardCompareGroups.value = await analysisApi.groupComparison('year')
+  } catch (e) {
+    console.error('加载看板数据失败:', e)
+  }
+}
+
+// ── 计算属性（通用）──
 const filteredMembers = computed(() => {
   if (!selectedGroupId.value) return members.value
   return members.value.filter(m => m.group_id === selectedGroupId.value)
@@ -886,69 +884,6 @@ function getRateClass(rate) {
   return 'rate-red'
 }
 
-function getBarColor(rate) {
-  if (rate >= 100) return '#34C759'
-  if (rate >= 80) return '#FFCC00'
-  if (rate >= 60) return '#FF9500'
-  return '#FF3B30'
-}
-
-// 加载销售趋势数据
-async function loadTrendData() {
-  try {
-    const year = new Date().getFullYear()
-    const params = {
-      year,
-      group_by: trendGroupBy.value
-    }
-    if (trendProduct.value) {
-      params.product_id = trendProduct.value
-    }
-    const [trendRes, trendStatRes, contributionRes] = await Promise.all([
-      analysisApi.salesTrend(params),
-      analysisApi.salesTrendStats({ year, product_id: trendProduct.value || undefined }),
-      analysisApi.productContribution(year)
-    ])
-    trendChartData.value = trendRes
-    trendStats.value = trendStatRes
-    productContribution.value = contributionRes.contribution || []
-  } catch (error) {
-    console.error('加载销售趋势数据失败:', error)
-  }
-}
-
-// 加载营业部对比数据
-async function loadCompareData() {
-  try {
-    const [comparisonRes, groupTrendRes] = await Promise.all([
-      analysisApi.groupComparison(compareTimeRange.value),
-      analysisApi.groupTrend()
-    ])
-    compareGroups.value = comparisonRes
-    groupTrendData.value = groupTrendRes
-  } catch (error) {
-    console.error('加载营业部对比数据失败:', error)
-  }
-}
-
-// 打开营业部成员弹窗
-async function openGroupMembersModal(group) {
-  selectedGroupForModal.value = group
-  try {
-    const res = await analysisApi.groupMembers(group.id, compareTimeRange.value)
-    groupMembersData.value = res.members || []
-    groupMembersModalVisible.value = true
-  } catch (error) {
-    console.error('加载营业部成员数据失败:', error)
-  }
-}
-
-// 关闭营业部成员弹窗
-function closeGroupMembersModal() {
-  groupMembersModalVisible.value = false
-  selectedGroupForModal.value = null
-  groupMembersData.value = []
-}
 </script>
 
 <style scoped>
@@ -2142,5 +2077,353 @@ function closeGroupMembersModal() {
 .rate-red {
   background: #FEE2E2;
   color: #DC2626;
+}
+
+/* ── 年度经营看板 ── */
+.dashboard-controls {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.control-label {
+  font-size: 13px;
+  color: #6E6E73;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 甘特图 */
+.gantt-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.gantt-count-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #007AFF;
+  background: #E8F4FD;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.gantt-legend {
+  display: flex;
+  gap: 14px;
+}
+.gantt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #6E6E73;
+}
+.gantt-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.gantt-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+.gantt-header-row {
+  display: flex;
+  border-bottom: 2px solid #E5E5EA;
+  background: #F5F5F7;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.gantt-name-col {
+  width: 160px;
+  min-width: 160px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1D1D1F;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-right: 1px solid #E5E5EA;
+}
+.gantt-header-cell {
+  font-weight: 600;
+  color: #6E6E73;
+  font-size: 12px;
+}
+.gantt-timeline-area {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+.gantt-header-cells {
+  display: flex;
+}
+.gantt-col-header {
+  padding: 10px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6E6E73;
+  border-right: 1px solid #E5E5EA;
+}
+.gantt-rows-wrapper {
+  max-height: 520px;
+  overflow-y: auto;
+}
+.gantt-row-item {
+  display: flex;
+  border-bottom: 1px solid #F0F0F0;
+  background: #fff;
+}
+.gantt-row-alt {
+  background: #FAFAFA;
+}
+.gantt-timeline-row {
+  position: relative;
+  display: flex;
+}
+.gantt-grid-col {
+  border-right: 1px solid #F0F0F0;
+  height: 32px;
+  flex-shrink: 0;
+}
+.gantt-bar {
+  position: absolute;
+  top: 5px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: filter 0.15s;
+  min-width: 4px;
+}
+.gantt-bar:hover {
+  filter: brightness(0.9);
+}
+.gantt-bar-text {
+  font-size: 11px;
+  color: white;
+  font-weight: 600;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gantt-empty {
+  text-align: center;
+  padding: 48px;
+  color: #8E8E93;
+  font-size: 14px;
+}
+
+/* 营业部战队排行 */
+.ranking-subtitle {
+  font-size: 13px;
+  color: #8E8E93;
+}
+.team-ranking-list {
+  display: flex;
+  flex-direction: column;
+}
+.team-item {
+  border-bottom: 1px solid #F0F0F0;
+}
+.team-item:last-child {
+  border-bottom: none;
+}
+.team-main-row {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  gap: 16px;
+  transition: background 0.15s;
+}
+.team-main-row:hover {
+  background: #F9F9FB;
+}
+.team-rank-col {
+  width: 40px;
+  flex-shrink: 0;
+}
+.rank-medal {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: #E5E5EA;
+  color: #6E6E73;
+}
+.medal-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: white; }
+.medal-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); color: white; }
+.medal-3 { background: linear-gradient(135deg, #CD7F32, #B87333); color: white; }
+.team-name-col {
+  width: 110px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1D1D1F;
+  flex-shrink: 0;
+}
+.team-bar-col {
+  flex: 1;
+  min-width: 0;
+}
+.team-sales-track {
+  height: 8px;
+  background: #E5E5EA;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.team-sales-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007AFF, #5856D6);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.team-sales-col {
+  width: 120px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 700;
+  color: #007AFF;
+  flex-shrink: 0;
+}
+.team-percap-col {
+  width: 140px;
+  text-align: right;
+  font-size: 13px;
+  color: #6E6E73;
+  flex-shrink: 0;
+}
+.team-percap-col strong {
+  color: #1D1D1F;
+}
+.unit {
+  font-size: 11px;
+  color: #8E8E93;
+  margin-left: 2px;
+}
+.team-stars-col {
+  width: 90px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.star-icon {
+  font-size: 15px;
+  color: #E5E5EA;
+}
+.star-icon.lit {
+  color: #FFCC00;
+}
+.team-expand-col {
+  width: 28px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.expand-chevron {
+  font-size: 20px;
+  color: #8E8E93;
+  display: inline-block;
+  transform: rotate(0deg);
+  transition: transform 0.2s;
+  line-height: 1;
+}
+.expand-chevron.open {
+  transform: rotate(90deg);
+}
+
+/* 成员展开面板 */
+.team-members-panel {
+  padding: 12px 20px 20px 72px;
+  background: #F9F9FB;
+  border-top: 1px solid #F0F0F0;
+}
+.panel-loading {
+  padding: 16px;
+  color: #8E8E93;
+  font-size: 13px;
+}
+.member-contrib-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.member-contrib-name {
+  width: 80px;
+  font-size: 13px;
+  color: #1D1D1F;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.member-contrib-track {
+  flex: 1;
+  height: 8px;
+  background: #E5E5EA;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.member-contrib-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #34C759, #30D158);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.member-contrib-amount {
+  width: 90px;
+  text-align: right;
+  font-size: 13px;
+  color: #007AFF;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.member-contrib-pct {
+  width: 45px;
+  text-align: right;
+  font-size: 13px;
+  color: #6E6E73;
+  flex-shrink: 0;
+}
+.team-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #E5E5EA;
+}
+.balance-label {
+  font-size: 12px;
+  color: #6E6E73;
+}
+.balance-tag {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.balance-excellent { background: #D1FAE5; color: #059669; }
+.balance-good      { background: #FEF3C7; color: #D97706; }
+.balance-warning   { background: #FEE2E2; color: #DC2626; }
+.balance-hint {
+  font-size: 12px;
+  color: #8E8E93;
 }
 </style>
