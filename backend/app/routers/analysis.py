@@ -389,11 +389,11 @@ def get_sales_trend(
 
             # 根据金额确定等级（用于热力图颜色）与图例保持一致
             # level-0: 0, level-1: 1-10万, level-2: 10-20万, level-3: 20-40万, level-4: 40万+
-            if amount >= 400:
+            if amount >= 40:
                 level = 4
-            elif amount >= 200:
+            elif amount >= 20:
                 level = 3
-            elif amount >= 100:
+            elif amount >= 10:
                 level = 2
             elif amount > 0:
                 level = 1
@@ -440,11 +440,11 @@ def get_sales_trend(
 
             # 根据金额确定等级（用于热力图颜色）与图例保持一致
             # level-0: 0, level-1: 1-10万, level-2: 10-20万, level-3: 20-40万, level-4: 40万+
-            if amount >= 400:
+            if amount >= 40:
                 level = 4
-            elif amount >= 200:
+            elif amount >= 20:
                 level = 3
-            elif amount >= 100:
+            elif amount >= 10:
                 level = 2
             elif amount > 0:
                 level = 1

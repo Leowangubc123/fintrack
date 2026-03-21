@@ -84,6 +84,7 @@
                   >
                     归档
                   </button>
+                  <button class="btn-link btn-danger" @click="handleDelete(product)">删除</button>
                 </div>
               </div>
             </div>

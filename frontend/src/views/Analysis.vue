@@ -64,10 +64,10 @@
                       {{ group.name }} ({{ group.members?.length || 0 }}人)
                     </td>
                     <td v-for="(p, idx) in matrixProducts" :key="idx">
-                      <span class="group-total">{{ getGroupProductTotal(group.id, p.id) }}万</span>
+                      <span class="group-total">{{ formatNumber(getGroupProductTotal(group.id, p.id)) }}万</span>
                     </td>
                     <td class="fixed-right">
-                      <span class="group-total">{{ getGroupTotal(group.id) }}万</span>
+                      <span class="group-total">{{ formatNumber(getGroupTotal(group.id)) }}万</span>
                     </td>
                   </tr>
                   <!-- 成员行 -->
@@ -91,7 +91,7 @@
                         {{ getMemberProductRate(member.id, p.id) }}%
                       </span>
                       <span v-else class="rate-cell" :class="getRateClass(getMemberProductRate(member.id, p.id))">
-                        {{ getMemberProductAmount(member.id, p.id) }}万
+                        {{ formatNumber(getMemberProductAmount(member.id, p.id)) }}万
                       </span>
                     </td>
                     <td class="fixed-right">
@@ -102,7 +102,7 @@
                       >
                         {{ getMemberOverallRate(member.id) }}%
                       </span>
-                      <strong v-else>{{ getMemberTotal(member.id) }}万</strong>
+                      <strong v-else>{{ formatNumber(getMemberTotal(member.id)) }}万</strong>
                     </td>
                   </tr>
                 </template>
@@ -875,7 +875,8 @@ function getMemberOverallRate(memberId) {
 
 function formatNumber(num) {
   if (!num) return '0'
-  return Number(num).toLocaleString()
+  const rounded = Math.round(Number(num) * 100) / 100
+  return rounded.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
 }
 
 function getRateClass(rate) {
