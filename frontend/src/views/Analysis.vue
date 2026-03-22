@@ -287,43 +287,6 @@
         </div>
       </div>
 
-      <!-- 全年销售走势 -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title-section">
-            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-            <span class="card-title">全年销售走势</span>
-          </div>
-          <div class="trend-total-badge">
-            全年总销售 <strong>¥{{ formatNumber(dashboardYearTotal) }} 万</strong>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="annual-chart-wrap">
-            <div class="annual-bars">
-              <div v-for="pt in dashboardChartPoints" :key="pt.month" class="annual-bar-col">
-                <div class="annual-bar-value" v-if="pt.amount > 0">{{ formatNumber(pt.amount) }}</div>
-                <div class="annual-bar-fill" :style="{ height: pt.barPct + '%' }"></div>
-                <div class="annual-bar-label">{{ pt.month }}月</div>
-              </div>
-            </div>
-            <svg class="annual-trend-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path :d="trendLinePath" fill="none" stroke="#FF9500" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
-              <circle v-for="(pt, i) in dashboardChartPoints.filter(p => p.amount > 0)" :key="i"
-                :cx="((dashboardChartPoints.indexOf(pt)) / 11 * 100).toFixed(2)"
-                :cy="(100 - (pt.amount / Math.max(...dashboardChartPoints.map(p=>p.amount),1)) * 92).toFixed(2)"
-                r="1.5" fill="#FF9500" stroke="white" stroke-width="0.5"/>
-            </svg>
-          </div>
-          <div class="annual-chart-legend">
-            <span class="legend-bar-item"><span class="legend-bar-dot" style="background:#007AFF"></span>月销售额（万元）</span>
-            <span class="legend-bar-item"><span class="legend-line-dot" style="background:#FF9500"></span>走势线</span>
-          </div>
-        </div>
-      </div>
-
       <!-- 产品发售甘特图 -->
       <div class="card">
         <div class="card-header">
@@ -369,6 +332,89 @@
               </div>
               <div v-if="ganttProducts.length === 0" class="gantt-empty">该时间段暂无产品发售</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 全年销量走势 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-section">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span class="card-title">全年销量走势</span>
+          </div>
+        </div>
+        <div class="card-body" style="padding: 20px 24px 16px;">
+          <!-- 年度总销售额大字 -->
+          <div class="annual-total-hero">
+            <div class="annual-total-label">{{ dashboardYear }} 年度总销售额</div>
+            <div class="annual-total-value">¥ {{ formatNumber(dashboardYearTotal) }} <span class="annual-total-unit">万元</span></div>
+          </div>
+          <!-- SVG 图表 -->
+          <div class="annual-svg-chart-container" ref="chartContainer">
+            <svg class="annual-svg-chart" :viewBox="`0 0 780 220`" preserveAspectRatio="xMidYMid meet">
+              <!-- 背景网格线 -->
+              <line v-for="n in 4" :key="'grid'+n"
+                :x1="48" :y1="20 + (n-1) * 42"
+                :x2="768" :y2="20 + (n-1) * 42"
+                stroke="#F0F0F0" stroke-width="1"/>
+              <!-- Y轴标签 -->
+              <text v-for="n in 4" :key="'ylabel'+n"
+                :x="40" :y="20 + (n-1) * 42 + 4"
+                text-anchor="end" font-size="10" fill="#AEAEB2">
+                {{ formatNumber(chartYLabel(4 - n)) }}
+              </text>
+              <!-- 柱状图 -->
+              <g v-for="(pt, i) in dashboardChartPoints" :key="'bar'+i">
+                <rect
+                  :x="48 + i * 60 + 12"
+                  :y="pt.barH > 0 ? 20 + 126 - pt.barH : 146"
+                  :width="36"
+                  :height="pt.barH > 0 ? pt.barH : 0"
+                  :fill="pt.barH > 0 ? 'url(#barGrad)' : '#E5E5EA'"
+                  rx="4" ry="4"/>
+                <!-- 数值标签 -->
+                <text v-if="pt.amount > 0"
+                  :x="48 + i * 60 + 30"
+                  :y="pt.barH > 0 ? 20 + 126 - pt.barH - 5 : 140"
+                  text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">
+                  {{ formatNumber(pt.amount) }}
+                </text>
+                <!-- 月份标签 -->
+                <text
+                  :x="48 + i * 60 + 30"
+                  y="170"
+                  text-anchor="middle" font-size="12" font-weight="500" fill="#6E6E73">
+                  {{ pt.month }}月
+                </text>
+              </g>
+              <!-- 趋势折线 -->
+              <polyline
+                :points="trendPolylinePoints"
+                fill="none" stroke="#FF9500" stroke-width="2.5"
+                stroke-linejoin="round" stroke-linecap="round"
+                stroke-dasharray="none"/>
+              <!-- 趋势折线节点 -->
+              <circle v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i"
+                v-if="pt.amount > 0"
+                :cx="48 + i * 60 + 30"
+                :cy="20 + 126 - pt.barH"
+                r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
+              <!-- 渐变定义 -->
+              <defs>
+                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#5AC8FA"/>
+                  <stop offset="100%" stop-color="#007AFF"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <!-- 图例 -->
+          <div class="annual-chart-legend" style="margin-top: 8px;">
+            <span class="legend-bar-item"><span class="legend-bar-dot" style="background:linear-gradient(#5AC8FA,#007AFF)"></span>月销售额（万元）</span>
+            <span class="legend-bar-item"><span class="legend-line-dot" style="background:#FF9500"></span>走势线</span>
           </div>
         </div>
       </div>
@@ -704,19 +750,20 @@ const dashboardChartPoints = computed(() => {
   return Array.from({ length: 12 }, (_, i) => {
     const item = dashboardTrendData.value.find(d => d.month === i + 1)
     const amount = item?.amount || 0
-    return { month: i + 1, amount, barPct: (amount / maxAmt) * 100 }
+    return { month: i + 1, amount, barPct: (amount / maxAmt) * 100, barH: Math.round((amount / maxAmt) * 126) }
   })
 })
 
-const trendLinePath = computed(() => {
-  const pts = dashboardChartPoints.value
-  const maxAmt = Math.max(...pts.map(p => p.amount), 1)
-  return pts.map((p, i) => {
-    const x = (i / 11) * 100
-    const y = 100 - (p.amount / maxAmt) * 92
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
-  }).join(' ')
+const trendPolylinePoints = computed(() => {
+  return dashboardChartPoints.value
+    .map((pt, i) => `${48 + i * 60 + 30},${pt.amount > 0 ? 20 + 126 - pt.barH : 146}`)
+    .join(' ')
 })
+
+function chartYLabel(n) {
+  const maxAmt = Math.max(...dashboardTrendData.value.map(d => d.amount), 1)
+  return Math.round(maxAmt * n / 3)
+}
 
 // ── 年度看板方法 ──
 function getGanttBarStyle(product) {
@@ -2483,65 +2530,42 @@ function getRateClass(rate) {
 }
 
 /* 全年销售走势图 */
-.trend-total-badge {
+.annual-total-hero {
+  text-align: center;
+  padding: 12px 0 20px;
+  border-bottom: 1px solid #F0F0F0;
+  margin-bottom: 16px;
+}
+.annual-total-label {
   font-size: 13px;
-  color: #6E6E73;
-}
-.trend-total-badge strong {
-  color: #007AFF;
-  font-size: 15px;
-}
-.annual-chart-wrap {
-  position: relative;
-  height: 200px;
-  margin-bottom: 12px;
-}
-.annual-bars {
-  display: flex;
-  align-items: flex-end;
-  height: 100%;
-  gap: 4px;
-  padding: 24px 0 28px 0;
-}
-.annual-bar-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  position: relative;
-}
-.annual-bar-value {
-  font-size: 10px;
-  color: #007AFF;
-  font-weight: 600;
-  white-space: nowrap;
-  margin-bottom: 3px;
-  line-height: 1;
-}
-.annual-bar-fill {
-  width: 70%;
-  background: linear-gradient(180deg, #5AC8FA 0%, #007AFF 100%);
-  border-radius: 4px 4px 0 0;
-  transition: height 0.4s ease;
-  min-height: 2px;
-}
-.annual-bar-label {
-  position: absolute;
-  bottom: 0;
-  font-size: 11px;
   color: #8E8E93;
-  white-space: nowrap;
+  font-weight: 500;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.annual-trend-svg {
-  position: absolute;
-  top: 24px;
-  left: 0;
+.annual-total-value {
+  font-size: 44px;
+  font-weight: 800;
+  color: #1D1D1F;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.annual-total-unit {
+  font-size: 18px;
+  font-weight: 500;
+  color: #6E6E73;
+  letter-spacing: 0;
+}
+.annual-svg-chart-container {
   width: 100%;
-  height: calc(100% - 52px);
-  pointer-events: none;
-  overflow: visible;
+  overflow-x: auto;
+}
+.annual-svg-chart {
+  width: 100%;
+  min-width: 600px;
+  display: block;
+  height: 200px;
 }
 .annual-chart-legend {
   display: flex;

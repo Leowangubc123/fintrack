@@ -22,26 +22,22 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         Product.is_archived == False
     ).count()
 
-    # 本年度已发售重点产品数
+    # 本年度已发售重点产品数（含已归档）
     year_products = db.query(Product).filter(
-        Product.start_date >= year_start,
-        Product.is_archived == False
+        Product.start_date >= year_start
     ).count()
 
-    # 本年度销售额：本年度发售的所有产品的累积销售额总和
+    # 本年度销售额：本年度发售的所有产品的累积销售额总和（含已归档）
     year_product_ids = db.query(Product.id).filter(
-        Product.start_date >= year_start,
-        Product.is_archived == False
+        Product.start_date >= year_start
     ).subquery()
 
     total_sales = db.query(func.sum(SalesRecord.amount)).filter(
         SalesRecord.product_id.in_(year_product_ids)
     ).scalar() or 0
 
-    # 本月整体目标（简化计算，使用产品总目标）
-    total_target = db.query(func.sum(Product.total_target)).filter(
-        Product.is_archived == False
-    ).scalar() or 0
+    # 整体目标（含已归档产品）
+    total_target = db.query(func.sum(Product.total_target)).scalar() or 0
 
     # 整体完成率
     completion_rate = (float(total_sales) / float(total_target) * 100) if total_target > 0 else 0
