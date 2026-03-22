@@ -397,11 +397,12 @@
                 stroke-linejoin="round" stroke-linecap="round"
                 stroke-dasharray="none"/>
               <!-- 趋势折线节点 -->
-              <circle v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i"
-                v-if="pt.amount > 0"
-                :cx="48 + i * 60 + 30"
-                :cy="20 + 126 - pt.barH"
-                r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
+              <template v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i">
+                <circle v-if="pt.amount > 0"
+                  :cx="48 + i * 60 + 30"
+                  :cy="20 + 126 - pt.barH"
+                  r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
+              </template>
               <!-- 渐变定义 -->
               <defs>
                 <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
