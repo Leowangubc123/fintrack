@@ -46,7 +46,7 @@ def calculate_status(start_date: date, end_date: date) -> str:
 def list_products(
     status: Optional[str] = None,
     product_type: Optional[str] = None,
-    is_archived: Optional[bool] = False,
+    is_archived: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     """获取产品列表，支持筛选，包含销售进度"""
