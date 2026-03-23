@@ -350,7 +350,7 @@
             <span class="card-title">全年销量走势</span>
           </div>
         </div>
-        <div class="card-body" style="padding: 16px 8px 16px;">
+        <div class="card-body" style="padding: 16px 0 12px;">
           <!-- 年度总额 居中 -->
           <div class="annual-total-center">
             <span class="annual-total-label">{{ dashboardYear }} 年度总销售额</span>
@@ -359,37 +359,37 @@
           </div>
           <!-- SVG 图表 全宽 -->
             <div class="annual-svg-chart-container" ref="chartContainer">
-            <svg class="annual-svg-chart" :viewBox="`0 0 780 260`" preserveAspectRatio="xMidYMid meet">
-              <!-- 背景网格线 -->
+            <svg class="annual-svg-chart" :viewBox="`0 0 780 260`" preserveAspectRatio="none">
+              <!-- 背景网格线: 左留24px给Y轴标签，右留4px -->
               <line v-for="n in 5" :key="'grid'+n"
-                :x1="36" :y1="20 + (n-1) * 42"
-                :x2="776" :y2="20 + (n-1) * 42"
+                :x1="24" :y1="20 + (n-1) * 42"
+                :x2="778" :y2="20 + (n-1) * 42"
                 stroke="#F0F0F0" stroke-width="1"/>
               <!-- Y轴标签 -->
               <text v-for="n in 5" :key="'ylabel'+n"
-                :x="30" :y="20 + (n-1) * 42 + 4"
+                :x="20" :y="20 + (n-1) * 42 + 4"
                 text-anchor="end" font-size="10" fill="#AEAEB2">
                 {{ formatNumber(chartYLabel(5 - n)) }}
               </text>
-              <!-- 柱状图: 12列均分 (780-36-4)/12=61.67px/列，柱宽44px，左偏8px -->
+              <!-- 柱状图: 12列均分 (780-24-4)/12=62.67px/列，柱宽46px，左偏8px -->
               <g v-for="(pt, i) in dashboardChartPoints" :key="'bar'+i">
                 <rect
-                  :x="36 + i * 62 + 9"
+                  :x="24 + i * 63 + 8"
                   :y="pt.barH > 0 ? 20 + 168 - pt.barH : 188"
-                  :width="44"
+                  :width="47"
                   :height="pt.barH > 0 ? pt.barH : 0"
                   :fill="pt.barH > 0 ? 'url(#barGrad)' : '#E5E5EA'"
                   rx="4" ry="4"/>
                 <!-- 数值标签 -->
                 <text v-if="pt.amount > 0"
-                  :x="36 + i * 62 + 31"
+                  :x="24 + i * 63 + 31"
                   :y="pt.barH > 0 ? 20 + 168 - pt.barH - 5 : 183"
                   text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">
                   {{ formatNumber(pt.amount) }}
                 </text>
                 <!-- 月份标签 -->
                 <text
-                  :x="36 + i * 62 + 31"
+                  :x="24 + i * 63 + 31"
                   y="210"
                   text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">
                   {{ pt.month }}月
@@ -403,7 +403,7 @@
               <!-- 趋势折线节点 -->
               <template v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i">
                 <circle v-if="pt.amount > 0"
-                  :cx="36 + i * 62 + 31"
+                  :cx="24 + i * 63 + 31"
                   :cy="20 + 168 - pt.barH"
                   r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
               </template>
@@ -417,7 +417,7 @@
             </svg>
             </div>
           <!-- 图例 -->
-          <div class="annual-chart-legend" style="margin-top: 4px;">
+          <div class="annual-chart-legend" style="margin-top: 4px; padding: 0 12px 4px;">
             <span class="legend-bar-item"><span class="legend-bar-dot" style="background:linear-gradient(#5AC8FA,#007AFF)"></span>月销售额（万元）</span>
             <span class="legend-bar-item"><span class="legend-line-dot" style="background:#FF9500"></span>走势线</span>
           </div>
@@ -761,7 +761,7 @@ const dashboardChartPoints = computed(() => {
 
 const trendPolylinePoints = computed(() => {
   return dashboardChartPoints.value
-    .map((pt, i) => `${36 + i * 62 + 31},${20 + 168 - pt.barH}`)
+    .map((pt, i) => `${24 + i * 63 + 31},${20 + 168 - pt.barH}`)
     .join(' ')
 })
 
@@ -2587,12 +2587,11 @@ function getRateClass(rate) {
   color: #6E6E73;
 }
 .annual-svg-chart-container {
-  flex: 1;
-  overflow-x: auto;
+  width: 100%;
+  overflow-x: hidden;
 }
 .annual-svg-chart {
   width: 100%;
-  min-width: 600px;
   display: block;
   height: 240px;
 }
