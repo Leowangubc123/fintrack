@@ -64,10 +64,16 @@
                       {{ group.name }} ({{ group.members?.length || 0 }}人)
                     </td>
                     <td v-for="(p, idx) in matrixProducts" :key="idx">
-                      <span class="group-total">{{ formatNumber(getGroupProductTotal(group.id, p.id)) }}万</span>
+                      <span v-if="matrixView === 'rate'" class="rate-cell" :class="getRateClass(getGroupProductRate(group.id, p.id))">
+                        {{ getGroupProductRate(group.id, p.id) }}%
+                      </span>
+                      <span v-else class="group-total">{{ formatNumber(getGroupProductTotal(group.id, p.id)) }}万</span>
                     </td>
                     <td class="fixed-right">
-                      <span class="group-total">{{ formatNumber(getGroupTotal(group.id)) }}万</span>
+                      <span v-if="matrixView === 'rate'" class="rate-cell" :class="getRateClass(getGroupOverallRate(group.id))">
+                        {{ getGroupOverallRate(group.id) }}%
+                      </span>
+                      <span v-else class="group-total">{{ formatNumber(getGroupTotal(group.id)) }}万</span>
                     </td>
                   </tr>
                   <!-- 成员行 -->
@@ -324,10 +330,8 @@
                   <div
                     class="gantt-bar"
                     :style="getGanttBarStyle(product)"
-                    :title="`${product.name}\n募集期：${product.start_date} → ${product.end_date}`"
-                  >
-                    <span class="gantt-bar-text">{{ product.name }}</span>
-                  </div>
+                    :title="`${product.name}  |  ${product.start_date} → ${product.end_date}`"
+                  ></div>
                 </div>
               </div>
               <div v-if="ganttProducts.length === 0" class="gantt-empty">该时间段暂无产品发售</div>
@@ -346,47 +350,49 @@
             <span class="card-title">全年销量走势</span>
           </div>
         </div>
-        <div class="card-body" style="padding: 20px 24px 16px;">
-          <!-- 年度总销售额大字 -->
-          <div class="annual-total-hero">
-            <div class="annual-total-label">{{ dashboardYear }} 年度总销售额</div>
-            <div class="annual-total-value">¥ {{ formatNumber(dashboardYearTotal) }} <span class="annual-total-unit">万元</span></div>
-          </div>
-          <!-- SVG 图表 -->
-          <div class="annual-svg-chart-container" ref="chartContainer">
-            <svg class="annual-svg-chart" :viewBox="`0 0 780 220`" preserveAspectRatio="xMidYMid meet">
+        <div class="card-body" style="padding: 16px 24px 16px;">
+          <!-- 年度总额 + 图表并排布局 -->
+          <div class="annual-chart-layout">
+            <div class="annual-total-side">
+              <div class="annual-total-label">{{ dashboardYear }} 年度总销售额</div>
+              <div class="annual-total-value">¥{{ formatNumber(dashboardYearTotal) }}</div>
+              <div class="annual-total-unit">万元</div>
+            </div>
+            <!-- SVG 图表 -->
+            <div class="annual-svg-chart-container" ref="chartContainer">
+            <svg class="annual-svg-chart" :viewBox="`0 0 780 260`" preserveAspectRatio="xMidYMid meet">
               <!-- 背景网格线 -->
-              <line v-for="n in 4" :key="'grid'+n"
+              <line v-for="n in 5" :key="'grid'+n"
                 :x1="48" :y1="20 + (n-1) * 42"
                 :x2="768" :y2="20 + (n-1) * 42"
                 stroke="#F0F0F0" stroke-width="1"/>
               <!-- Y轴标签 -->
-              <text v-for="n in 4" :key="'ylabel'+n"
+              <text v-for="n in 5" :key="'ylabel'+n"
                 :x="40" :y="20 + (n-1) * 42 + 4"
                 text-anchor="end" font-size="10" fill="#AEAEB2">
-                {{ formatNumber(chartYLabel(4 - n)) }}
+                {{ formatNumber(chartYLabel(5 - n)) }}
               </text>
               <!-- 柱状图 -->
               <g v-for="(pt, i) in dashboardChartPoints" :key="'bar'+i">
                 <rect
-                  :x="48 + i * 60 + 12"
-                  :y="pt.barH > 0 ? 20 + 126 - pt.barH : 146"
-                  :width="36"
+                  :x="48 + i * 60 + 10"
+                  :y="pt.barH > 0 ? 20 + 168 - pt.barH : 188"
+                  :width="40"
                   :height="pt.barH > 0 ? pt.barH : 0"
                   :fill="pt.barH > 0 ? 'url(#barGrad)' : '#E5E5EA'"
                   rx="4" ry="4"/>
                 <!-- 数值标签 -->
                 <text v-if="pt.amount > 0"
                   :x="48 + i * 60 + 30"
-                  :y="pt.barH > 0 ? 20 + 126 - pt.barH - 5 : 140"
+                  :y="pt.barH > 0 ? 20 + 168 - pt.barH - 5 : 183"
                   text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">
                   {{ formatNumber(pt.amount) }}
                 </text>
                 <!-- 月份标签 -->
                 <text
                   :x="48 + i * 60 + 30"
-                  y="170"
-                  text-anchor="middle" font-size="12" font-weight="500" fill="#6E6E73">
+                  y="210"
+                  text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">
                   {{ pt.month }}月
                 </text>
               </g>
@@ -394,13 +400,12 @@
               <polyline
                 :points="trendPolylinePoints"
                 fill="none" stroke="#FF9500" stroke-width="2.5"
-                stroke-linejoin="round" stroke-linecap="round"
-                stroke-dasharray="none"/>
+                stroke-linejoin="round" stroke-linecap="round"/>
               <!-- 趋势折线节点 -->
               <template v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i">
                 <circle v-if="pt.amount > 0"
                   :cx="48 + i * 60 + 30"
-                  :cy="20 + 126 - pt.barH"
+                  :cy="20 + 168 - pt.barH"
                   r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
               </template>
               <!-- 渐变定义 -->
@@ -411,9 +416,10 @@
                 </linearGradient>
               </defs>
             </svg>
+            </div>
           </div>
           <!-- 图例 -->
-          <div class="annual-chart-legend" style="margin-top: 8px;">
+          <div class="annual-chart-legend" style="margin-top: 4px;">
             <span class="legend-bar-item"><span class="legend-bar-dot" style="background:linear-gradient(#5AC8FA,#007AFF)"></span>月销售额（万元）</span>
             <span class="legend-bar-item"><span class="legend-line-dot" style="background:#FF9500"></span>走势线</span>
           </div>
@@ -566,7 +572,7 @@ async function loadData() {
     }))
     matrixSalesData.value = matrixRes.sales_data
     matrixTargetData.value = matrixRes.target_data || []
-    expandedGroups.value = groupsRes.map(g => g.id)
+    expandedGroups.value = []
 
     // 初始化个人查询数据
     if (groupsRes.length > 0) {
@@ -751,19 +757,19 @@ const dashboardChartPoints = computed(() => {
   return Array.from({ length: 12 }, (_, i) => {
     const item = dashboardTrendData.value.find(d => d.month === i + 1)
     const amount = item?.amount || 0
-    return { month: i + 1, amount, barPct: (amount / maxAmt) * 100, barH: Math.round((amount / maxAmt) * 126) }
+    return { month: i + 1, amount, barPct: (amount / maxAmt) * 100, barH: Math.round((amount / maxAmt) * 168) }
   })
 })
 
 const trendPolylinePoints = computed(() => {
   return dashboardChartPoints.value
-    .map((pt, i) => `${48 + i * 60 + 30},${pt.amount > 0 ? 20 + 126 - pt.barH : 146}`)
+    .map((pt, i) => `${48 + i * 60 + 30},${20 + 168 - pt.barH}`)
     .join(' ')
 })
 
 function chartYLabel(n) {
   const maxAmt = Math.max(...dashboardTrendData.value.map(d => d.amount), 1)
-  return Math.round(maxAmt * n / 3)
+  return Math.round(maxAmt * n / 4)
 }
 
 // ── 年度看板方法 ──
@@ -898,6 +904,28 @@ function getGroupProductTotal(groupId, productId) {
     .filter(s => groupMembers.includes(Number(s.member_id)) && Number(s.product_id) === Number(productId))
     .reduce((sum, s) => sum + Number(s.amount), 0)
   return total
+}
+
+function getGroupProductRate(groupId, productId) {
+  const groupMembers = members.value.filter(m => m.group_id === groupId).map(m => Number(m.id))
+  const totalAmount = matrixSalesData.value
+    .filter(s => groupMembers.includes(Number(s.member_id)) && Number(s.product_id) === Number(productId))
+    .reduce((sum, s) => sum + Number(s.amount), 0)
+  const totalTarget = matrixTargetData.value
+    .filter(t => groupMembers.includes(Number(t.member_id)) && Number(t.product_id) === Number(productId))
+    .reduce((sum, t) => sum + Number(t.target_amount), 0)
+  return totalTarget > 0 ? Math.round((totalAmount / totalTarget) * 100) : 0
+}
+
+function getGroupOverallRate(groupId) {
+  const groupMembers = members.value.filter(m => m.group_id === groupId).map(m => Number(m.id))
+  const totalAmount = matrixSalesData.value
+    .filter(s => groupMembers.includes(Number(s.member_id)))
+    .reduce((sum, s) => sum + Number(s.amount), 0)
+  const totalTarget = matrixTargetData.value
+    .filter(t => groupMembers.includes(Number(t.member_id)))
+    .reduce((sum, t) => sum + Number(t.target_amount), 0)
+  return totalTarget > 0 ? Math.round((totalAmount / totalTarget) * 100) : 0
 }
 
 function getGroupTotal(groupId) {
@@ -2251,13 +2279,15 @@ function getRateClass(rate) {
 .gantt-name-col {
   width: 160px;
   min-width: 160px;
-  padding: 10px 14px;
-  font-size: 13px;
+  padding: 4px 10px;
+  font-size: 12px;
   color: #1D1D1F;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   border-right: 1px solid #E5E5EA;
+  display: flex;
+  align-items: center;
 }
 .gantt-header-cell {
   font-weight: 600;
@@ -2281,12 +2311,12 @@ function getRateClass(rate) {
   border-right: 1px solid #E5E5EA;
 }
 .gantt-rows-wrapper {
-  max-height: 520px;
+  max-height: 480px;
   overflow-y: auto;
 }
 .gantt-row-item {
   display: flex;
-  border-bottom: 1px solid #F0F0F0;
+  border-bottom: 1px solid #F5F5F7;
   background: #fff;
 }
 .gantt-row-alt {
@@ -2298,32 +2328,21 @@ function getRateClass(rate) {
 }
 .gantt-grid-col {
   border-right: 1px solid #F0F0F0;
-  height: 32px;
+  height: 22px;
   flex-shrink: 0;
 }
 .gantt-bar {
   position: absolute;
-  top: 5px;
-  height: 22px;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
+  top: 4px;
+  height: 14px;
+  border-radius: 3px;
   cursor: pointer;
-  transition: filter 0.15s;
+  transition: filter 0.15s, opacity 0.15s;
   min-width: 4px;
 }
 .gantt-bar:hover {
-  filter: brightness(0.9);
-}
-.gantt-bar-text {
-  font-size: 11px;
-  color: white;
-  font-weight: 600;
-  padding: 0 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  filter: brightness(0.85);
+  opacity: 0.9;
 }
 .gantt-empty {
   text-align: center;
@@ -2531,42 +2550,50 @@ function getRateClass(rate) {
 }
 
 /* 全年销售走势图 */
-.annual-total-hero {
+.annual-chart-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.annual-total-side {
+  width: 120px;
+  flex-shrink: 0;
+  padding: 12px 0;
   text-align: center;
-  padding: 12px 0 20px;
-  border-bottom: 1px solid #F0F0F0;
-  margin-bottom: 16px;
+  border-right: 1px solid #F0F0F0;
+  margin-right: 4px;
+  align-self: center;
 }
 .annual-total-label {
-  font-size: 13px;
+  font-size: 11px;
   color: #8E8E93;
   font-weight: 500;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 .annual-total-value {
-  font-size: 44px;
+  font-size: 26px;
   font-weight: 800;
-  color: #1D1D1F;
+  color: #007AFF;
   line-height: 1;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
 }
 .annual-total-unit {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 500;
-  color: #6E6E73;
-  letter-spacing: 0;
+  color: #8E8E93;
+  display: block;
+  margin-top: 4px;
 }
 .annual-svg-chart-container {
-  width: 100%;
+  flex: 1;
   overflow-x: auto;
 }
 .annual-svg-chart {
   width: 100%;
   min-width: 600px;
   display: block;
-  height: 200px;
+  height: 240px;
 }
 .annual-chart-legend {
   display: flex;

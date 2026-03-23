@@ -8,7 +8,7 @@ class ProductBase(BaseModel):
     name: str
     alias: Optional[str] = None
     type: str
-    issuer: str
+    issuer: Optional[str] = ''
     code: str
     start_date: date
     end_date: date

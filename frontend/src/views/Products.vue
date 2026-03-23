@@ -42,8 +42,8 @@
                   <span class="info-value">{{ product.type }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">发行:</span>
-                  <span class="info-value">{{ product.issuer }}</span>
+                  <span class="info-label">代码:</span>
+                  <span class="info-value" style="font-family: monospace; font-weight: 600;">{{ product.code || '—' }}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">募集期:</span>
@@ -216,13 +216,6 @@
               />
             </el-form-item>
           </div>
-          <el-form-item label="发行机构" prop="issuer">
-            <el-input
-              v-model="form.issuer"
-              placeholder="请输入产品发行方名称"
-              class="apple-input"
-            />
-          </el-form-item>
         </div>
 
         <!-- 募集信息 -->
@@ -334,9 +327,6 @@
               <el-input v-model="editForm.code" placeholder="请输入官方产品代码" class="apple-input" />
             </el-form-item>
           </div>
-          <el-form-item label="发行机构" prop="issuer">
-            <el-input v-model="editForm.issuer" placeholder="请输入产品发行方名称" class="apple-input" />
-          </el-form-item>
         </div>
 
         <!-- 募集信息 -->
@@ -667,7 +657,6 @@ const editForm = ref({
   id: null,
   name: '',
   type: '',
-  issuer: '',
   code: '',
   start_date: null,
   end_date: null,
@@ -678,7 +667,6 @@ const editForm = ref({
 const rules = {
   name: [{ required: true, message: '请输入产品名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择产品类型', trigger: 'change' }],
-  issuer: [{ required: true, message: '请输入发行机构', trigger: 'blur' }],
   code: [{ required: true, message: '请输入产品代码', trigger: 'blur' }],
   start_date: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
   end_date: [{ required: true, message: '请选择结束日期', trigger: 'change' }],

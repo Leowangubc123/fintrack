@@ -189,9 +189,9 @@ onMounted(() => {
 
 async function loadProducts() {
   try {
-    // 加载所有产品，包括已结束的，以便可以导入历史数据
     const res = await productsApi.list()
-    products.value = res
+    // 只显示未归档的产品
+    products.value = res.filter(p => !p.is_archived)
   } catch (error) {
     console.error('加载产品失败:', error)
   }
