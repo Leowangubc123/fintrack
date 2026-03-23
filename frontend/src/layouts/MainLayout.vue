@@ -3,12 +3,22 @@
     <!-- 左侧导航栏 - 玻璃拟态 -->
     <aside class="sidebar">
       <div class="logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-        <span>FinTrack</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 130" class="logo-svg">
+          <defs>
+            <clipPath id="lensClip">
+              <circle cx="62" cy="58" r="34"/>
+            </clipPath>
+          </defs>
+          <circle cx="62" cy="58" r="34" fill="#ffffff" stroke="#1E40AF" stroke-width="7"/>
+          <g clip-path="url(#lensClip)">
+            <rect x="33" y="58" width="9" height="20" rx="1.5" fill="#007AFF"/>
+            <rect x="46" y="48" width="9" height="30" rx="1.5" fill="#007AFF"/>
+            <rect x="59" y="53" width="9" height="25" rx="1.5" fill="#007AFF"/>
+            <rect x="72" y="40" width="9" height="38" rx="1.5" fill="#007AFF"/>
+          </g>
+          <line x1="88" y1="85" x2="112" y2="110" stroke="#1E40AF" stroke-width="7" stroke-linecap="round"/>
+          <text x="130" y="74" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="bold" fill="#1E40AF" letter-spacing="-1">Fintrack</text>
+        </svg>
       </div>
 
       <nav class="nav-menu">
@@ -87,28 +97,14 @@ const menuItems = ref([
   height: 64px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 10px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1D1D1F;
+  padding: 0 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.logo-icon svg {
-  width: 20px;
-  height: 20px;
+.logo-svg {
+  width: 100%;
+  max-width: 192px;
+  height: auto;
 }
 
 .nav-menu {
