@@ -3,23 +3,24 @@
     <div class="login-card">
       <!-- Logo -->
       <div class="login-logo">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 130" class="logo-svg">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 270 80" class="logo-svg">
           <defs>
             <clipPath id="lensClipLogin">
-              <circle cx="62" cy="58" r="34"/>
+              <circle cx="38" cy="40" r="22"/>
             </clipPath>
           </defs>
-          <circle cx="62" cy="58" r="34" fill="#ffffff" stroke="#1E40AF" stroke-width="7"/>
+          <circle cx="38" cy="40" r="27" fill="white" stroke="#1E40AF" stroke-width="7"/>
+          <circle cx="38" cy="40" r="22" fill="none" stroke="white" stroke-width="2"/>
           <g clip-path="url(#lensClipLogin)">
-            <rect x="33" y="58" width="9" height="20" rx="1.5" fill="#007AFF"/>
-            <rect x="46" y="48" width="9" height="30" rx="1.5" fill="#007AFF"/>
-            <rect x="59" y="53" width="9" height="25" rx="1.5" fill="#007AFF"/>
-            <rect x="72" y="40" width="9" height="38" rx="1.5" fill="#007AFF"/>
+            <rect x="20" y="46" width="10" height="22" fill="#007AFF"/>
+            <rect x="33" y="36" width="10" height="32" fill="#007AFF"/>
+            <rect x="46" y="26" width="10" height="42" fill="#007AFF"/>
           </g>
-          <line x1="88" y1="85" x2="112" y2="110" stroke="#1E40AF" stroke-width="7" stroke-linecap="round"/>
-          <text x="130" y="74" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="bold" fill="#1E40AF" letter-spacing="-1">Fintrack</text>
+          <line x1="57" y1="63" x2="72" y2="80" stroke="#1E40AF" stroke-width="7" stroke-linecap="round"/>
+          <text x="84" y="54" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="bold" fill="#1E40AF" letter-spacing="-1">Fintrack</text>
         </svg>
       </div>
+
 
       <p class="login-subtitle">金融产品销售管理系统</p>
 
@@ -104,7 +105,7 @@ async function handleLogin() {
 }
 
 .login-logo {
-  width: 220px;
+  width: 230px;
   margin-bottom: 8px;
 }
 
