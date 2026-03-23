@@ -47,6 +47,10 @@
             <div class="user-avatar">管</div>
             <span>管理员</span>
           </div>
+          <button class="logout-btn" @click="handleLogout">
+            <el-icon :size="16"><SwitchButton /></el-icon>
+            <span>退出</span>
+          </button>
         </div>
       </header>
 
@@ -60,7 +64,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import { DataLine, UserFilled, Box, Upload, TrendCharts } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton } from '@element-plus/icons-vue'
+
+const router = useRouter()
 
 const menuItems = ref([
   { path: '/', title: '数据看板', icon: DataLine },
@@ -69,6 +76,11 @@ const menuItems = ref([
   { path: '/organization', title: '营销人员', icon: UserFilled },
   { path: '/import', title: '数据导入', icon: Upload },
 ])
+
+function handleLogout() {
+  localStorage.removeItem('ft_auth')
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -198,6 +210,29 @@ const menuItems = ref([
   color: white;
   font-weight: 600;
   font-size: 13px;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 59, 48, 0.08);
+  color: #FF3B30;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 59, 48, 0.15);
+}
+
+.logout-btn:active {
+  transform: scale(0.98);
 }
 
 .content-wrapper {
