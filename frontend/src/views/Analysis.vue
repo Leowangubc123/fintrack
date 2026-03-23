@@ -359,53 +359,58 @@
           </div>
           <!-- SVG 图表 全宽 -->
             <div class="annual-svg-chart-container" ref="chartContainer">
-            <svg class="annual-svg-chart" :viewBox="`0 0 780 260`" preserveAspectRatio="none">
-              <!-- 背景网格线: 左留24px给Y轴标签，右留4px -->
+            <svg class="annual-svg-chart" viewBox="0 0 1200 260" preserveAspectRatio="xMidYMid meet">
+              <!--
+                viewBox 1200×260，左留40px(Y轴标签)，右留8px
+                可用宽度 1152px / 12列 = 96px/列，柱宽60px，左偏18px，列中心48px
+                Y轴: top=20, bottom=188, 可用高度168px
+              -->
+              <!-- 背景网格线 -->
               <line v-for="n in 5" :key="'grid'+n"
-                :x1="24" :y1="20 + (n-1) * 42"
-                :x2="778" :y2="20 + (n-1) * 42"
+                :x1="40" :y1="20 + (n-1) * 42"
+                :x2="1194" :y2="20 + (n-1) * 42"
                 stroke="#F0F0F0" stroke-width="1"/>
               <!-- Y轴标签 -->
               <text v-for="n in 5" :key="'ylabel'+n"
-                :x="20" :y="20 + (n-1) * 42 + 4"
-                text-anchor="end" font-size="10" fill="#AEAEB2">
+                :x="34" :y="20 + (n-1) * 42 + 4"
+                text-anchor="end" font-size="11" fill="#AEAEB2">
                 {{ formatNumber(chartYLabel(5 - n)) }}
               </text>
-              <!-- 柱状图: 12列均分 (780-24-4)/12=62.67px/列，柱宽46px，左偏8px -->
+              <!-- 柱状图 -->
               <g v-for="(pt, i) in dashboardChartPoints" :key="'bar'+i">
                 <rect
-                  :x="24 + i * 63 + 8"
+                  :x="40 + i * 96 + 18"
                   :y="pt.barH > 0 ? 20 + 168 - pt.barH : 188"
-                  :width="47"
+                  :width="60"
                   :height="pt.barH > 0 ? pt.barH : 0"
                   :fill="pt.barH > 0 ? 'url(#barGrad)' : '#E5E5EA'"
-                  rx="4" ry="4"/>
+                  rx="5" ry="5"/>
                 <!-- 数值标签 -->
                 <text v-if="pt.amount > 0"
-                  :x="24 + i * 63 + 31"
-                  :y="pt.barH > 0 ? 20 + 168 - pt.barH - 5 : 183"
-                  text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">
+                  :x="40 + i * 96 + 48"
+                  :y="pt.barH > 0 ? 20 + 168 - pt.barH - 6 : 183"
+                  text-anchor="middle" font-size="11" font-weight="600" fill="#007AFF">
                   {{ formatNumber(pt.amount) }}
                 </text>
                 <!-- 月份标签 -->
                 <text
-                  :x="24 + i * 63 + 31"
+                  :x="40 + i * 96 + 48"
                   y="210"
-                  text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">
+                  text-anchor="middle" font-size="14" font-weight="600" fill="#3A3A3C">
                   {{ pt.month }}月
                 </text>
               </g>
-              <!-- 趋势折线 -->
+              <!-- 趋势折线（仅当前及过往月份） -->
               <polyline
                 :points="trendPolylinePoints"
-                fill="none" stroke="#FF9500" stroke-width="2.5"
+                fill="none" stroke="#FF9500" stroke-width="3"
                 stroke-linejoin="round" stroke-linecap="round"/>
-              <!-- 趋势折线节点 -->
+              <!-- 趋势折线节点（仅当前及过往月份） -->
               <template v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i">
-                <circle v-if="pt.amount > 0"
-                  :cx="24 + i * 63 + 31"
+                <circle v-if="pt.amount > 0 && isTrendMonth(pt.month)"
+                  :cx="40 + i * 96 + 48"
                   :cy="20 + 168 - pt.barH"
-                  r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
+                  r="5" fill="#FF9500" stroke="white" stroke-width="2.5"/>
               </template>
               <!-- 渐变定义 -->
               <defs>
@@ -759,9 +764,21 @@ const dashboardChartPoints = computed(() => {
   })
 })
 
+// 只对当前年份的过往+当月，或历史年份的全部有数据月份画折线
+function isTrendMonth(month) {
+  const now = new Date()
+  if (dashboardYear.value < now.getFullYear()) return true   // 历史年份全显示
+  if (dashboardYear.value > now.getFullYear()) return false  // 未来年份不显示
+  return month <= now.getMonth() + 1                        // 当前年份只到当月
+}
+
 const trendPolylinePoints = computed(() => {
   return dashboardChartPoints.value
-    .map((pt, i) => `${24 + i * 63 + 31},${20 + 168 - pt.barH}`)
+    .filter(pt => pt.amount > 0 && isTrendMonth(pt.month))
+    .map(pt => {
+      const i = pt.month - 1
+      return `${40 + i * 96 + 48},${20 + 168 - pt.barH}`
+    })
     .join(' ')
 })
 
@@ -2593,7 +2610,8 @@ function getRateClass(rate) {
 .annual-svg-chart {
   width: 100%;
   display: block;
-  height: 240px;
+  /* height auto-scales to match viewBox 1200×260 aspect ratio */
+  aspect-ratio: 1200 / 260;
 }
 .annual-chart-legend {
   display: flex;
