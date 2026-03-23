@@ -680,8 +680,7 @@ async function loadMemberDetail(memberId) {
 
 // ── 年度看板计算属性 ──
 const yearOptions = computed(() => {
-  const y = new Date().getFullYear()
-  return [y - 1, y, y + 1]
+  return [new Date().getFullYear()]
 })
 
 const ganttViewRange = computed(() => {

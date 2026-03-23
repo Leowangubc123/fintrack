@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全年销量走势 · 示意图</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+    background: #F5F5F7;
+    padding: 40px;
+    color: #1D1D1F;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    overflow: hidden;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── 顶部：标题 + 年度总额 ── */
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-icon { width: 20px; height: 20px; color: #34C759; flex-shrink: 0; }
+  .card-title { font-size: 16px; font-weight: 600; color: #1D1D1F; }
+
+  .total-block {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .total-label {
+    font-size: 13px;
+    color: #8E8E93;
+    font-weight: 500;
+  }
+  .total-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1D1D1F;
+    letter-spacing: -0.5px;
+  }
+  .total-unit {
+    font-size: 14px;
+    color: #6E6E73;
+    font-weight: 500;
+  }
+
+  /* ── 图表区 ── */
+  .chart-area {
+    padding: 20px 28px 16px;
+  }
+
+  /* SVG 撑满宽度 */
+  .chart-svg-wrap {
+    width: 100%;
+  }
+  .chart-svg-wrap svg {
+    width: 100%;
+    display: block;
+  }
+
+  /* 图例 */
+  .chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6E6E73;
+  }
+  .legend-bar {
+    width: 14px; height: 8px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #5AC8FA, #007AFF);
+  }
+  .legend-line {
+    width: 20px; height: 2.5px;
+    border-radius: 2px;
+    background: #FF9500;
+    position: relative;
+  }
+  .legend-line::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #FF9500;
+  }
+
+  .note { text-align: center; font-size: 12px; color: #C8C8C8; margin-top: 28px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- 顶部 -->
+  <div class="card-header">
+    <div class="header-left">
+      <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span class="card-title">全年销量走势</span>
+      <span style="font-size:13px;color:#8E8E93;margin-left:4px;">2025年</span>
+    </div>
+    <div class="total-block">
+      <span class="total-label">年度总销售额</span>
+      <span class="total-value">¥3,840</span>
+      <span class="total-unit">万元</span>
+    </div>
+  </div>
+
+  <!-- 图表 -->
+  <div class="chart-area">
+    <div class="chart-svg-wrap">
+      <!--
+        viewBox: 0 0 1100 280
+        左边留 y 轴标签宽度 44px，右边留 10px
+        上边留 30px（数值标签），下边留 36px（月份标签）
+        可用图表高度：280 - 30 - 36 = 214px  → 柱子最高 180px，顶部留 34px 给数值标签
+        12 个柱，每个宽度 = (1100 - 44 - 10) / 12 = 87px
+        柱宽 44px，两侧各留 (87-44)/2 ≈ 21.5px
+      -->
+      <svg viewBox="0 0 1100 280" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="barG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#5AC8FA"/>
+            <stop offset="100%" stop-color="#007AFF"/>
+          </linearGradient>
+        </defs>
+
+        <!-- 网格线 + Y轴标签 (5条) -->
+        <!-- y 可用区：30 ~ 210，跨度 180，分4格 -->
+        <!-- 最大值约 550万，每格 ~138万 -->
+
+        <line x1="44" y1="30"  x2="1090" y2="30"  stroke="#F0F0F0" stroke-width="1"/>
+        <text x="38" y="34"  text-anchor="end" font-size="11" fill="#AEAEB2">550</text>
+
+        <line x1="44" y1="75"  x2="1090" y2="75"  stroke="#F0F0F0" stroke-width="1"/>
+        <text x="38" y="79"  text-anchor="end" font-size="11" fill="#AEAEB2">413</text>
+
+        <line x1="44" y1="120" x2="1090" y2="120" stroke="#F0F0F0" stroke-width="1"/>
+        <text x="38" y="124" text-anchor="end" font-size="11" fill="#AEAEB2">275</text>
+
+        <line x1="44" y1="165" x2="1090" y2="165" stroke="#F0F0F0" stroke-width="1"/>
+        <text x="38" y="169" text-anchor="end" font-size="11" fill="#AEAEB2">138</text>
+
+        <line x1="44" y1="210" x2="1090" y2="210" stroke="#F0F0F2" stroke-width="1"/>
+        <text x="38" y="214" text-anchor="end" font-size="11" fill="#AEAEB2">0</text>
+
+        <!--
+          月份数据（万元）：
+          1月  2月  3月  4月  5月  6月  7月  8月  9月 10月 11月 12月
+          120  180  320  280  200  350  420  510  340  260  0    0
+          (10月后暂无数据)
+
+          比例：/ 550 * 180
+          120→39  180→59  320→105  280→92  200→65  350→115
+          420→138  510→167  340→112  260→85  0→0  0→0
+
+          每列中心 x = 44 + (i+0.5)*87.17  i=0..11
+          col centers: 87.6 ≈ 44+43.6, 44+130.7, 44+217.9, 44+305.1...
+          Simplified: 44 + i*87.17 + 43.6
+
+          i=0: 87.6    i=1: 174.7   i=2: 261.9   i=3: 349.0
+          i=4: 436.2   i=5: 523.3   i=6: 610.5   i=7: 697.6
+          i=8: 784.8   i=9: 871.9   i=10: 959.1  i=11: 1046.2
+
+          bar left = cx - 22, bar top = 210 - barH, bar width=44
+        -->
+
+        <!-- 1月 h=39 -->
+        <rect x="65.6" y="171" width="44" height="39" fill="url(#barG)" rx="4"/>
+        <text x="87.6" y="165" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">120</text>
+        <text x="87.6" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">1月</text>
+
+        <!-- 2月 h=59 -->
+        <rect x="152.7" y="151" width="44" height="59" fill="url(#barG)" rx="4"/>
+        <text x="174.7" y="145" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">180</text>
+        <text x="174.7" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">2月</text>
+
+        <!-- 3月 h=105 -->
+        <rect x="239.9" y="105" width="44" height="105" fill="url(#barG)" rx="4"/>
+        <text x="261.9" y="99" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">320</text>
+        <text x="261.9" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">3月</text>
+
+        <!-- 4月 h=92 -->
+        <rect x="327.0" y="118" width="44" height="92" fill="url(#barG)" rx="4"/>
+        <text x="349.0" y="112" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">280</text>
+        <text x="349.0" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">4月</text>
+
+        <!-- 5月 h=65 -->
+        <rect x="414.2" y="145" width="44" height="65" fill="url(#barG)" rx="4"/>
+        <text x="436.2" y="139" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">200</text>
+        <text x="436.2" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">5月</text>
+
+        <!-- 6月 h=115 -->
+        <rect x="501.3" y="95" width="44" height="115" fill="url(#barG)" rx="4"/>
+        <text x="523.3" y="89" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">350</text>
+        <text x="523.3" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">6月</text>
+
+        <!-- 7月 h=138 -->
+        <rect x="588.5" y="72" width="44" height="138" fill="url(#barG)" rx="4"/>
+        <text x="610.5" y="66" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">420</text>
+        <text x="610.5" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">7月</text>
+
+        <!-- 8月 h=167 -->
+        <rect x="675.6" y="43" width="44" height="167" fill="url(#barG)" rx="4"/>
+        <text x="697.6" y="37" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">510</text>
+        <text x="697.6" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">8月</text>
+
+        <!-- 9月 h=112 -->
+        <rect x="762.8" y="98" width="44" height="112" fill="url(#barG)" rx="4"/>
+        <text x="784.8" y="92" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">340</text>
+        <text x="784.8" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">9月</text>
+
+        <!-- 10月 h=85 -->
+        <rect x="849.9" y="125" width="44" height="85" fill="url(#barG)" rx="4"/>
+        <text x="871.9" y="119" text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">260</text>
+        <text x="871.9" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">10月</text>
+
+        <!-- 11月 无数据 -->
+        <rect x="937.1" y="207" width="44" height="3" fill="#E5E5EA" rx="2"/>
+        <text x="959.1" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#AEAEB2">11月</text>
+
+        <!-- 12月 无数据 -->
+        <rect x="1024.2" y="207" width="44" height="3" fill="#E5E5EA" rx="2"/>
+        <text x="1046.2" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#AEAEB2">12月</text>
+
+        <!-- 趋势折线（只画有数据的月份） -->
+        <polyline
+          points="87.6,171  174.7,151  261.9,105  349.0,118  436.2,145  523.3,95  610.5,72  697.6,43  784.8,98  871.9,125"
+          fill="none" stroke="#FF9500" stroke-width="2.5"
+          stroke-linejoin="round" stroke-linecap="round"/>
+
+        <!-- 折线节点 -->
+        <circle cx="87.6"  cy="171" r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="174.7" cy="151" r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="261.9" cy="105" r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="349.0" cy="118" r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="436.2" cy="145" r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="523.3" cy="95"  r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="610.5" cy="72"  r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="697.6" cy="43"  r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="784.8" cy="98"  r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+        <circle cx="871.9" cy="125" r="4.5" fill="#FF9500" stroke="white" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <!-- 图例 -->
+    <div class="chart-legend">
+      <div class="legend-item">
+        <div class="legend-bar"></div>
+        <span>月销售额（万元）</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line"></div>
+        <span>走势线</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">示意图 · 非真实数据</div>
+
+</body>
+</html>

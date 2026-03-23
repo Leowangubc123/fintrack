@@ -8,7 +8,7 @@
         <div class="kpi-sub">个产品募集中</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">本年度已发售重点产品</div>
+        <div class="kpi-label">本年度已发售</div>
         <div class="kpi-value">{{ summary.year_products || 0 }}</div>
         <div class="kpi-sub">个重点产品</div>
       </div>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据看板 · 方案C v3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #F5F5F7;
+    color: #1D1D1F;
+    padding: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+
+  /* ── KPI 卡片 ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 22px 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    text-align: center;
+  }
+  .kpi-label { font-size: 13px; color: #6E6E73; margin-bottom: 10px; font-weight: 500; }
+  .kpi-value { font-size: 30px; font-weight: 700; color: #1D1D1F; margin-bottom: 6px; }
+  .kpi-value.green { color: #34C759; }
+  .kpi-value.blue  { color: #007AFF; }
+  .kpi-sub { font-size: 12px; color: #8E8E93; }
+  .kpi-progress { height: 6px; background: #E5E5EA; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .kpi-progress-fill { height: 100%; background: #34C759; border-radius: 3px; width: 84%; }
+
+  /* ── 产品卡片 ── */
+  .product-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  /* 顶部标题栏 */
+  .card-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 24px;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .card-title-row { display: flex; align-items: center; gap: 8px; }
+  .card-icon { width: 19px; height: 19px; color: #007AFF; flex-shrink: 0; }
+  .card-title-text { font-size: 15px; font-weight: 600; color: #1D1D1F; }
+  .active-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #E3F5E8; color: #1A9E3F;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .active-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #34C759;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  /* 主体：左右布局 */
+  .card-body { display: flex; }
+
+  /* ── 左：产品信息 ── */
+  .product-detail {
+    width: 270px;
+    flex-shrink: 0;
+    padding: 20px 22px;
+    border-right: 1px solid #F0F0F0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .product-name-full {
+    font-size: 15px; font-weight: 700; color: #1D1D1F;
+    line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* 代码 + 截止+剩余 合并一行 */
+  .product-meta {
+    display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  }
+  .product-code {
+    font-family: "SF Mono","Menlo",monospace;
+    font-size: 11px; color: #8E8E93;
+    background: #F5F5F7; padding: 2px 7px; border-radius: 5px;
+  }
+  .deadline-combined {
+    font-size: 12px; font-weight: 600;
+    color: #FF9500; background: #FFF4E0;
+    padding: 3px 10px; border-radius: 20px;
+    border: 1px solid rgba(255,149,0,.2);
+    white-space: nowrap;
+  }
+  .deadline-combined.urgent {
+    color: #FF3B30; background: #FFF0EF;
+    border-color: rgba(255,59,48,.2);
+  }
+
+  /* 完成率大字 */
+  .completion-row {
+    display: flex; align-items: flex-end; gap: 6px;
+  }
+  .completion-pct {
+    font-size: 44px; font-weight: 800;
+    line-height: 1; letter-spacing: -2px;
+  }
+  .completion-sublabel { font-size: 12px; color: #8E8E93; padding-bottom: 7px; }
+
+  .progress-bar-left {
+    height: 8px; background: #E5E5EA; border-radius: 4px; overflow: hidden;
+  }
+  .p-fill { height: 100%; border-radius: 4px; }
+  .p-green  { background: linear-gradient(90deg,#34C759,#30D158); }
+  .p-orange { background: linear-gradient(90deg,#FF9500,#E07800); }
+
+  /* 金额两列 */
+  .amount-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .amount-item { background: #F9F9FB; border-radius: 10px; padding: 10px 12px; }
+  .amount-val  { font-size: 15px; font-weight: 700; color: #1D1D1F; }
+  .amount-val.blue { color: #007AFF; }
+  .amount-lbl  { font-size: 11px; color: #8E8E93; margin-top: 2px; }
+
+  /* ── 右：营业部 ── */
+  .groups-section {
+    flex: 1;
+    padding: 18px 0 18px 22px; /* 右边不留 padding，让进度条到边 */
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .groups-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+    padding-right: 24px;
+  }
+  .groups-title { font-size: 13px; font-weight: 600; color: #8E8E93; text-transform: uppercase; letter-spacing: .5px; }
+  .groups-sub   { font-size: 12px; color: #AEAEB2; }
+
+  .group-rows { display: flex; flex-direction: column; gap: 0; flex: 1; }
+
+  /* 每行：
+     [medal] [name 95px] [完成率文字区 110px] [销量文字区 80px] [进度条 flex, 到卡片右边缘]
+  */
+  .group-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid #F8F8FA;
+  }
+  .group-row:last-child { border-bottom: none; }
+
+  .rank-col { width: 28px; flex-shrink: 0; }
+  .medal {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .medal-1 { background: linear-gradient(135deg,#FFD700,#FFA500); color:#fff; }
+  .medal-2 { background: linear-gradient(135deg,#C0C0C0,#A0A0A0); color:#fff; }
+  .medal-3 { background: linear-gradient(135deg,#CD7F32,#B87333); color:#fff; }
+  .medal-n { background: #EBEBEF; color: #6E6E73; }
+
+  .g-name {
+    width: 95px; flex-shrink: 0;
+    font-size: 14px; font-weight: 600; color: #1D1D1F;
+  }
+
+  /* 完成率：label 上，数值下 */
+  .g-rate-block {
+    width: 90px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .g-rate-label { font-size: 10px; color: #AEAEB2; font-weight: 500; }
+  .g-rate-val   { font-size: 17px; font-weight: 800; }
+  .rate-green  { color: #28C840; }
+  .rate-orange { color: #E08000; }
+  .rate-red    { color: #FF3B30; }
+
+  /* 销量：label 上，数值下 */
+  .g-sales-block {
+    width: 80px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .g-sales-label { font-size: 10px; color: #AEAEB2; font-weight: 500; }
+  .g-sales-val   { font-size: 14px; font-weight: 700; color: #007AFF; }
+
+  /* 进度条：flex:1，右边不留 padding，让它顶到卡片边缘 */
+  .g-bar-wrap {
+    flex: 1;
+    padding-right: 24px; /* 只在这里设右边距 */
+    display: flex;
+    align-items: center;
+  }
+  .g-bar-track {
+    flex: 1;
+    height: 10px;
+    background: #EBEBEF;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .g-bar-fill { height: 100%; border-radius: 5px; }
+  .bar-green  { background: linear-gradient(90deg,#34C759,#30D158); }
+  .bar-orange { background: linear-gradient(90deg,#FF9500,#E07800); }
+  .bar-red    { background: linear-gradient(90deg,#FF3B30,#E02020); }
+
+  .note { text-align: center; font-size: 12px; color: #C8C8C8; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<div class="page-title">数据看板</div>
+
+<!-- KPI -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">本月在售产品</div>
+    <div class="kpi-value blue">2</div>
+    <div class="kpi-sub">个产品募集中</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">本年度已发售重点产品</div>
+    <div class="kpi-value">14</div>
+    <div class="kpi-sub">个重点产品</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">本年度销售额</div>
+    <div class="kpi-value" style="font-size:24px;">¥3,840万元</div>
+    <div class="kpi-sub">近7日 ↑ ¥320万元</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">整体完成率</div>
+    <div class="kpi-value green">84%</div>
+    <div class="kpi-progress"><div class="kpi-progress-fill"></div></div>
+  </div>
+</div>
+
+<!-- ═══ 产品卡片 1 ═══ -->
+<div class="product-card">
+  <div class="card-topbar">
+    <div class="card-title-row">
+      <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      </svg>
+      <span class="card-title-text">在售产品</span>
+    </div>
+    <div class="active-badge"><span class="active-dot"></span>募集中</div>
+  </div>
+
+  <div class="card-body">
+    <!-- 左 -->
+    <div class="product-detail">
+      <div class="product-name-full" title="广发稳健增益180天持有期">广发稳健增益180天持有期</div>
+      <div class="product-meta">
+        <span class="product-code">GF20240108</span>
+        <span class="deadline-combined urgent">截止 01-07 · 剩 18 天</span>
+      </div>
+      <div>
+        <div class="completion-row">
+          <div class="completion-pct" style="color:#34C759">84%</div>
+          <div class="completion-sublabel">整体完成率</div>
+        </div>
+        <div class="progress-bar-left" style="margin-top:8px;margin-bottom:14px;">
+          <div class="p-fill p-green" style="width:84%"></div>
+        </div>
+        <div class="amount-grid">
+          <div class="amount-item">
+            <div class="amount-val">¥2,000万</div>
+            <div class="amount-lbl">全公司目标</div>
+          </div>
+          <div class="amount-item">
+            <div class="amount-val blue">¥1,680万</div>
+            <div class="amount-lbl">已完成销量</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右 -->
+    <div class="groups-section">
+      <div class="groups-header">
+        <span class="groups-title">各营业部完成情况</span>
+        <span class="groups-sub">按完成率排序</span>
+      </div>
+      <div class="group-rows">
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-1">1</div></div>
+          <div class="g-name">第一营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-green">96%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥480万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-green" style="width:96%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-2">2</div></div>
+          <div class="g-name">本部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-green">88%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥220万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-green" style="width:88%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-3">3</div></div>
+          <div class="g-name">第二营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-orange">84%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥420万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-orange" style="width:84%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-n">4</div></div>
+          <div class="g-name">第三营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-orange">76%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥380万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-orange" style="width:76%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-n">5</div></div>
+          <div class="g-name">第四营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-red">48%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥120万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-red" style="width:48%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-n">6</div></div>
+          <div class="g-name">第五营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-red">24%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥60万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-red" style="width:24%"></div></div></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 产品卡片 2 ═══ -->
+<div class="product-card">
+  <div class="card-topbar">
+    <div class="card-title-row">
+      <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      </svg>
+      <span class="card-title-text">在售产品</span>
+    </div>
+    <div class="active-badge"><span class="active-dot"></span>募集中</div>
+  </div>
+
+  <div class="card-body">
+    <div class="product-detail">
+      <div class="product-name-full" title="中银汇利灵活配置混合型">中银汇利灵活配置混合型</div>
+      <div class="product-meta">
+        <span class="product-code">ZY20240215</span>
+        <span class="deadline-combined">截止 02-15 · 剩 32 天</span>
+      </div>
+      <div>
+        <div class="completion-row">
+          <div class="completion-pct" style="color:#FF9500">61%</div>
+          <div class="completion-sublabel">整体完成率</div>
+        </div>
+        <div class="progress-bar-left" style="margin-top:8px;margin-bottom:14px;">
+          <div class="p-fill p-orange" style="width:61%"></div>
+        </div>
+        <div class="amount-grid">
+          <div class="amount-item">
+            <div class="amount-val">¥1,500万</div>
+            <div class="amount-lbl">全公司目标</div>
+          </div>
+          <div class="amount-item">
+            <div class="amount-val blue">¥915万</div>
+            <div class="amount-lbl">已完成销量</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="groups-section">
+      <div class="groups-header">
+        <span class="groups-title">各营业部完成情况</span>
+        <span class="groups-sub">按完成率排序</span>
+      </div>
+      <div class="group-rows">
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-1">1</div></div>
+          <div class="g-name">第二营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-orange">82%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥246万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-orange" style="width:82%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-2">2</div></div>
+          <div class="g-name">第一营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-orange">74%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥222万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-orange" style="width:74%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-3">3</div></div>
+          <div class="g-name">本部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-orange">68%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥136万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-orange" style="width:68%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-n">4</div></div>
+          <div class="g-name">第三营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-orange">55%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥165万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-orange" style="width:55%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-n">5</div></div>
+          <div class="g-name">第四营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-red">38%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥95万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-red" style="width:38%"></div></div></div>
+        </div>
+
+        <div class="group-row">
+          <div class="rank-col"><div class="medal medal-n">6</div></div>
+          <div class="g-name">第五营业部</div>
+          <div class="g-rate-block"><div class="g-rate-label">完成率</div><div class="g-rate-val rate-red">34%</div></div>
+          <div class="g-sales-block"><div class="g-sales-label">销量</div><div class="g-sales-val">¥51万</div></div>
+          <div class="g-bar-wrap"><div class="g-bar-track"><div class="g-bar-fill bar-red" style="width:34%"></div></div></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">示意图 · 非真实数据</div>
+</body>
+</html>

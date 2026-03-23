@@ -5,8 +5,15 @@ import Organization from '../views/Organization.vue'
 import Products from '../views/Products.vue'
 import Import from '../views/Import.vue'
 import Analysis from '../views/Analysis.vue'
+import Login from '../views/Login.vue'
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: { public: true }
+  },
   {
     path: '/',
     component: MainLayout,
@@ -23,6 +30,13 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to) => {
+  const isAuth = localStorage.getItem('ft_auth') === 'true'
+  if (!to.meta.public && !isAuth) {
+    return { name: 'Login' }
+  }
 })
 
 export default router
