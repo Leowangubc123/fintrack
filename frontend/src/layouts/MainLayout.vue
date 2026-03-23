@@ -3,21 +3,24 @@
     <!-- 左侧导航栏 - 玻璃拟态 -->
     <aside class="sidebar">
       <div class="logo">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 130" class="logo-svg">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 120" class="logo-svg">
           <defs>
             <clipPath id="lensClip">
-              <circle cx="62" cy="58" r="34"/>
+              <circle cx="54" cy="52" r="35"/>
             </clipPath>
           </defs>
-          <circle cx="62" cy="58" r="34" fill="#ffffff" stroke="#1E40AF" stroke-width="7"/>
+          <!-- Lens ring -->
+          <circle cx="54" cy="52" r="35" fill="#ffffff" stroke="#1E3FAE" stroke-width="9"/>
+          <!-- 3 bars: short → medium → tall, left to right -->
           <g clip-path="url(#lensClip)">
-            <rect x="33" y="58" width="9" height="20" rx="1.5" fill="#007AFF"/>
-            <rect x="46" y="48" width="9" height="30" rx="1.5" fill="#007AFF"/>
-            <rect x="59" y="53" width="9" height="25" rx="1.5" fill="#007AFF"/>
-            <rect x="72" y="40" width="9" height="38" rx="1.5" fill="#007AFF"/>
+            <rect x="32" y="57" width="12" height="22" rx="2" fill="#1A9FFF"/>
+            <rect x="49" y="44" width="12" height="35" rx="2" fill="#1A9FFF"/>
+            <rect x="66" y="34" width="12" height="45" rx="2" fill="#1A9FFF"/>
           </g>
-          <line x1="88" y1="85" x2="112" y2="110" stroke="#1E40AF" stroke-width="7" stroke-linecap="round"/>
-          <text x="130" y="74" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="bold" fill="#1E40AF" letter-spacing="-1">Fintrack</text>
+          <!-- Handle -->
+          <line x1="81" y1="79" x2="106" y2="106" stroke="#1E3FAE" stroke-width="9" stroke-linecap="round"/>
+          <!-- Wordmark -->
+          <text x="124" y="71" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="bold" fill="#1E3FAE" letter-spacing="-0.5">Fintrack</text>
         </svg>
       </div>
 
