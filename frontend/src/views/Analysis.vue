@@ -351,14 +351,13 @@
           </div>
         </div>
         <div class="card-body" style="padding: 16px 24px 16px;">
-          <!-- 年度总额 + 图表并排布局 -->
-          <div class="annual-chart-layout">
-            <div class="annual-total-side">
-              <div class="annual-total-label">{{ dashboardYear }} 年度总销售额</div>
-              <div class="annual-total-value">¥{{ formatNumber(dashboardYearTotal) }}</div>
-              <div class="annual-total-unit">万元</div>
-            </div>
-            <!-- SVG 图表 -->
+          <!-- 年度总额 居中 -->
+          <div class="annual-total-center">
+            <span class="annual-total-label">{{ dashboardYear }} 年度总销售额</span>
+            <span class="annual-total-value">¥{{ formatNumber(dashboardYearTotal) }}</span>
+            <span class="annual-total-unit">万元</span>
+          </div>
+          <!-- SVG 图表 全宽 -->
             <div class="annual-svg-chart-container" ref="chartContainer">
             <svg class="annual-svg-chart" :viewBox="`0 0 780 260`" preserveAspectRatio="xMidYMid meet">
               <!-- 背景网格线 -->
@@ -417,7 +416,6 @@
               </defs>
             </svg>
             </div>
-          </div>
           <!-- 图例 -->
           <div class="annual-chart-legend" style="margin-top: 4px;">
             <span class="legend-bar-item"><span class="legend-bar-dot" style="background:linear-gradient(#5AC8FA,#007AFF)"></span>月销售额（万元）</span>
@@ -2550,40 +2548,29 @@ function getRateClass(rate) {
 }
 
 /* 全年销售走势图 */
-.annual-chart-layout {
+.annual-total-center {
   display: flex;
-  align-items: flex-start;
-  gap: 20px;
-}
-.annual-total-side {
-  width: 120px;
-  flex-shrink: 0;
-  padding: 12px 0;
-  text-align: center;
-  border-right: 1px solid #F0F0F0;
-  margin-right: 4px;
-  align-self: center;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 .annual-total-label {
-  font-size: 11px;
+  font-size: 13px;
   color: #8E8E93;
   font-weight: 500;
-  margin-bottom: 8px;
-  line-height: 1.4;
 }
 .annual-total-value {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 800;
-  color: #007AFF;
+  color: #1D1D1F;
   line-height: 1;
   letter-spacing: -0.5px;
 }
 .annual-total-unit {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-  color: #8E8E93;
-  display: block;
-  margin-top: 4px;
+  color: #6E6E73;
 }
 .annual-svg-chart-container {
   flex: 1;

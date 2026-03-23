@@ -1358,7 +1358,8 @@ async function handleClearSalesData(product) {
 
 .info-row {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
   font-size: 13px;
 }
@@ -1396,15 +1397,14 @@ async function handleClearSalesData(product) {
 }
 
 .progress-stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #6E6E73;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-weight: 500;
 }
 
 .progress-stat-value {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: #1D1D1F;
 }
 
