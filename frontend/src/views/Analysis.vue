@@ -331,7 +331,7 @@
                     class="gantt-bar"
                     :style="getGanttBarStyle(product)"
                     :title="`${product.name}  |  ${product.start_date} → ${product.end_date}`"
-                  ></div>
+                  ><span class="gantt-bar-label">{{ product.name }}</span></div>
                 </div>
               </div>
               <div v-if="ganttProducts.length === 0" class="gantt-empty">该时间段暂无产品发售</div>
@@ -350,7 +350,7 @@
             <span class="card-title">全年销量走势</span>
           </div>
         </div>
-        <div class="card-body" style="padding: 16px 24px 16px;">
+        <div class="card-body" style="padding: 16px 8px 16px;">
           <!-- 年度总额 居中 -->
           <div class="annual-total-center">
             <span class="annual-total-label">{{ dashboardYear }} 年度总销售额</span>
@@ -362,34 +362,34 @@
             <svg class="annual-svg-chart" :viewBox="`0 0 780 260`" preserveAspectRatio="xMidYMid meet">
               <!-- 背景网格线 -->
               <line v-for="n in 5" :key="'grid'+n"
-                :x1="48" :y1="20 + (n-1) * 42"
-                :x2="768" :y2="20 + (n-1) * 42"
+                :x1="36" :y1="20 + (n-1) * 42"
+                :x2="776" :y2="20 + (n-1) * 42"
                 stroke="#F0F0F0" stroke-width="1"/>
               <!-- Y轴标签 -->
               <text v-for="n in 5" :key="'ylabel'+n"
-                :x="40" :y="20 + (n-1) * 42 + 4"
+                :x="30" :y="20 + (n-1) * 42 + 4"
                 text-anchor="end" font-size="10" fill="#AEAEB2">
                 {{ formatNumber(chartYLabel(5 - n)) }}
               </text>
-              <!-- 柱状图 -->
+              <!-- 柱状图: 12列均分 (780-36-4)/12=61.67px/列，柱宽44px，左偏8px -->
               <g v-for="(pt, i) in dashboardChartPoints" :key="'bar'+i">
                 <rect
-                  :x="48 + i * 60 + 10"
+                  :x="36 + i * 62 + 9"
                   :y="pt.barH > 0 ? 20 + 168 - pt.barH : 188"
-                  :width="40"
+                  :width="44"
                   :height="pt.barH > 0 ? pt.barH : 0"
                   :fill="pt.barH > 0 ? 'url(#barGrad)' : '#E5E5EA'"
                   rx="4" ry="4"/>
                 <!-- 数值标签 -->
                 <text v-if="pt.amount > 0"
-                  :x="48 + i * 60 + 30"
+                  :x="36 + i * 62 + 31"
                   :y="pt.barH > 0 ? 20 + 168 - pt.barH - 5 : 183"
                   text-anchor="middle" font-size="10" font-weight="600" fill="#007AFF">
                   {{ formatNumber(pt.amount) }}
                 </text>
                 <!-- 月份标签 -->
                 <text
-                  :x="48 + i * 60 + 30"
+                  :x="36 + i * 62 + 31"
                   y="210"
                   text-anchor="middle" font-size="13" font-weight="600" fill="#3A3A3C">
                   {{ pt.month }}月
@@ -403,7 +403,7 @@
               <!-- 趋势折线节点 -->
               <template v-for="(pt, i) in dashboardChartPoints" :key="'dot'+i">
                 <circle v-if="pt.amount > 0"
-                  :cx="48 + i * 60 + 30"
+                  :cx="36 + i * 62 + 31"
                   :cy="20 + 168 - pt.barH"
                   r="4" fill="#FF9500" stroke="white" stroke-width="2"/>
               </template>
@@ -761,7 +761,7 @@ const dashboardChartPoints = computed(() => {
 
 const trendPolylinePoints = computed(() => {
   return dashboardChartPoints.value
-    .map((pt, i) => `${48 + i * 60 + 30},${20 + 168 - pt.barH}`)
+    .map((pt, i) => `${36 + i * 62 + 31},${20 + 168 - pt.barH}`)
     .join(' ')
 })
 
@@ -2326,17 +2326,31 @@ function getRateClass(rate) {
 }
 .gantt-grid-col {
   border-right: 1px solid #F0F0F0;
-  height: 22px;
+  height: 26px;
   flex-shrink: 0;
 }
 .gantt-bar {
   position: absolute;
-  top: 4px;
-  height: 14px;
-  border-radius: 3px;
+  top: 3px;
+  height: 18px;
+  border-radius: 4px;
   cursor: pointer;
   transition: filter 0.15s, opacity 0.15s;
   min-width: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.gantt-bar-label {
+  padding-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1;
 }
 .gantt-bar:hover {
   filter: brightness(0.85);

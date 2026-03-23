@@ -62,7 +62,7 @@
           <div class="product-meta">
             <span class="product-code">{{ product.start_date?.slice(0,7).replace('-','') || '—' }}</span>
             <span class="deadline-tag" :class="product.days_left <= 7 ? 'urgent' : ''">
-              截止 {{ formatShortDate(product.end_date) }} · 剩 {{ product.days_left }} 天
+              剩 {{ product.days_left }} 天
             </span>
           </div>
           <div class="completion-block">
@@ -103,9 +103,10 @@
               <div class="g-name">{{ group.name }}</div>
               <div class="g-rate-block">
                 <div class="g-rate-label">完成率</div>
-                <div class="g-rate-val" :style="{ color: getRateColor(group.completion_rate) }">
+                <div v-if="group.target > 0" class="g-rate-val" :style="{ color: getRateColor(group.completion_rate) }">
                   {{ group.completion_rate }}%
                 </div>
+                <div v-else class="g-rate-val g-no-task">无任务</div>
               </div>
               <div class="g-sales-block">
                 <div class="g-sales-label">销量</div>
@@ -113,7 +114,7 @@
               </div>
               <div class="g-bar-wrap">
                 <div class="g-bar-track">
-                  <div class="g-bar-fill" :class="getProgressColor(group.completion_rate)"
+                  <div v-if="group.target > 0" class="g-bar-fill" :class="getProgressColor(group.completion_rate)"
                     :style="{ width: Math.min(group.completion_rate, 100) + '%' }"></div>
                 </div>
               </div>
@@ -171,10 +172,6 @@ function formatNumber(num) {
   return Math.round(Number(num) * 10) / 10
 }
 
-function formatShortDate(dateStr) {
-  if (!dateStr) return '—'
-  return dateStr.slice(5) // MM-DD
-}
 
 function getRateColor(rate) {
   if (!rate || rate < 50) return '#FF3B30'
@@ -376,6 +373,7 @@ function getMedalClass(idx) {
 .g-rate-block { width: 72px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
 .g-rate-label { font-size: 10px; color: #AEAEB2; font-weight: 500; }
 .g-rate-val   { font-size: 17px; font-weight: 800; }
+.g-no-task    { font-size: 12px; font-weight: 500; color: #AEAEB2; }
 
 /* 销量（上标签 下数值） */
 .g-sales-block { width: 80px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
