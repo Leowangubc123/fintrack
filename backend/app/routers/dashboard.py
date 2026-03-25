@@ -103,6 +103,7 @@ def get_active_products_summary(db: Session = Depends(get_db)):
         result.append({
             "id": product.id,
             "name": product.name,
+            "code": product.code,
             "type": product.type,
             "target": float(product.total_target),
             "sales": float(total_sales),
