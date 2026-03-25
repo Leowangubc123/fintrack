@@ -60,7 +60,7 @@
         <div class="product-detail">
           <div class="product-name" :title="product.name">{{ product.name }}</div>
           <div class="product-meta">
-            <span class="product-code">{{ product.start_date?.slice(0,7).replace('-','') || '—' }}</span>
+            <span class="product-code">{{ product.code || '—' }}</span>
             <span class="deadline-tag" :class="product.days_left <= 7 ? 'urgent' : ''">
               剩 {{ product.days_left }} 天
             </span>
@@ -301,8 +301,8 @@ function getMedalClass(idx) {
 .product-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .product-code {
   font-family: "SF Mono","Menlo",monospace;
-  font-size: 11px; color: #8E8E93;
-  background: #F5F5F7; padding: 2px 7px; border-radius: 5px;
+  font-size: 12px; color: #007AFF; font-weight: 600;
+  background: #F0F7FF; padding: 3px 10px; border-radius: 6px;
 }
 .deadline-tag {
   font-size: 12px; font-weight: 600;
