@@ -171,53 +171,72 @@ def get_groups_ranking(product_id: int = None, db: Session = Depends(get_db)):
 
 @router.get("/matrix")
 def get_sales_matrix(db: Session = Depends(get_db)):
-    """获取产品矩阵数据"""
+    """获取产品矩阵数据 - 按营业部统计"""
+    from app.models import ProductTarget
+
     # 获取所有在售产品
     products = db.query(Product).filter(
         Product.status == "募集中",
         Product.is_archived == False
     ).order_by(Product.start_date).all()
 
-    # 获取所有成员
-    members = db.query(Member).all()
+    # 获取所有营业部
+    groups = db.query(Group).all()
 
     # 构建矩阵
     matrix_amount = []
     matrix_rate = []
 
-    for member in members:
+    # 同时构建 sales_data 和 target_data 供前端使用
+    sales_data = []
+    target_data = []
+
+    for group in groups:
         amount_row = []
         rate_row = []
 
         for product in products:
-            # 销售额
+            # 该营业部该产品的实际总销量
             sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.member_id == member.id,
+                SalesRecord.group_id == group.id,
                 SalesRecord.product_id == product.id
             ).scalar() or 0
 
-            # 目标（简化：平均分配）
-            member_count = db.query(Member).count()
-            target = float(product.total_target) / member_count if member_count > 0 else 0
+            # 该营业部该产品被分配的任务数（目标）
+            target = db.query(func.sum(ProductTarget.target_amount)).filter(
+                ProductTarget.group_id == group.id,
+                ProductTarget.product_id == product.id,
+                ProductTarget.member_id == None  # 只取营业部级别的目标
+            ).scalar() or 0
 
             amount_row.append(float(sales))
-            rate_row.append(round(float(sales) / target * 100, 1) if target > 0 else 0)
+            rate_row.append(round(float(sales) / float(target) * 100, 1) if target > 0 else 0)
+
+            # 添加到 sales_data 和 target_data（使用 group_id 作为 key）
+            if sales > 0:
+                sales_data.append({
+                    'group_id': group.id,
+                    'product_id': product.id,
+                    'amount': float(sales)
+                })
+
+            if target > 0:
+                target_data.append({
+                    'group_id': group.id,
+                    'product_id': product.id,
+                    'target_amount': float(target)
+                })
 
         matrix_amount.append(amount_row)
         matrix_rate.append(rate_row)
 
     return {
         "products": [{"id": p.id, "name": p.name} for p in products],
-        "members": [
-            {
-                "id": m.id,
-                "name": m.name,
-                "group_name": m.group.name if m.group else ""
-            }
-            for m in members
-        ],
+        "groups": [{"id": g.id, "name": g.name} for g in groups],
         "amount_matrix": matrix_amount,
-        "rate_matrix": matrix_rate
+        "rate_matrix": matrix_rate,
+        "sales_data": sales_data,
+        "target_data": target_data
     }
 
 

@@ -866,43 +866,37 @@ function filterPersonalProducts() {
 }
 
 function getGroupProductTotal(groupId, productId) {
-  // 从销售数据中汇总该营业部该产品的销售总额
-  const groupMembers = members.value.filter(m => m.group_id === groupId).map(m => Number(m.id))
-  const total = matrixSalesData.value
-    .filter(s => groupMembers.includes(Number(s.member_id)) && Number(s.product_id) === Number(productId))
-    .reduce((sum, s) => sum + Number(s.amount), 0)
-  return total
+  // 从销售数据中直接获取该营业部该产品的销售总额
+  const record = matrixSalesData.value.find(
+    s => Number(s.group_id) === Number(groupId) && Number(s.product_id) === Number(productId)
+  )
+  return record ? record.amount : 0
 }
 
 function getGroupProductRate(groupId, productId) {
-  const groupMembers = members.value.filter(m => m.group_id === groupId).map(m => Number(m.id))
-  const totalAmount = matrixSalesData.value
-    .filter(s => groupMembers.includes(Number(s.member_id)) && Number(s.product_id) === Number(productId))
-    .reduce((sum, s) => sum + Number(s.amount), 0)
-  const totalTarget = matrixTargetData.value
-    .filter(t => groupMembers.includes(Number(t.member_id)) && Number(t.product_id) === Number(productId))
-    .reduce((sum, t) => sum + Number(t.target_amount), 0)
-  return totalTarget > 0 ? Math.round((totalAmount / totalTarget) * 100) : 0
+  const sales = getGroupProductTotal(groupId, productId)
+  const targetRecord = matrixTargetData.value.find(
+    t => Number(t.group_id) === Number(groupId) && Number(t.product_id) === Number(productId)
+  )
+  const target = targetRecord ? targetRecord.target_amount : 0
+  return target > 0 ? Math.round((sales / target) * 100) : 0
 }
 
 function getGroupOverallRate(groupId) {
-  const groupMembers = members.value.filter(m => m.group_id === groupId).map(m => Number(m.id))
-  const totalAmount = matrixSalesData.value
-    .filter(s => groupMembers.includes(Number(s.member_id)))
-    .reduce((sum, s) => sum + Number(s.amount), 0)
-  const totalTarget = matrixTargetData.value
-    .filter(t => groupMembers.includes(Number(t.member_id)))
-    .reduce((sum, t) => sum + Number(t.target_amount), 0)
-  return totalTarget > 0 ? Math.round((totalAmount / totalTarget) * 100) : 0
+  const groupSales = matrixSalesData.value
+    .filter(s => Number(s.group_id) === Number(groupId))
+    .reduce((sum, s) => sum + s.amount, 0)
+  const groupTarget = matrixTargetData.value
+    .filter(t => Number(t.group_id) === Number(groupId))
+    .reduce((sum, t) => sum + t.target_amount, 0)
+  return groupTarget > 0 ? Math.round((groupSales / groupTarget) * 100) : 0
 }
 
 function getGroupTotal(groupId) {
   // 从销售数据中汇总该营业部的销售总额
-  const groupMembers = members.value.filter(m => m.group_id === groupId).map(m => Number(m.id))
-  const total = matrixSalesData.value
-    .filter(s => groupMembers.includes(Number(s.member_id)))
-    .reduce((sum, s) => sum + Number(s.amount), 0)
-  return total
+  return matrixSalesData.value
+    .filter(s => Number(s.group_id) === Number(groupId))
+    .reduce((sum, s) => sum + s.amount, 0)
 }
 
 function hasMemberTask(memberId, productId) {
