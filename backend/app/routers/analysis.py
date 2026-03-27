@@ -631,11 +631,10 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
     # 构建营业部级别销售数据（汇总成员销量）
     group_sales_data = []
     for group in groups:
-        group_member_ids = [m.id for m in members if m.group_id == group.id]
         for product in products:
-            # 汇总该营业部所有成员在该产品上的销量
+            # 使用 group_id 统计营业部销量（与目标统计口径一致）
             total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.member_id.in_(group_member_ids),
+                SalesRecord.group_id == group.id,
                 SalesRecord.product_id == product.id
             ).scalar() or 0
 
