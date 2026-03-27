@@ -43,6 +43,14 @@
               <button class="toggle-btn" :class="{ active: matrixView === 'amount' }" @click="matrixView = 'amount'">实际销量</button>
               <button class="toggle-btn" :class="{ active: matrixView === 'rate' }" @click="matrixView = 'rate'">完成率</button>
             </div>
+            <button class="export-btn" @click="exportMatrixToExcel">
+              <svg class="export-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              导出Excel
+            </button>
           </div>
         </div>
         <div class="card-body" style="padding: 0;">
@@ -468,6 +476,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import * as XLSX from 'xlsx'
 import { productsApi, membersApi, groupsApi, analysisApi } from '../api'
 
 // Tab配置
@@ -981,6 +990,84 @@ function getRateClass(rate) {
   return 'rate-red'
 }
 
+// Excel 导出功能
+function exportMatrixToExcel() {
+  // 构建表头
+  const headers = ['营业部/成员']
+  matrixProducts.value.forEach(p => headers.push(p.name))
+  headers.push('汇总')
+
+  // 构建数据行
+  const data = []
+  const isRateView = matrixView.value === 'rate'
+
+  matrixGroups.value.forEach(group => {
+    // 营业部行
+    const groupRow = {}
+    groupRow['营业部/成员'] = `${group.name} (${group.members?.length || 0}人)`
+
+    matrixProducts.value.forEach(p => {
+      if (isRateView) {
+        groupRow[p.name] = `${getGroupProductRate(group.id, p.id)}%`
+      } else {
+        groupRow[p.name] = getGroupProductTotal(group.id, p.id)
+      }
+    })
+
+    if (isRateView) {
+      groupRow['汇总'] = `${getGroupOverallRate(group.id)}%`
+    } else {
+      groupRow['汇总'] = getGroupTotal(group.id)
+    }
+
+    data.push(groupRow)
+
+    // 成员行
+    if (group.members) {
+      group.members.forEach(member => {
+        const memberRow = {}
+        memberRow['营业部/成员'] = `  ${member.name}`
+
+        matrixProducts.value.forEach(p => {
+          if (!hasMemberTask(member.id, p.id)) {
+            memberRow[p.name] = '无任务'
+          } else if (isRateView) {
+            memberRow[p.name] = `${getMemberProductRate(member.id, p.id)}%`
+          } else {
+            memberRow[p.name] = getMemberProductAmount(member.id, p.id)
+          }
+        })
+
+        if (isRateView) {
+          memberRow['汇总'] = `${getMemberOverallRate(member.id)}%`
+        } else {
+          memberRow['汇总'] = getMemberTotal(member.id)
+        }
+
+        data.push(memberRow)
+      })
+    }
+  })
+
+  // 创建 worksheet
+  const ws = XLSX.utils.json_to_sheet(data, { header: headers })
+
+  // 设置列宽
+  const colWidths = headers.map((h, i) => ({
+    wch: i === 0 ? 25 : 15
+  }))
+  ws['!cols'] = colWidths
+
+  // 创建 workbook
+  const wb = XLSX.utils.book_new()
+  const viewType = isRateView ? '完成率' : '实际销量'
+  XLSX.utils.book_append_sheet(wb, ws, `产品矩阵-${viewType}`)
+
+  // 下载文件
+  const dateStr = new Date().toISOString().split('T')[0]
+  XLSX.writeFile(wb, `产品矩阵_${viewType}_${dateStr}.xlsx`)
+}
+
 </script>
 
 <style scoped>
@@ -1109,6 +1196,31 @@ function getRateClass(rate) {
 .toggle-btn.active {
   background: #007AFF;
   color: white;
+}
+
+/* 导出按钮 */
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #34C759;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-btn:hover {
+  background: #2DAF4D;
+}
+
+.export-icon {
+  width: 16px;
+  height: 16px;
 }
 
 /* 产品矩阵 */
