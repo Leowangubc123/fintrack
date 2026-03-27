@@ -59,7 +59,13 @@ export const membersApi = {
   delete: (id) => api.delete(`/members/${id}`),
   transfer: (id, targetGroupId) => api.post(`/members/${id}/transfer`, null, {
     params: { target_group_id: targetGroupId }
-  })
+  }),
+  getAll: () => api.get('/members')
+}
+
+// 组织架构API（兼容命名）
+export const organizationApi = {
+  getMembers: () => api.get('/members')
 }
 
 // 产品API
@@ -109,4 +115,26 @@ export const analysisApi = {
   salesTrendStats: (params) => api.get('/analysis/sales-trend/stats', { params }),
   productContribution: (year) => api.get('/analysis/product-contribution', { params: { year } }),
   matrix: () => api.get('/analysis/matrix')
+}
+
+// 私募基金API
+export const privateFundApi = {
+  // 产品管理
+  getProducts: () => api.get('/private-fund/products'),
+  createProduct: (data) => api.post('/private-fund/products', data),
+  updateProduct: (id, data) => api.put(`/private-fund/products/${id}`, data),
+  deleteProduct: (id) => api.delete(`/private-fund/products/${id}`),
+
+  // 交易记录
+  createTransaction: (data) => api.post('/private-fund/transactions', data),
+  getRecentTransactions: (limit = 10) => api.get('/private-fund/transactions/recent', { params: { limit } }),
+
+  // 年度统计
+  getAnnualStats: (year) => api.get('/private-fund/stats/annual', { params: { year } }),
+  getAnnualSales: (year) => api.get('/private-fund/sales/annual', { params: { year } }),
+
+  // 保有统计
+  getHoldingStats: () => api.get('/private-fund/holdings/stats'),
+  getProductHoldings: () => api.get('/private-fund/holdings/products'),
+  getHoldingTrend: (period) => api.get('/private-fund/holdings/trend', { params: { period } })
 }

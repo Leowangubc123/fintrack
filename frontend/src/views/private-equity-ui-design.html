@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>私募销售 - 界面设计原型</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #F5F5F7;
+            color: #1D1D1F;
+            line-height: 1.6;
+        }
+
+        /* ==================== 整体布局 ==================== */
+        .main-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 左侧导航 */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 240px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(0, 0, 0, 0.06);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1E40AF;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-menu {
+            padding: 12px;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            margin: 2px 0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #6E6E73;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 122, 255, 0.08);
+            color: #007AFF;
+        }
+
+        .nav-item.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        .nav-item.private-equity {
+            background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);
+            color: white;
+            margin-top: 8px;
+            position: relative;
+        }
+
+        .nav-item.private-equity::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-item.private-equity:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            margin-left: 240px;
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            height: 64px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1D1D1F;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-title-badge {
+            background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #6E6E73;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        /* 内容区 */
+        .content-wrapper {
+            flex: 1;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        /* ==================== 标签页 ==================== */
+        .tabs-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            background: #FAFAFB;
+            padding: 0 8px;
+        }
+
+        .tab-item {
+            padding: 16px 24px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #6E6E73;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .tab-item:hover {
+            color: #1D1D1F;
+        }
+
+        .tab-item.active {
+            color: #7C3AED;
+            border-bottom-color: #7C3AED;
+            background: rgba(124, 58, 237, 0.05);
+        }
+
+        .tab-content {
+            padding: 24px;
+        }
+
+        /* ==================== 产品库页面 ==================== */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 16px;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            font-size: 14px;
+            background: #F5F5F7;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            background: white;
+            border-color: #7C3AED;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8E8E93;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-secondary {
+            background: #F5F5F7;
+            color: #1D1D1F;
+        }
+
+        .btn-secondary:hover {
+            background: #E5E5EA;
+        }
+
+        .btn-danger {
+            background: #FFF0EF;
+            color: #FF3B30;
+        }
+
+        .btn-danger:hover {
+            background: #FFE5E3;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* 产品卡片网格 */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            padding: 20px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .product-card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .product-title-section {
+            flex: 1;
+        }
+
+        .product-name {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1D1D1F;
+            margin-bottom: 6px;
+        }
+
+        .product-code {
+            font-family: "SF Mono", "Menlo", monospace;
+            font-size: 13px;
+            color: #7C3AED;
+            font-weight: 600;
+            background: rgba(124, 58, 237, 0.08);
+            padding: 3px 10px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .risk-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .risk-r3 {
+            background: #E3F5E8;
+            color: #1A9E3F;
+        }
+
+        .risk-r4 {
+            background: #FFF4E0;
+            color: #FF9500;
+        }
+
+        .risk-r5 {
+            background: #FFF0EF;
+            color: #FF3B30;
+        }
+
+        .product-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .info-item {
+            background: #F9F9FB;
+            padding: 10px 12px;
+            border-radius: 10px;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #8E8E93;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1D1D1F;
+        }
+
+        .fee-section {
+            background: linear-gradient(135deg, #FAFAFB 0%, #F5F5F7 100%);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .fee-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6E6E73;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .fee-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .fee-item {
+            text-align: center;
+        }
+
+        .fee-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1D1D1F;
+        }
+
+        .fee-label {
+            font-size: 10px;
+            color: #8E8E93;
+            margin-top: 2px;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .product-actions .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        /* ==================== 销售录入页面 ==================== */
+        .entry-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .form-panel {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            padding: 24px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1D1D1F;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #3A3A3C;
+            margin-bottom: 8px;
+        }
+
+        .form-label .required {
+            color: #FF3B30;
+            margin-left: 2px;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            font-size: 15px;
+            background: #FAFAFB;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            background: white;
+            border-color: #7C3AED;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .coefficient-display {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .coefficient-label {
+            font-size: 14px;
+            color: #6E6E73;
+        }
+
+        .coefficient-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #7C3AED;
+        }
+
+        .assessed-display {
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            color: white;
+        }
+
+        .assessed-label {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        .assessed-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .assessed-hint {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        /* 最近记录列表 */
+        .record-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .record-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            transition: background 0.2s;
+        }
+
+        .record-item:hover {
+            background: #FAFAFB;
+        }
+
+        .record-item:last-child {
+            border-bottom: none;
+        }
+
+        .record-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            font-size: 18px;
+        }
+
+        .record-content {
+            flex: 1;
+        }
+
+        .record-product {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1D1D1F;
+            margin-bottom: 2px;
+        }
+
+        .record-meta {
+            font-size: 13px;
+            color: #8E8E93;
+        }
+
+        .record-amount {
+            text-align: right;
+        }
+
+        .record-actual {
+            font-size: 14px;
+            color: #1D1D1F;
+            font-weight: 500;
+        }
+
+        .record-assessed {
+            font-size: 16px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+
+        .record-label {
+            font-size: 11px;
+            color: #8E8E93;
+        }
+
+        /* ==================== 业绩统计页面 ==================== */
+        .stats-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #6E6E73;
+        }
+
+        .filter-select {
+            padding: 8px 14px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .date-range {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-input {
+            padding: 8px 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        /* KPI 卡片 */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .kpi-card.assessed::before {
+            background: linear-gradient(90deg, #007AFF, #5856D6);
+        }
+
+        .kpi-card.actual::before {
+            background: linear-gradient(90deg, #7C3AED, #A855F7);
+        }
+
+        .kpi-card.coeff::before {
+            background: linear-gradient(90deg, #FF9500, #FF6B35);
+        }
+
+        .kpi-card.count::before {
+            background: linear-gradient(90deg, #34C759, #30D158);
+        }
+
+        .kpi-label {
+            font-size: 13px;
+            color: #6E6E73;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1D1D1F;
+        }
+
+        .kpi-value.assessed {
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: #8E8E93;
+            margin-top: 4px;
+        }
+
+        /* 图表区域 */
+        .charts-grid {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .chart-row-1 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .chart-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .chart-header {
+            padding: 20px 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1D1D1F;
+        }
+
+        .chart-subtitle {
+            font-size: 13px;
+            color: #8E8E93;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #FAFAFB 0%, #F5F5F7 100%);
+            color: #8E8E93;
+            font-size: 14px;
+        }
+
+        .chart-placeholder-small {
+            height: 250px;
+        }
+
+        /* 数据表格 */
+        .data-table-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .table-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            padding: 0 20px;
+        }
+
+        .table-tab {
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6E6E73;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .table-tab:hover {
+            color: #1D1D1F;
+        }
+
+        .table-tab.active {
+            color: #7C3AED;
+            border-bottom-color: #7C3AED;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: #FAFAFB;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6E6E73;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            font-size: 14px;
+            color: #1D1D1F;
+        }
+
+        .data-table tr:hover {
+            background: #FAFAFB;
+        }
+
+        .assessed-highlight {
+            color: #007AFF;
+            font-weight: 700;
+        }
+
+        /* ==================== 模态框 ==================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1D1D1F;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: #F5F5F7;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #6E6E73;
+        }
+
+        .modal-close:hover {
+            background: #E5E5EA;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* ==================== 演示切换 ==================== */
+        .demo-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+        }
+
+        .demo-controls-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6E6E73;
+            margin-bottom: 10px;
+        }
+
+        .demo-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .demo-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .demo-btn:hover {
+            background: #F5F5F7;
+        }
+
+        .demo-btn.active {
+            background: #7C3AED;
+            color: white;
+            border-color: #7C3AED;
+        }
+
+        /* 隐藏非活动页面 */
+        .page-section {
+            display: none;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-layout">
+        <!-- 左侧导航栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-text">FinTrack</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3v18h18"/>
+                        <path d="M18 17V9"/>
+                        <path d="M13 17V5"/>
+                        <path d="M8 17v-3"/>
+                    </svg>
+                    <span>数据看板</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    <span>数据分析</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                    </svg>
+                    <span>产品管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    <span>营销人员</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <span>数据导入</span>
+                </a>
+                <a href="#" class="nav-item private-equity active">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <span>私募销售</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部标题栏 -->
+            <header class="header">
+                <h1 class="page-title">
+                    私募销售
+                    <span class="page-title-badge">Private Equity</span>
+                </h1>
+                <div class="user-info">
+                    <div class="user-avatar">管</div>
+                    <span>管理员</span>
+                </div>
+            </header>
+
+            <!-- 页面内容 -->
+            <div class="content-wrapper">
+                <div class="tabs-container">
+                    <!-- 标签页头部 -->
+                    <div class="tabs-header">
+                        <div class="tab-item active" onclick="switchTab('products')">产品库</div>
+                        <div class="tab-item" onclick="switchTab('entry')">销售录入</div>
+                        <div class="tab-item" onclick="switchTab('stats')">业绩统计</div>
+                    </div>
+
+                    <!-- 标签页内容 -->
+                    <div class="tab-content">
+                        <!-- ========== 产品库页面 ========== -->
+                        <div id="products-page" class="page-section active">
+                            <div class="toolbar">
+                                <div class="search-box">
+                                    <span class="search-icon">🔍</span>
+                                    <input type="text" placeholder="搜索产品名称或代码...">
+                                </div>
+                                <button class="btn btn-primary">
+                                    <span>+</span> 添加产品
+                                </button>
+                            </div>
+
+                            <div class="product-grid">
+                                <!-- 产品卡片 1 -->
+                                <div class="product-card">
+                                    <div class="product-header">
+                                        <div class="product-title-section">
+                                            <div class="product-name">XX稳健增长私募基金</div>
+                                            <span class="product-code">SM2024A001</span>
+                                        </div>
+                                        <span class="risk-badge risk-r3">R3</span>
+                                    </div>
+                                    <div class="product-info-grid">
+                                        <div class="info-item">
+                                            <div class="info-label">管理人</div>
+                                            <div class="info-value">XX资产管理</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">代销范围</div>
+                                            <div class="info-value">全国</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">销售系数</div>
+                                            <div class="info-value" style="color: #7C3AED;">2.5</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">保有系数</div>
+                                            <div class="info-value">1.2</div>
+                                        </div>
+                                    </div>
+                                    <div class="fee-section">
+                                        <div class="fee-title">费率结构</div>
+                                        <div class="fee-grid">
+                                            <div class="fee-item">
+                                                <div class="fee-value">1.5%</div>
+                                                <div class="fee-label">认申购费</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">0%</div>
+                                                <div class="fee-label">赎回费</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">1.0%</div>
+                                                <div class="fee-label">销售服务</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">1.5%</div>
+                                                <div class="fee-label">管理费</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="product-actions">
+                                        <button class="btn btn-secondary btn-sm">编辑</button>
+                                        <button class="btn btn-danger btn-sm">删除</button>
+                                    </div>
+                                </div>
+
+                                <!-- 产品卡片 2 -->
+                                <div class="product-card">
+                                    <div class="product-header">
+                                        <div class="product-title-section">
+                                            <div class="product-name">XX优选量化私募</div>
+                                            <span class="product-code">SM2024B002</span>
+                                        </div>
+                                        <span class="risk-badge risk-r4">R4</span>
+                                    </div>
+                                    <div class="product-info-grid">
+                                        <div class="info-item">
+                                            <div class="info-label">管理人</div>
+                                            <div class="info-value">YY私募基金</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">代销范围</div>
+                                            <div class="info-value">华东地区</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">销售系数</div>
+                                            <div class="info-value" style="color: #7C3AED;">3.0</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">保有系数</div>
+                                            <div class="info-value">1.5</div>
+                                        </div>
+                                    </div>
+                                    <div class="fee-section">
+                                        <div class="fee-title">费率结构</div>
+                                        <div class="fee-grid">
+                                            <div class="fee-item">
+                                                <div class="fee-value">2.0%</div>
+                                                <div class="fee-label">认申购费</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">1.0%</div>
+                                                <div class="fee-label">赎回费</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">0.5%</div>
+                                                <div class="fee-label">销售服务</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">2.0%</div>
+                                                <div class="fee-label">管理费</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="product-actions">
+                                        <button class="btn btn-secondary btn-sm">编辑</button>
+                                        <button class="btn btn-danger btn-sm">删除</button>
+                                    </div>
+                                </div>
+
+                                <!-- 产品卡片 3 -->
+                                <div class="product-card">
+                                    <div class="product-header">
+                                        <div class="product-title-section">
+                                            <div class="product-name">XX高净值专享私募</div>
+                                            <span class="product-code">SM2024C003</span>
+                                        </div>
+                                        <span class="risk-badge risk-r5">R5</span>
+                                    </div>
+                                    <div class="product-info-grid">
+                                        <div class="info-item">
+                                            <div class="info-label">管理人</div>
+                                            <div class="info-value">ZZ财富管理</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">代销范围</div>
+                                            <div class="info-value">VIP客户</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">销售系数</div>
+                                            <div class="info-value" style="color: #7C3AED;">3.0</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">保有系数</div>
+                                            <div class="info-value">2.0</div>
+                                        </div>
+                                    </div>
+                                    <div class="fee-section">
+                                        <div class="fee-title">费率结构</div>
+                                        <div class="fee-grid">
+                                            <div class="fee-item">
+                                                <div class="fee-value">2.5%</div>
+                                                <div class="fee-label">认申购费</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">2.0%</div>
+                                                <div class="fee-label">赎回费</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">1.0%</div>
+                                                <div class="fee-label">销售服务</div>
+                                            </div>
+                                            <div class="fee-item">
+                                                <div class="fee-value">2.5%</div>
+                                                <div class="fee-label">管理费</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="product-actions">
+                                        <button class="btn btn-secondary btn-sm">编辑</button>
+                                        <button class="btn btn-danger btn-sm">删除</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ========== 销售录入页面 ========== -->
+                        <div id="entry-page" class="page-section">
+                            <div class="entry-container">
+                                <!-- 左侧：录入表单 -->
+                                <div class="form-panel">
+                                    <div class="panel-title">录入销售记录</div>
+                                    <form>
+                                        <div class="form-group">
+                                            <label class="form-label">
+                                                选择产品 <span class="required">*</span>
+                                            </label>
+                                            <select class="form-select">
+                                                <option value="">请选择私募产品</option>
+                                                <option value="1">XX稳健增长私募基金 (SM2024A001)</option>
+                                                <option value="2">XX优选量化私募 (SM2024B002)</option>
+                                                <option value="3">XX高净值专享私募 (SM2024C003)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">销售系数</label>
+                                            <div class="coefficient-display">
+                                                <span class="coefficient-label">该产品销售系数</span>
+                                                <span class="coefficient-value">2.5</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">
+                                                销售人员 <span class="required">*</span>
+                                            </label>
+                                            <select class="form-select">
+                                                <option value="">请选择销售人员</option>
+                                                <option value="1">张三 - 北京营业部</option>
+                                                <option value="2">李四 - 上海营业部</option>
+                                                <option value="3">王五 - 深圳营业部</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="form-label">
+                                                    销售日期 <span class="required">*</span>
+                                                </label>
+                                                <input type="date" class="form-input" value="2026-03-27">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">
+                                                    实际销量(万) <span class="required">*</span>
+                                                </label>
+                                                <input type="number" class="form-input" placeholder="请输入销量">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label">备注</label>
+                                            <input type="text" class="form-input" placeholder="可选填写备注信息">
+                                        </div>
+
+                                        <div class="assessed-display">
+                                            <div class="assessed-label">考核销量（自动计算）</div>
+                                            <div class="assessed-value">0.0 万</div>
+                                            <div class="assessed-hint">实际销量 × 销售系数 = 考核销量</div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary submit-btn">提交销售记录</button>
+                                    </form>
+                                </div>
+
+                                <!-- 右侧：最近记录 -->
+                                <div class="form-panel">
+                                    <div class="panel-title">最近录入记录</div>
+                                    <div class="record-list">
+                                        <div class="record-item">
+                                            <div class="record-icon">📊</div>
+                                            <div class="record-content">
+                                                <div class="record-product">XX稳健增长私募基金</div>
+                                                <div class="record-meta">张三 · 北京营业部 · 03-27</div>
+                                            </div>
+                                            <div class="record-amount">
+                                                <div class="record-actual">100万</div>
+                                                <div class="record-assessed">250万</div>
+                                                <div class="record-label">系数 2.5</div>
+                                            </div>
+                                        </div>
+                                        <div class="record-item">
+                                            <div class="record-icon">📊</div>
+                                            <div class="record-content">
+                                                <div class="record-product">XX优选量化私募</div>
+                                                <div class="record-meta">李四 · 上海营业部 · 03-26</div>
+                                            </div>
+                                            <div class="record-amount">
+                                                <div class="record-actual">80万</div>
+                                                <div class="record-assessed">240万</div>
+                                                <div class="record-label">系数 3.0</div>
+                                            </div>
+                                        </div>
+                                        <div class="record-item">
+                                            <div class="record-icon">📊</div>
+                                            <div class="record-content">
+                                                <div class="record-product">XX稳健增长私募基金</div>
+                                                <div class="record-meta">王五 · 深圳营业部 · 03-25</div>
+                                            </div>
+                                            <div class="record-amount">
+                                                <div class="record-actual">150万</div>
+                                                <div class="record-assessed">375万</div>
+                                                <div class="record-label">系数 2.5</div>
+                                            </div>
+                                        </div>
+                                        <div class="record-item">
+                                            <div class="record-icon">📊</div>
+                                            <div class="record-content">
+                                                <div class="record-product">XX高净值专享私募</div>
+                                                <div class="record-meta">赵六 · 广州营业部 · 03-24</div>
+                                            </div>
+                                            <div class="record-amount">
+                                                <div class="record-actual">200万</div>
+                                                <div class="record-assessed">600万</div>
+                                                <div class="record-label">系数 3.0</div>
+                                            </div>
+                                        </div>
+                                        <div class="record-item">
+                                            <div class="record-icon">📊</div>
+                                            <div class="record-content">
+                                                <div class="record-product">XX优选量化私募</div>
+                                                <div class="record-meta">钱七 · 成都营业部 · 03-23</div>
+                                            </div>
+                                            <div class="record-amount">
+                                                <div class="record-actual">60万</div>
+                                                <div class="record-assessed">180万</div>
+                                                <div class="record-label">系数 3.0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ========== 业绩统计页面 ========== -->
+                        <div id="stats-page" class="page-section">
+                            <!-- 筛选栏 -->
+                            <div class="stats-filters">
+                                <div class="filter-item">
+                                    <span class="filter-label">时间范围：</span>
+                                    <div class="date-range">
+                                        <input type="date" class="date-input" value="2026-01-01">
+                                        <span>至</span>
+                                        <input type="date" class="date-input" value="2026-03-27">
+                                    </div>
+                                </div>
+                                <div class="filter-item">
+                                    <span class="filter-label">产品：</span>
+                                    <select class="filter-select">
+                                        <option>全部产品</option>
+                                        <option>XX稳健增长私募基金</option>
+                                        <option>XX优选量化私募</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <span class="filter-label">营业部：</span>
+                                    <select class="filter-select">
+                                        <option>全部营业部</option>
+                                        <option>北京营业部</option>
+                                        <option>上海营业部</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- KPI 卡片 -->
+                            <div class="kpi-grid">
+                                <div class="kpi-card assessed">
+                                    <div class="kpi-label">总考核销量</div>
+                                    <div class="kpi-value assessed">1,645万</div>
+                                    <div class="kpi-sub">实际销量 × 销售系数</div>
+                                </div>
+                                <div class="kpi-card actual">
+                                    <div class="kpi-label">总实际销量</div>
+                                    <div class="kpi-value">590万</div>
+                                    <div class="kpi-sub">原始销售金额</div>
+                                </div>
+                                <div class="kpi-card coeff">
+                                    <div class="kpi-label">平均销售系数</div>
+                                    <div class="kpi-value">2.79</div>
+                                    <div class="kpi-sub">所有产品系数加权平均</div>
+                                </div>
+                                <div class="kpi-card count">
+                                    <div class="kpi-label">销售笔数</div>
+                                    <div class="kpi-value">12笔</div>
+                                    <div class="kpi-sub">本月录入记录</div>
+                                </div>
+                            </div>
+
+                            <!-- 图表区域 -->
+                            <div class="charts-grid">
+                                <!-- 第一行：营业部对比 -->
+                                <div class="chart-row-1">
+                                    <div class="chart-card">
+                                        <div class="chart-header">
+                                            <div>
+                                                <div class="chart-title">营业部考核销量对比</div>
+                                                <div class="chart-subtitle">按考核销量排序</div>
+                                            </div>
+                                        </div>
+                                        <div class="chart-placeholder">
+                                            📊 营业部考核销量柱状图
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 第二行：个人排行 + 月度趋势 -->
+                                <div class="chart-row-2">
+                                    <div class="chart-card">
+                                        <div class="chart-header">
+                                            <div>
+                                                <div class="chart-title">个人考核销量 TOP10</div>
+                                                <div class="chart-subtitle">销售人员业绩排名</div>
+                                            </div>
+                                        </div>
+                                        <div class="chart-placeholder chart-placeholder-small">
+                                            📈 个人考核销量横向柱状图
+                                        </div>
+                                    </div>
+                                    <div class="chart-card">
+                                        <div class="chart-header">
+                                            <div>
+                                                <div class="chart-title">月度考核销量趋势</div>
+                                                <div class="chart-subtitle">近6个月数据走势</div>
+                                            </div>
+                                        </div>
+                                        <div class="chart-placeholder chart-placeholder-small">
+                                            📉 月度考核销量折线图
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 数据明细表格 -->
+                            <div class="data-table-container">
+                                <div class="table-tabs">
+                                    <div class="table-tab active">按营业部查看</div>
+                                    <div class="table-tab">按个人查看</div>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>排名</th>
+                                                <th>营业部</th>
+                                                <th>销售笔数</th>
+                                                <th>实际销量(万)</th>
+                                                <th>考核销量(万)</th>
+                                                <th>占比</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>1</td>
+                                                <td>北京营业部</td>
+                                                <td>4笔</td>
+                                                <td>180万</td>
+                                                <td class="assessed-highlight">500万</td>
+                                                <td>30.4%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>2</td>
+                                                <td>上海营业部</td>
+                                                <td>3笔</td>
+                                                <td>150万</td>
+                                                <td class="assessed-highlight">425万</td>
+                                                <td>25.8%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>3</td>
+                                                <td>深圳营业部</td>
+                                                <td>3笔</td>
+                                                <td>140万</td>
+                                                <td class="assessed-highlight">400万</td>
+                                                <td>24.3%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>4</td>
+                                                <td>广州营业部</td>
+                                                <td>1笔</td>
+                                                <td>80万</td>
+                                                <td class="assessed-highlight">220万</td>
+                                                <td>13.4%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>5</td>
+                                                <td>成都营业部</td>
+                                                <td>1笔</td>
+                                                <td>40万</td>
+                                                <td class="assessed-highlight">100万</td>
+                                                <td>6.1%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 添加/编辑产品模态框 -->
+    <div class="modal-overlay" id="product-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">添加私募产品</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">产品名称 <span class="required">*</span></label>
+                        <input type="text" class="form-input" placeholder="请输入产品名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">产品代码 <span class="required">*</span></label>
+                        <input type="text" class="form-input" placeholder="如：SM2024A001">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">管理人名称 <span class="required">*</span></label>
+                        <input type="text" class="form-input" placeholder="请输入管理人名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">代销范围</label>
+                        <input type="text" class="form-input" placeholder="如：全国/华东地区">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">风险等级 <span class="required">*</span></label>
+                        <select class="form-select">
+                            <option value="">请选择</option>
+                            <option value="R3">R3 - 中等风险</option>
+                            <option value="R4">R4 - 中高风险</option>
+                            <option value="R5">R5 - 高风险</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">锁定期</label>
+                        <input type="text" class="form-input" placeholder="如：1年/2年">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">销售系数 <span class="required">*</span></label>
+                        <input type="number" class="form-input" placeholder="1-3之间" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">保有系数</label>
+                        <input type="number" class="form-input" placeholder="0-2之间" step="0.1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">认申购费 (%)</label>
+                        <input type="number" class="form-input" placeholder="如：1.5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">赎回费 (%)</label>
+                        <input type="number" class="form-input" placeholder="如：0" step="0.1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">销售服务费 (%)</label>
+                        <input type="number" class="form-input" placeholder="如：1.0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">管理费 (%)</label>
+                        <input type="number" class="form-input" placeholder="如：1.5" step="0.1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">业绩提成</label>
+                    <input type="text" class="form-input" placeholder="如：超额收益20%">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary">保存产品</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 演示控制 -->
+    <div class="demo-controls">
+        <div class="demo-controls-title">页面切换演示</div>
+        <div class="demo-buttons">
+            <button class="demo-btn active" onclick="switchTab('products')">产品库</button>
+            <button class="demo-btn" onclick="switchTab('entry')">销售录入</button>
+            <button class="demo-btn" onclick="switchTab('stats')">业绩统计</button>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // 更新标签页头部
+            document.querySelectorAll('.tab-item').forEach((tab, index) => {
+                const tabs = ['products', 'entry', 'stats'];
+                if (tabs[index] === tabName) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            // 更新页面内容
+            document.querySelectorAll('.page-section').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(tabName + '-page').classList.add('active');
+
+            // 更新演示按钮
+            document.querySelectorAll('.demo-btn').forEach((btn, index) => {
+                const tabs = ['products', 'entry', 'stats'];
+                if (tabs[index] === tabName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('product-modal').style.display = 'none';
+        }
+
+        // 点击"添加产品"按钮显示模态框
+        document.querySelector('.btn-primary').addEventListener('click', function(e) {
+            if (e.target.textContent.includes('添加产品')) {
+                document.getElementById('product-modal').style.display = 'flex';
+            }
+        });
+    </script>
+</body>
+</html>
