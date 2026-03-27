@@ -645,15 +645,14 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
                     "amount": float(total_sales)
                 })
 
-    # 构建营业部级别任务目标数据（汇总成员任务）
+    # 构建营业部级别任务目标数据（汇总成员任务 + 营业部级别任务）
     group_target_data = []
     for group in groups:
         for product in products:
-            # 汇总该营业部所有成员在该产品上的任务目标
+            # 汇总该营业部在该产品上的所有任务目标（包括成员级别和营业部级别）
             total_target = db.query(func.sum(ProductTarget.target_amount)).filter(
                 ProductTarget.group_id == group.id,
-                ProductTarget.product_id == product.id,
-                ProductTarget.member_id != None  # 只汇总成员级别的任务
+                ProductTarget.product_id == product.id
             ).scalar() or 0
 
             if total_target > 0:
