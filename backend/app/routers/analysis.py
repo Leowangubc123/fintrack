@@ -598,14 +598,14 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
     groups = db.query(Group).all()
     members = db.query(Member).all()
 
-    # 获取所有销售记录统计
+    # 获取所有销售记录统计（成员级别）
     sales_stats = db.query(
         SalesRecord.member_id,
         SalesRecord.product_id,
         func.sum(SalesRecord.amount).label('total_amount')
     ).group_by(SalesRecord.member_id, SalesRecord.product_id).all()
 
-    # 构建销售数据列表（可序列化为JSON）
+    # 构建销售数据列表（可序列化为JSON）- 成员级别
     sales_data = []
     for stat in sales_stats:
         sales_data.append({
@@ -619,7 +619,7 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
         ProductTarget.member_id != None
     ).all()
 
-    # 构建任务目标数据列表
+    # 构建任务目标数据列表 - 成员级别
     target_data = []
     for target in targets:
         target_data.append({
@@ -627,6 +627,42 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
             "product_id": target.product_id,
             "target_amount": float(target.target_amount)
         })
+
+    # 构建营业部级别销售数据（汇总成员销量）
+    group_sales_data = []
+    for group in groups:
+        group_member_ids = [m.id for m in members if m.group_id == group.id]
+        for product in products:
+            # 汇总该营业部所有成员在该产品上的销量
+            total_sales = db.query(func.sum(SalesRecord.amount)).filter(
+                SalesRecord.member_id.in_(group_member_ids),
+                SalesRecord.product_id == product.id
+            ).scalar() or 0
+
+            if total_sales > 0:
+                group_sales_data.append({
+                    "group_id": group.id,
+                    "product_id": product.id,
+                    "amount": float(total_sales)
+                })
+
+    # 构建营业部级别任务目标数据（汇总成员任务）
+    group_target_data = []
+    for group in groups:
+        for product in products:
+            # 汇总该营业部所有成员在该产品上的任务目标
+            total_target = db.query(func.sum(ProductTarget.target_amount)).filter(
+                ProductTarget.group_id == group.id,
+                ProductTarget.product_id == product.id,
+                ProductTarget.member_id != None  # 只汇总成员级别的任务
+            ).scalar() or 0
+
+            if total_target > 0:
+                group_target_data.append({
+                    "group_id": group.id,
+                    "product_id": product.id,
+                    "target_amount": float(total_target)
+                })
 
     # 按募集期开始日期排序（较早的排在前面）
     sorted_products = sorted(products, key=lambda p: p.start_date or date.min)
@@ -645,5 +681,7 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
             for g in groups
         ],
         "sales_data": sales_data,
-        "target_data": target_data
+        "target_data": target_data,
+        "group_sales_data": group_sales_data,
+        "group_target_data": group_target_data
     }

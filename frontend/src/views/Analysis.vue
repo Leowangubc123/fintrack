@@ -490,8 +490,10 @@ const matrixMonth = ref('')
 const matrixProducts = ref([])
 const matrixGroups = ref([])
 const expandedGroups = ref([])
-const matrixSalesData = ref([]) // 存储销售数据
-const matrixTargetData = ref([]) // 存储任务目标数据
+const matrixSalesData = ref([]) // 存储销售数据（成员级别）
+const matrixTargetData = ref([]) // 存储任务目标数据（成员级别）
+const matrixGroupSalesData = ref([]) // 存储营业部销售数据（新增）
+const matrixGroupTargetData = ref([]) // 存储营业部任务目标数据（新增）
 
 // 个人查询
 const selectedMemberId = ref('')
@@ -551,6 +553,8 @@ async function loadData() {
     }))
     matrixSalesData.value = matrixRes.sales_data
     matrixTargetData.value = matrixRes.target_data || []
+    matrixGroupSalesData.value = matrixRes.group_sales_data || []
+    matrixGroupTargetData.value = matrixRes.group_target_data || []
     expandedGroups.value = []
 
     // 初始化个人查询数据
@@ -866,8 +870,8 @@ function filterPersonalProducts() {
 }
 
 function getGroupProductTotal(groupId, productId) {
-  // 从销售数据中直接获取该营业部该产品的销售总额
-  const record = matrixSalesData.value.find(
+  // 从营业部销售数据中直接获取该营业部该产品的销售总额
+  const record = matrixGroupSalesData.value.find(
     s => Number(s.group_id) === Number(groupId) && Number(s.product_id) === Number(productId)
   )
   return record ? record.amount : 0
@@ -875,7 +879,7 @@ function getGroupProductTotal(groupId, productId) {
 
 function getGroupProductRate(groupId, productId) {
   const sales = getGroupProductTotal(groupId, productId)
-  const targetRecord = matrixTargetData.value.find(
+  const targetRecord = matrixGroupTargetData.value.find(
     t => Number(t.group_id) === Number(groupId) && Number(t.product_id) === Number(productId)
   )
   const target = targetRecord ? targetRecord.target_amount : 0
@@ -883,18 +887,18 @@ function getGroupProductRate(groupId, productId) {
 }
 
 function getGroupOverallRate(groupId) {
-  const groupSales = matrixSalesData.value
+  const groupSales = matrixGroupSalesData.value
     .filter(s => Number(s.group_id) === Number(groupId))
     .reduce((sum, s) => sum + s.amount, 0)
-  const groupTarget = matrixTargetData.value
+  const groupTarget = matrixGroupTargetData.value
     .filter(t => Number(t.group_id) === Number(groupId))
     .reduce((sum, t) => sum + t.target_amount, 0)
   return groupTarget > 0 ? Math.round((groupSales / groupTarget) * 100) : 0
 }
 
 function getGroupTotal(groupId) {
-  // 从销售数据中汇总该营业部的销售总额
-  return matrixSalesData.value
+  // 从营业部销售数据中汇总该营业部的销售总额
+  return matrixGroupSalesData.value
     .filter(s => Number(s.group_id) === Number(groupId))
     .reduce((sum, s) => sum + s.amount, 0)
 }
