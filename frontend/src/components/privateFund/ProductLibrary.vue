@@ -636,19 +636,21 @@ onMounted(() => {
 
 .detail-item {
   background: white;
-  padding: 12px 14px;
-  border-radius: 8px;
+  padding: 16px 18px;
+  border-radius: 10px;
 }
 
 .detail-label {
-  font-size: 12px;
-  color: #8E8E93;
-  margin-bottom: 6px;
+  font-size: 14px;
+  color: #6E6E73;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .detail-value {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   color: #1D1D1F;
+  line-height: 1.4;
 }
 </style>
