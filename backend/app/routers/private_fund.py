@@ -70,7 +70,9 @@ class PrivateFundTransactionResponse(PrivateFundTransactionBase):
 class PrivateFundProduct:
     _id_counter = 0
     _products = []
-    _data_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'private_fund_products.pkl')
+    # Docker 容器内使用 /app/data，本地开发使用相对路径
+    _data_dir = '/app/data' if os.path.exists('/app/data') else os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
+    _data_file = os.path.join(_data_dir, 'private_fund_products.pkl')
 
     def __init__(self, **kwargs):
         PrivateFundProduct._id_counter += 1
@@ -195,10 +197,10 @@ def get_products(db: Session = Depends(get_db)):
             strategy_type=p.strategy_type,
             risk_level=p.risk_level,
             lock_period=p.lock_period,
+            open_period=p.open_period,
             sales_coefficient=p.sales_coefficient,
             holding_coefficient=p.holding_coefficient,
             subscription_fee=p.subscription_fee,
-            redemption_fee=p.redemption_fee,
             service_fee=p.service_fee,
             management_fee=p.management_fee,
             performance_fee=p.performance_fee,
@@ -221,10 +223,10 @@ def create_product(product: PrivateFundProductCreate, db: Session = Depends(get_
         strategy_type=p.strategy_type,
         risk_level=p.risk_level,
         lock_period=p.lock_period,
+        open_period=p.open_period,
         sales_coefficient=p.sales_coefficient,
         holding_coefficient=p.holding_coefficient,
         subscription_fee=p.subscription_fee,
-        redemption_fee=p.redemption_fee,
         service_fee=p.service_fee,
         management_fee=p.management_fee,
         performance_fee=p.performance_fee,
@@ -248,10 +250,10 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
         strategy_type=p.strategy_type,
         risk_level=p.risk_level,
         lock_period=p.lock_period,
+        open_period=p.open_period,
         sales_coefficient=p.sales_coefficient,
         holding_coefficient=p.holding_coefficient,
         subscription_fee=p.subscription_fee,
-        redemption_fee=p.redemption_fee,
         service_fee=p.service_fee,
         management_fee=p.management_fee,
         performance_fee=p.performance_fee,

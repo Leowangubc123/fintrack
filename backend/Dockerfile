@@ -10,6 +10,9 @@ RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.
 # 创建数据目录
 RUN mkdir -p /app/data /app/backup
 
+# 复制数据文件（如果存在）
+COPY data/ ./data/
+
 # 复制应用代码
 COPY app/ ./app/
 
