@@ -36,16 +36,18 @@
                 <div class="product-row-name">{{ product.name }}</div>
                 <span class="product-row-code">{{ product.code }}</span>
               </div>
-              <div class="product-row-info">
-                <span>🏢 {{ product.manager }}</span>
-                <span>🔒 {{ product.lock_period || '无' }}</span>
-              </div>
-              <span class="risk-badge" :class="'risk-' + product.risk_level.toLowerCase()">
-                {{ product.risk_level }}
-              </span>
-              <div class="coefficient-box">
-                <div class="coefficient-box-label">销售系数</div>
-                <div class="coefficient-box-value">{{ product.sales_coefficient }}</div>
+              <div class="product-row-meta">
+                <div class="product-row-info">
+                  <span>🏢 {{ product.manager }}</span>
+                  <span>🔒 {{ product.lock_period || '无' }}</span>
+                </div>
+                <span class="risk-badge" :class="'risk-' + product.risk_level.toLowerCase()">
+                  {{ product.risk_level }}
+                </span>
+                <div class="coefficient-box-inline">
+                  <span class="coefficient-label">销售系数</span>
+                  <span class="coefficient-value">{{ product.sales_coefficient }}</span>
+                </div>
               </div>
             </div>
             <div class="product-row-actions" @click.stop>
@@ -62,7 +64,7 @@
             <div class="detail-grid">
               <div class="detail-item">
                 <div class="detail-label">策略类型</div>
-                <div class="detail-value">{{ product.strategy_type }}</div>
+                <div class="detail-value">{{ product.custom_strategy || product.strategy_type }}</div>
               </div>
               <div class="detail-item">
                 <div class="detail-label">管理人</div>
@@ -323,12 +325,8 @@ const deleteProduct = async (productId) => {
 
 const saveProduct = async () => {
   try {
-    // 合并自定义策略类型
+    // 准备表单数据，保留 strategy_type 和 custom_strategy 分开存储
     const formData = { ...productForm.value }
-    if (formData.strategy_type === '其他' && formData.custom_strategy) {
-      formData.strategy_type = formData.custom_strategy
-    }
-    delete formData.custom_strategy
 
     if (editingProduct.value) {
       await privateFundApi.updateProduct(editingProduct.value.id, formData)
@@ -588,23 +586,29 @@ onMounted(() => {
   color: #FF3B30;
 }
 
-.coefficient-box {
-  width: 100px;
-  text-align: center;
-  padding: 10px 14px;
+.product-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.coefficient-box-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid rgba(124, 58, 237, 0.2);
 }
 
-.coefficient-box-label {
-  font-size: 11px;
-  color: #8E8E93;
-  margin-bottom: 2px;
+.coefficient-label {
+  font-size: 13px;
+  color: #6E6E73;
 }
 
-.coefficient-box-value {
-  font-size: 20px;
+.coefficient-value {
+  font-size: 18px;
   font-weight: 700;
   color: #7C3AED;
 }
