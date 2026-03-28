@@ -50,53 +50,35 @@
       <div ref="trendChart" class="chart-content" style="height: 300px;"></div>
     </div>
 
-    <!-- 保有产品明细 -->
+    <!-- 营业部保有明细 -->
     <div class="holding-table-container">
       <div class="table-header">
-        <div class="table-title">保有产品明细</div>
-        <div class="strategy-filter">
-          <span
-            class="strategy-tag"
-            :class="{ active: selectedStrategy === '' }"
-            @click="selectedStrategy = ''"
-          >全部</span>
-          <span
-            v-for="strategy in strategyTypes"
-            :key="strategy"
-            class="strategy-tag"
-            :class="{ active: selectedStrategy === strategy }"
-            @click="selectedStrategy = strategy"
-          >{{ strategy }}</span>
-        </div>
+        <div class="table-title">营业部保有明细</div>
+        <div class="table-subtitle">各营业部私募产品保有情况统计</div>
       </div>
       <div class="table-wrapper">
         <table class="data-table">
           <thead>
             <tr>
-              <th>产品名称</th>
-              <th>策略类型</th>
-              <th>风险等级</th>
-              <th>管理人</th>
+              <th>营业部</th>
               <th>实际保有量(万)</th>
               <th>保有系数</th>
               <th>考核保有量(万)</th>
+              <th>产品数量</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredHoldings" :key="item.product_id">
-              <td>{{ item.product_name }}</td>
-              <td>{{ item.strategy_type }}</td>
-              <td>
-                <span class="risk-badge" :class="'risk-' + item.risk_level?.toLowerCase()">
-                  {{ item.risk_level }}
-                </span>
-              </td>
-              <td>{{ item.manager }}</td>
+            <tr v-for="item in groupHoldings" :key="item.group_id">
+              <td class="group-name">{{ item.group_name }}</td>
               <td>{{ formatNumber(item.holding_amount) }}万</td>
               <td>
-                <span class="coefficient-cell">{{ item.holding_coefficient }}</span>
+                <span class="coefficient-cell">{{ item.avg_holding_coeff.toFixed(2) }}</span>
               </td>
               <td class="assessed-highlight">{{ formatNumber(item.assessed_holding) }}万</td>
+              <td>{{ item.product_count }}</td>
+            </tr>
+            <tr v-if="groupHoldings.length === 0">
+              <td colspan="5" class="empty-row">暂无保有数据</td>
             </tr>
           </tbody>
         </table>
@@ -106,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { privateFundApi } from '../../api'
@@ -117,19 +99,74 @@ const stats = ref({
   total_assessed_holding: 0
 })
 
-const holdings = ref([])
+const transactions = ref([])
+const products = ref([])
 const period = ref('week')
-const selectedStrategy = ref('')
 const trendChart = ref(null)
 
 let trendChartInstance = null
 
-const strategyTypes = ['量化指增', '量化选股', '主观多头', '量化中性', '量化套利', '全天候策略', '其他']
+// 计算各营业部保有数据
+const groupHoldings = computed(() => {
+  // 按营业部统计
+  const groupStats = {}
 
-const filteredHoldings = computed(() => {
-  if (!selectedStrategy.value) return holdings.value
-  return holdings.value.filter(h => h.strategy_type === selectedStrategy.value)
+  transactions.value.forEach(t => {
+    if (t.transaction_type !== 'sale') return // 只统计销售
+
+    const groupId = t.group_id || 'unknown'
+    const groupName = t.group_name || '未知营业部'
+
+    if (!groupStats[groupId]) {
+      groupStats[groupId] = {
+        group_id: groupId,
+        group_name: groupName,
+        total_holding: 0,
+        total_coeff: 0,
+        product_count: 0,
+        products: new Set()
+      }
+    }
+
+    // 计算该交易的当前保有（销售 - 赎回）
+    const netHolding = calculateNetHolding(t.product_id, t.member_id)
+    if (netHolding > 0) {
+      groupStats[groupId].total_holding += netHolding
+      groupStats[groupId].total_coeff += netHolding * (t.holding_coefficient || 1.0)
+      groupStats[groupId].products.add(t.product_id)
+    }
+  })
+
+  // 转换为数组并计算考核保有量
+  return Object.values(groupStats)
+    .map(g => {
+      const avgCoeff = g.total_holding > 0 ? g.total_coeff / g.total_holding : 1.0
+      return {
+        group_id: g.group_id,
+        group_name: g.group_name,
+        holding_amount: g.total_holding,
+        avg_holding_coeff: avgCoeff,
+        assessed_holding: g.total_holding * avgCoeff,
+        product_count: g.products.size
+      }
+    })
+    .sort((a, b) => b.assessed_holding - a.assessed_holding)
 })
+
+// 计算某个产品的净保有（简化计算）
+function calculateNetHolding(productId, memberId) {
+  let holding = 0
+  transactions.value
+    .filter(t => t.product_id === productId && t.member_id === memberId)
+    .forEach(t => {
+      if (t.transaction_type === 'sale') {
+        holding += t.amount
+      } else {
+        holding -= t.amount
+      }
+    })
+  return Math.max(0, holding)
+}
 
 const formatNumber = (num) => {
   if (!num) return '0'
@@ -197,12 +234,13 @@ const loadStats = async () => {
   }
 }
 
-const loadHoldings = async () => {
+const loadTransactions = async () => {
   try {
-    const res = await privateFundApi.getProductHoldings()
-    holdings.value = res
+    // 获取所有交易记录
+    const res = await privateFundApi.getRecentTransactions(1000)
+    transactions.value = res
   } catch (error) {
-    ElMessage.error('加载保有明细失败')
+    ElMessage.error('加载交易记录失败')
   }
 }
 
@@ -226,7 +264,7 @@ const handleResize = () => {
 
 onMounted(() => {
   loadStats()
-  loadHoldings()
+  loadTransactions()
   loadTrendData()
   window.addEventListener('resize', handleResize)
 })
@@ -368,42 +406,18 @@ onMounted(() => {
 .table-header {
   padding: 20px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 .table-title {
   font-size: 16px;
   font-weight: 600;
   color: #1D1D1F;
+  margin-bottom: 4px;
 }
 
-.strategy-filter {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.strategy-tag {
-  padding: 6px 12px;
-  border-radius: 8px;
+.table-subtitle {
   font-size: 13px;
-  cursor: pointer;
-  background: #F5F5F7;
-  color: #6E6E73;
-  transition: all 0.2s;
-}
-
-.strategy-tag:hover {
-  background: #E5E5EA;
-}
-
-.strategy-tag.active {
-  background: #7C3AED;
-  color: white;
+  color: #8E8E93;
 }
 
 .table-wrapper {
@@ -436,26 +450,9 @@ onMounted(() => {
   background: #FAFAFB;
 }
 
-.risk-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.risk-r3 {
-  background: #E3F5E8;
-  color: #1A9E3F;
-}
-
-.risk-r4 {
-  background: #FFF4E0;
-  color: #FF9500;
-}
-
-.risk-r5 {
-  background: #FFF0EF;
-  color: #FF3B30;
+.group-name {
+  font-weight: 600;
+  color: #1D1D1F;
 }
 
 .coefficient-cell {
@@ -470,5 +467,11 @@ onMounted(() => {
 .assessed-highlight {
   color: #007AFF;
   font-weight: 700;
+}
+
+.empty-row {
+  text-align: center;
+  color: #8E8E93;
+  padding: 40px;
 }
 </style>

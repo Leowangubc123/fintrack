@@ -19,6 +19,7 @@ class PrivateFundProductBase(BaseModel):
     manager: str
     distribution_scope: Optional[str] = "全国"
     strategy_type: str
+    custom_strategy: Optional[str] = None  # 自定义策略类型
     risk_level: str  # R3/R4/R5
     lock_period: Optional[str] = None
     open_period: Optional[str] = None  # 开放期
@@ -58,7 +59,9 @@ class PrivateFundTransactionResponse(PrivateFundTransactionBase):
     assessed_amount: Optional[float] = None
     product_name: Optional[str] = None
     member_name: Optional[str] = None
+    group_id: Optional[int] = None
     group_name: Optional[str] = None
+    holding_coefficient: Optional[float] = None
     created_at: datetime
 
     class Config:
@@ -195,6 +198,7 @@ def get_products(db: Session = Depends(get_db)):
             manager=p.manager,
             distribution_scope=p.distribution_scope,
             strategy_type=p.strategy_type,
+            custom_strategy=getattr(p, 'custom_strategy', None),
             risk_level=p.risk_level,
             lock_period=p.lock_period,
             open_period=p.open_period,
@@ -301,7 +305,9 @@ def create_transaction(transaction: PrivateFundTransactionCreate, db: Session = 
         'assessed_amount': assessed_amount,
         'product_name': product.name,
         'member_name': member.name,
-        'group_name': group.name if group else '未知'
+        'group_id': member.group_id,
+        'group_name': group.name if group else '未知',
+        'holding_coefficient': product.holding_coefficient or 1.0
     }
 
     t = PrivateFundTransaction.create(data)
@@ -318,7 +324,9 @@ def create_transaction(transaction: PrivateFundTransactionCreate, db: Session = 
         assessed_amount=t.assessed_amount,
         product_name=t.product_name,
         member_name=t.member_name,
+        group_id=t.group_id,
         group_name=t.group_name,
+        holding_coefficient=t.holding_coefficient,
         created_at=t.created_at
     )
 
@@ -340,7 +348,9 @@ def get_recent_transactions(limit: int = 10, db: Session = Depends(get_db)):
             assessed_amount=t.assessed_amount,
             product_name=t.product_name,
             member_name=t.member_name,
+            group_id=t.group_id,
             group_name=t.group_name,
+            holding_coefficient=t.holding_coefficient,
             created_at=t.created_at
         ) for t in transactions
     ]
