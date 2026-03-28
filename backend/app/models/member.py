@@ -14,3 +14,4 @@ class Member(Base):
     group = relationship("Group", back_populates="members")
     sales_records = relationship("SalesRecord", back_populates="member", cascade="all, delete-orphan")
     targets = relationship("ProductTarget", back_populates="member")
+    private_fund_transactions = relationship("PrivateFundTransaction", back_populates="member", cascade="all, delete-orphan")
