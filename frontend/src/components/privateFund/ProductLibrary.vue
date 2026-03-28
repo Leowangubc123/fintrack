@@ -38,7 +38,6 @@
               </div>
               <div class="product-row-meta">
                 <div class="product-row-info">
-                  <span>🏢 {{ product.manager }}</span>
                   <span>🔒 {{ product.lock_period || '无' }}</span>
                 </div>
                 <span class="risk-badge" :class="'risk-' + product.risk_level.toLowerCase()">
@@ -67,8 +66,8 @@
                 <div class="detail-value">{{ product.custom_strategy || product.strategy_type }}</div>
               </div>
               <div class="detail-item">
-                <div class="detail-label">管理人</div>
-                <div class="detail-value">{{ product.manager }}</div>
+                <div class="detail-label">产品代码</div>
+                <div class="detail-value">{{ product.code }}</div>
               </div>
               <div class="detail-item">
                 <div class="detail-label">代销范围</div>
@@ -133,19 +132,6 @@
           <el-col :span="12">
             <el-form-item label="产品代码" required>
               <el-input v-model="productForm.code" placeholder="如：SM2024A001" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="管理人" required>
-              <el-input v-model="productForm.manager" placeholder="请输入管理人名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="代销范围">
-              <el-input v-model="productForm.distribution_scope" placeholder="如：全国/华东地区" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -257,7 +243,6 @@ const strategyTypes = ['量化指增', '量化选股', '主观多头', '量化�
 const productForm = ref({
   name: '',
   code: '',
-  manager: '',
   distribution_scope: '',
   strategy_type: '',
   custom_strategy: '',
@@ -348,7 +333,6 @@ const resetForm = () => {
   productForm.value = {
     name: '',
     code: '',
-    manager: '',
     distribution_scope: '',
     strategy_type: '',
     custom_strategy: '',

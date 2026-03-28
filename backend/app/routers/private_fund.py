@@ -16,7 +16,6 @@ router = APIRouter(prefix="/api/private-fund", tags=["private_fund"])
 class PrivateFundProductBase(BaseModel):
     name: str
     code: str
-    manager: str
     distribution_scope: Optional[str] = "全国"
     strategy_type: str
     custom_strategy: Optional[str] = None  # 自定义策略类型
@@ -195,7 +194,6 @@ def get_products(db: Session = Depends(get_db)):
             id=p.id,
             name=p.name,
             code=p.code,
-            manager=p.manager,
             distribution_scope=p.distribution_scope,
             strategy_type=p.strategy_type,
             custom_strategy=getattr(p, 'custom_strategy', None),
@@ -222,9 +220,9 @@ def create_product(product: PrivateFundProductCreate, db: Session = Depends(get_
         id=p.id,
         name=p.name,
         code=p.code,
-        manager=p.manager,
         distribution_scope=p.distribution_scope,
         strategy_type=p.strategy_type,
+        custom_strategy=getattr(p, 'custom_strategy', None),
         risk_level=p.risk_level,
         lock_period=p.lock_period,
         open_period=p.open_period,
@@ -249,9 +247,9 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
         id=p.id,
         name=p.name,
         code=p.code,
-        manager=p.manager,
         distribution_scope=p.distribution_scope,
         strategy_type=p.strategy_type,
+        custom_strategy=getattr(p, 'custom_strategy', None),
         risk_level=p.risk_level,
         lock_period=p.lock_period,
         open_period=p.open_period,
@@ -476,7 +474,6 @@ def get_product_holdings(db: Session = Depends(get_db)):
                     "product_name": product.name,
                     "strategy_type": product.strategy_type,
                     "risk_level": product.risk_level,
-                    "manager": product.manager,
                     "holding_amount": round(holding, 2),
                     "holding_coefficient": product.holding_coefficient or 1.0,
                     "assessed_holding": round(holding * (product.holding_coefficient or 1.0), 2)
