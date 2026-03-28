@@ -509,27 +509,46 @@ def migrate_from_pickle(db: Session = Depends(get_db)):
         migrated = 0
 
         for p in products:
+            # 从对象实例获取属性（pickle存储的是对象，不是字典）
+            code = getattr(p, 'code', None)
+            if not code:
+                continue
+
             # 检查是否已存在
-            existing = db.query(PrivateFundProduct).filter(PrivateFundProduct.code == p.get('code')).first()
+            existing = db.query(PrivateFundProduct).filter(PrivateFundProduct.code == code).first()
             if existing:
                 continue
 
+            # 获取销售系数和保有系数，处理不同可能的数据类型
+            sales_coeff = getattr(p, 'sales_coefficient', 1.0)
+            holding_coeff = getattr(p, 'holding_coefficient', 1.0)
+
+            # 转换为 Decimal
+            if isinstance(sales_coeff, Decimal):
+                sales_coeff_decimal = sales_coeff
+            else:
+                sales_coeff_decimal = Decimal(str(sales_coeff))
+
+            if isinstance(holding_coeff, Decimal):
+                holding_coeff_decimal = holding_coeff
+            else:
+                holding_coeff_decimal = Decimal(str(holding_coeff)) if holding_coeff else Decimal('1.0')
+
             db_product = PrivateFundProduct(
-                id=p.get('id'),
-                name=p.get('name'),
-                code=p.get('code'),
-                distribution_scope=p.get('distribution_scope', '全国'),
-                strategy_type=p.get('strategy_type'),
-                custom_strategy=p.get('custom_strategy'),
-                risk_level=p.get('risk_level'),
-                lock_period=p.get('lock_period'),
-                open_period=p.get('open_period'),
-                sales_coefficient=Decimal(str(p.get('sales_coefficient', 1.0))),
-                holding_coefficient=Decimal(str(p.get('holding_coefficient', 1.0))) if p.get('holding_coefficient') else Decimal('1.0'),
-                subscription_fee=Decimal(str(p.get('subscription_fee'))) if p.get('subscription_fee') else None,
-                service_fee=Decimal(str(p.get('service_fee'))) if p.get('service_fee') else None,
-                management_fee=Decimal(str(p.get('management_fee'))) if p.get('management_fee') else None,
-                performance_fee=p.get('performance_fee')
+                name=getattr(p, 'name', ''),
+                code=code,
+                distribution_scope=getattr(p, 'distribution_scope', '全国'),
+                strategy_type=getattr(p, 'strategy_type', ''),
+                custom_strategy=getattr(p, 'custom_strategy', None),
+                risk_level=getattr(p, 'risk_level', 'R3'),
+                lock_period=getattr(p, 'lock_period', None),
+                open_period=getattr(p, 'open_period', None),
+                sales_coefficient=sales_coeff_decimal,
+                holding_coefficient=holding_coeff_decimal,
+                subscription_fee=Decimal(str(getattr(p, 'subscription_fee', None))) if getattr(p, 'subscription_fee', None) else None,
+                service_fee=Decimal(str(getattr(p, 'service_fee', None))) if getattr(p, 'service_fee', None) else None,
+                management_fee=Decimal(str(getattr(p, 'management_fee', None))) if getattr(p, 'management_fee', None) else None,
+                performance_fee=getattr(p, 'performance_fee', None)
             )
             db.add(db_product)
             migrated += 1
@@ -538,4 +557,6 @@ def migrate_from_pickle(db: Session = Depends(get_db)):
         return {"message": f"成功迁移 {migrated} 个产品", "migrated": migrated}
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"message": f"迁移失败: {str(e)}", "migrated": 0}
