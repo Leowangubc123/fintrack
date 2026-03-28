@@ -26,88 +26,88 @@
         <div
           v-for="product in getProductsByStrategy(strategy)"
           :key="product.id"
-          class="product-row"
-          @click="toggleDetail(product.id)"
         >
-          <div class="product-row-main">
-            <div class="product-basic-info">
-              <div class="product-row-name">{{ product.name }}</div>
-              <span class="product-row-code">{{ product.code }}</span>
+          <div
+            class="product-row"
+            @click="toggleDetail(product.id)"
+          >
+            <div class="product-row-main">
+              <div class="product-basic-info">
+                <div class="product-row-name">{{ product.name }}</div>
+                <span class="product-row-code">{{ product.code }}</span>
+              </div>
+              <div class="product-row-info">
+                <span>🏢 {{ product.manager }}</span>
+                <span>🔒 {{ product.lock_period || '无' }}</span>
+              </div>
+              <span class="risk-badge" :class="'risk-' + product.risk_level.toLowerCase()">
+                {{ product.risk_level }}
+              </span>
+              <div class="coefficient-box">
+                <div class="coefficient-box-label">销售系数</div>
+                <div class="coefficient-box-value">{{ product.sales_coefficient }}</div>
+              </div>
             </div>
-            <div class="product-row-info">
-              <span>📊 {{ product.manager }}</span>
-              <span>🌐 {{ product.distribution_scope || '全国' }}</span>
-              <span>🔒 {{ product.lock_period || '无' }}</span>
-            </div>
-            <span class="risk-badge" :class="'risk-' + product.risk_level.toLowerCase()">
-              {{ product.risk_level }}
-            </span>
-            <div class="coefficient-box">
-              <div class="coefficient-box-label">销售系数</div>
-              <div class="coefficient-box-value">{{ product.sales_coefficient }}</div>
+            <div class="product-row-actions" @click.stop>
+              <button class="btn btn-secondary btn-sm" @click="editProduct(product)">编辑</button>
+              <button class="btn btn-danger btn-sm" @click="deleteProduct(product.id)">删除</button>
             </div>
           </div>
-          <div class="product-row-actions" @click.stop>
-            <button class="btn btn-secondary btn-sm" @click="editProduct(product)">编辑</button>
-            <button class="btn btn-danger btn-sm" @click="deleteProduct(product.id)">删除</button>
-          </div>
-        </div>
 
-        <!-- 展开详情 -->
-        <div
-          v-for="product in getProductsByStrategy(strategy)"
-          :key="'detail-' + product.id"
-          class="product-detail-panel"
-          :class="{ active: expandedProducts.includes(product.id) }"
-        >
-          <div class="detail-grid">
-            <div class="detail-item">
-              <div class="detail-label">策略类型</div>
-              <div class="detail-value">{{ product.strategy_type }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">管理人</div>
-              <div class="detail-value">{{ product.manager }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">代销范围</div>
-              <div class="detail-value">{{ product.distribution_scope || '全国' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">风险等级</div>
-              <div class="detail-value">{{ product.risk_level }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">锁定期</div>
-              <div class="detail-value">{{ product.lock_period || '无' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">销售系数</div>
-              <div class="detail-value">{{ product.sales_coefficient }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">保有系数</div>
-              <div class="detail-value">{{ product.holding_coefficient || '-' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">认申购费</div>
-              <div class="detail-value">{{ product.subscription_fee ? product.subscription_fee + '%' : '-' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">开放期</div>
-              <div class="detail-value">{{ product.open_period || '-' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">销售服务费</div>
-              <div class="detail-value">{{ product.service_fee ? product.service_fee + '%' : '-' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">管理费</div>
-              <div class="detail-value">{{ product.management_fee ? product.management_fee + '%' : '-' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">业绩提成</div>
-              <div class="detail-value">{{ product.performance_fee || '-' }}</div>
+          <!-- 展开详情 -->
+          <div
+            class="product-detail-panel"
+            :class="{ active: expandedProducts.includes(product.id) }"
+          >
+            <div class="detail-grid">
+              <div class="detail-item">
+                <div class="detail-label">策略类型</div>
+                <div class="detail-value">{{ product.strategy_type }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">管理人</div>
+                <div class="detail-value">{{ product.manager }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">代销范围</div>
+                <div class="detail-value">{{ product.distribution_scope || '全国' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">风险等级</div>
+                <div class="detail-value">{{ product.risk_level }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">锁定期</div>
+                <div class="detail-value">{{ product.lock_period || '无' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">销售系数</div>
+                <div class="detail-value">{{ product.sales_coefficient }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">保有系数</div>
+                <div class="detail-value">{{ product.holding_coefficient || '-' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">认申购费</div>
+                <div class="detail-value">{{ product.subscription_fee ? product.subscription_fee + '%' : '-' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">开放期</div>
+                <div class="detail-value">{{ product.open_period || '-' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">销售服务费</div>
+                <div class="detail-value">{{ product.service_fee ? product.service_fee + '%' : '-' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">管理费</div>
+                <div class="detail-value">{{ product.management_fee ? product.management_fee + '%' : '-' }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">业绩提成</div>
+                <div class="detail-value">{{ product.performance_fee || '-' }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -555,8 +555,9 @@ onMounted(() => {
 .product-row-info {
   display: flex;
   gap: 24px;
-  font-size: 13px;
-  color: #6E6E73;
+  font-size: 14px;
+  color: #3A3A3C;
+  font-weight: 500;
 }
 
 .product-row-info span {
@@ -640,13 +641,13 @@ onMounted(() => {
 }
 
 .detail-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #8E8E93;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .detail-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #1D1D1F;
 }
