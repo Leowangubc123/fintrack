@@ -6,6 +6,8 @@ from typing import List, Optional
 from pydantic import BaseModel
 from app.database import get_db
 from app.models import Member, Group
+import os
+import pickle
 
 router = APIRouter(prefix="/api/private-fund", tags=["private_fund"])
 
@@ -19,10 +21,10 @@ class PrivateFundProductBase(BaseModel):
     strategy_type: str
     risk_level: str  # R3/R4/R5
     lock_period: Optional[str] = None
+    open_period: Optional[str] = None  # 开放期
     sales_coefficient: float
     holding_coefficient: Optional[float] = 1.0
     subscription_fee: Optional[float] = None
-    redemption_fee: Optional[float] = None
     service_fee: Optional[float] = None
     management_fee: Optional[float] = None
     performance_fee: Optional[str] = None
@@ -68,6 +70,7 @@ class PrivateFundTransactionResponse(PrivateFundTransactionBase):
 class PrivateFundProduct:
     _id_counter = 0
     _products = []
+    _data_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'private_fund_products.pkl')
 
     def __init__(self, **kwargs):
         PrivateFundProduct._id_counter += 1
@@ -77,17 +80,51 @@ class PrivateFundProduct:
         self.updated_at = None
 
     @classmethod
+    def _save_to_file(cls):
+        """保存数据到文件"""
+        try:
+            os.makedirs(os.path.dirname(cls._data_file), exist_ok=True)
+            with open(cls._data_file, 'wb') as f:
+                pickle.dump({
+                    'products': cls._products,
+                    'id_counter': cls._id_counter
+                }, f)
+        except Exception as e:
+            print(f"[WARN] Failed to save private fund data: {e}")
+
+    @classmethod
+    def _load_from_file(cls):
+        """从文件加载数据"""
+        if os.path.exists(cls._data_file):
+            try:
+                with open(cls._data_file, 'rb') as f:
+                    data = pickle.load(f)
+                    cls._products = data.get('products', [])
+                    cls._id_counter = data.get('id_counter', 0)
+                    print(f"[INFO] Loaded {len(cls._products)} private fund products from file")
+            except Exception as e:
+                print(f"[WARN] Failed to load private fund data: {e}")
+
+    @classmethod
     def create(cls, data):
+        # 确保已加载数据
+        if not cls._products and os.path.exists(cls._data_file):
+            cls._load_from_file()
         product = cls(**data)
         cls._products.append(product)
+        cls._save_to_file()
         return product
 
     @classmethod
     def get_all(cls):
+        if not cls._products and os.path.exists(cls._data_file):
+            cls._load_from_file()
         return cls._products
 
     @classmethod
     def get_by_id(cls, product_id):
+        if not cls._products and os.path.exists(cls._data_file):
+            cls._load_from_file()
         for p in cls._products:
             if p.id == product_id:
                 return p
@@ -100,6 +137,7 @@ class PrivateFundProduct:
             for key, value in data.items():
                 setattr(product, key, value)
             product.updated_at = datetime.now()
+            cls._save_to_file()
         return product
 
     @classmethod
@@ -107,6 +145,7 @@ class PrivateFundProduct:
         product = cls.get_by_id(product_id)
         if product:
             cls._products.remove(product)
+            cls._save_to_file()
             return True
         return False
 

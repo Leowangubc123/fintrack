@@ -94,8 +94,8 @@
               <div class="detail-value">{{ product.subscription_fee ? product.subscription_fee + '%' : '-' }}</div>
             </div>
             <div class="detail-item">
-              <div class="detail-label">赎回费</div>
-              <div class="detail-value">{{ product.redemption_fee ? product.redemption_fee + '%' : '-' }}</div>
+              <div class="detail-label">开放期</div>
+              <div class="detail-value">{{ product.open_period || '-' }}</div>
             </div>
             <div class="detail-item">
               <div class="detail-label">销售服务费</div>
@@ -184,29 +184,29 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="销售系数" required>
-              <el-input-number v-model="productForm.sales_coefficient" :min="0.1" :max="5" :step="0.1" style="width: 100%" />
+            <el-form-item label="开放期">
+              <el-input v-model="productForm.open_period" placeholder="如：每月5日为开放日" />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="销售系数" required>
+              <el-input-number v-model="productForm.sales_coefficient" :min="0.1" :max="5" :step="0.1" style="width: 100%" />
+            </el-form-item>
+          </el-col>
           <el-col :span="12">
             <el-form-item label="保有系数">
               <el-input-number v-model="productForm.holding_coefficient" :min="0" :max="5" :step="0.1" style="width: 100%" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="认申购费(%)">
-              <el-input-number v-model="productForm.subscription_fee" :min="0" :max="10" :step="0.1" style="width: 100%" />
-            </el-form-item>
-          </el-col>
         </el-row>
 
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="赎回费(%)">
-              <el-input-number v-model="productForm.redemption_fee" :min="0" :max="10" :step="0.1" style="width: 100%" />
+            <el-form-item label="认申购费(%)">
+              <el-input-number v-model="productForm.subscription_fee" :min="0" :max="10" :step="0.1" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -261,10 +261,10 @@ const productForm = ref({
   custom_strategy: '',
   risk_level: '',
   lock_period: '',
+  open_period: '',
   sales_coefficient: 1.0,
   holding_coefficient: 1.0,
   subscription_fee: null,
-  redemption_fee: null,
   service_fee: null,
   management_fee: null,
   performance_fee: ''
@@ -356,10 +356,10 @@ const resetForm = () => {
     custom_strategy: '',
     risk_level: '',
     lock_period: '',
+    open_period: '',
     sales_coefficient: 1.0,
     holding_coefficient: 1.0,
     subscription_fee: null,
-    redemption_fee: null,
     service_fee: null,
     management_fee: null,
     performance_fee: ''
