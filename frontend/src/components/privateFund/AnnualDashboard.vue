@@ -84,7 +84,7 @@
       <div class="table-wrapper">
         <table class="data-table">
           <thead>
-            <tr>
+            <tr v-if="viewMode === 'all'">
               <th>日期</th>
               <th>产品</th>
               <th>策略类型</th>
@@ -93,9 +93,20 @@
               <th>实际销量(万)</th>
               <th>考核销量(万)</th>
             </tr>
+            <tr v-else-if="viewMode === 'group'">
+              <th>营业部</th>
+              <th>实际销量合计(万)</th>
+              <th>考核销量合计(万)</th>
+            </tr>
+            <tr v-else-if="viewMode === 'member'">
+              <th>销售人员</th>
+              <th>营业部</th>
+              <th>实际销量合计(万)</th>
+              <th>考核销量合计(万)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr v-for="record in tableData" :key="record.id">
+            <tr v-if="viewMode === 'all'" v-for="record in tableData" :key="record.id">
               <td>{{ record.transaction_date }}</td>
               <td>{{ record.product_name }}</td>
               <td>{{ record.strategy_type }}</td>
@@ -103,6 +114,17 @@
               <td>{{ record.group_name }}</td>
               <td>{{ record.amount }}万</td>
               <td class="assessed-highlight">{{ record.assessed_amount }}万</td>
+            </tr>
+            <tr v-else-if="viewMode === 'group'" v-for="record in tableData" :key="record.id">
+              <td>{{ record.group_name }}</td>
+              <td>{{ record.amount.toFixed(2) }}万</td>
+              <td class="assessed-highlight">{{ record.assessed_amount.toFixed(2) }}万</td>
+            </tr>
+            <tr v-else-if="viewMode === 'member'" v-for="record in tableData" :key="record.id">
+              <td>{{ record.member_name }}</td>
+              <td>{{ record.group_name }}</td>
+              <td>{{ record.amount.toFixed(2) }}万</td>
+              <td class="assessed-highlight">{{ record.assessed_amount.toFixed(2) }}万</td>
             </tr>
           </tbody>
         </table>
@@ -112,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { privateFundApi } from '../../api'
@@ -135,11 +157,59 @@ let memberChartInstance = null
 let productChartInstance = null
 
 const tableData = computed(() => {
+  const sortedRecords = [...salesRecords.value].sort((a, b) => {
+    return new Date(b.transaction_date) - new Date(a.transaction_date)
+  })
+
   if (viewMode.value === 'all') {
-    return salesRecords.value
+    return sortedRecords
   }
-  // 按营业部或个人分组汇总逻辑
-  return salesRecords.value
+
+  if (viewMode.value === 'group') {
+    // 按营业部分组汇总
+    const groupStats = {}
+    sortedRecords.forEach(r => {
+      if (!groupStats[r.group_name]) {
+        groupStats[r.group_name] = {
+          id: `group-${r.group_name}`,
+          transaction_date: '-',
+          product_name: '-',
+          strategy_type: '-',
+          member_name: '-',
+          group_name: r.group_name,
+          amount: 0,
+          assessed_amount: 0
+        }
+      }
+      groupStats[r.group_name].amount += r.amount || 0
+      groupStats[r.group_name].assessed_amount += r.assessed_amount || 0
+    })
+    return Object.values(groupStats).sort((a, b) => b.assessed_amount - a.assessed_amount)
+  }
+
+  if (viewMode.value === 'member') {
+    // 按个人分组汇总
+    const memberStats = {}
+    sortedRecords.forEach(r => {
+      if (!memberStats[r.member_name]) {
+        memberStats[r.member_name] = {
+          id: `member-${r.member_name}`,
+          transaction_date: '-',
+          product_name: '-',
+          strategy_type: '-',
+          member_name: r.member_name,
+          group_name: r.group_name,
+          amount: 0,
+          assessed_amount: 0
+        }
+      }
+      memberStats[r.member_name].amount += r.amount || 0
+      memberStats[r.member_name].assessed_amount += r.assessed_amount || 0
+    })
+    return Object.values(memberStats).sort((a, b) => b.assessed_amount - a.assessed_amount)
+  }
+
+  return sortedRecords
 })
 
 const formatNumber = (num) => {
@@ -229,23 +299,32 @@ const initMemberChart = (data) => {
     },
     grid: {
       left: '3%',
-      right: '4%',
+      right: '15%',
       bottom: '3%',
       containLabel: true
     },
     xAxis: {
       type: 'value',
-      name: '考核销量(万)'
+      name: '考核销量(万)',
+      splitLine: {
+        lineStyle: { type: 'dashed' }
+      }
     },
     yAxis: {
       type: 'category',
       data: sortedMembers.map(m => m[0]).reverse(),
-      axisLabel: { fontSize: 12 }
+      axisLabel: {
+        fontSize: 12,
+        width: 80,
+        overflow: 'truncate'
+      }
     },
     series: [{
       type: 'bar',
       data: sortedMembers.map(m => m[1]).reverse(),
+      barWidth: '60%',
       itemStyle: {
+        borderRadius: [0, 4, 4, 0],
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
           { offset: 0, color: '#7C3AED' },
           { offset: 1, color: '#A855F7' }
@@ -254,7 +333,8 @@ const initMemberChart = (data) => {
       label: {
         show: true,
         position: 'right',
-        formatter: '{c}万'
+        formatter: '{c}万',
+        fontSize: 11
       }
     }]
   }
@@ -287,27 +367,44 @@ const initProductChart = (data) => {
       formatter: '{b}: {c}万 ({d}%)'
     },
     legend: {
-      orient: 'vertical',
-      right: '5%',
-      top: 'center'
+      orient: 'horizontal',
+      bottom: '5%',
+      left: 'center',
+      itemWidth: 12,
+      itemHeight: 12,
+      textStyle: {
+        fontSize: 11
+      }
+    },
+    grid: {
+      top: 10,
+      bottom: 10
     },
     series: [{
       type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['40%', '50%'],
-      avoidLabelOverlap: false,
+      radius: ['35%', '60%'],
+      center: ['50%', '45%'],
+      avoidLabelOverlap: true,
       itemStyle: {
-        borderRadius: 10,
+        borderRadius: 8,
         borderColor: '#fff',
         borderWidth: 2
       },
       label: {
-        show: false
+        show: true,
+        position: 'outside',
+        formatter: '{b}\n{c}万',
+        fontSize: 11
+      },
+      labelLine: {
+        show: true,
+        length: 10,
+        length2: 5
       },
       emphasis: {
         label: {
           show: true,
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: 'bold'
         }
       },
