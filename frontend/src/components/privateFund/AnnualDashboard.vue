@@ -129,23 +129,17 @@
           </tbody>
         </table>
       </div>
-    </div>
-
-    <!-- 营业部销量对比柱状图 -->
-    <div class="chart-card group-chart-card">
-      <div class="chart-header">
-        <div>
-          <div class="chart-title">营业部销量对比</div>
-          <div class="chart-subtitle">各营业部考核销量排名</div>
-        </div>
+      <!-- 营业部销量对比柱状图 - 仅在按营业部视图显示 -->
+      <div v-if="viewMode === 'group'" class="group-chart-section">
+        <div class="group-chart-title">营业部销量对比</div>
+        <div ref="groupChart" class="group-chart-content"></div>
       </div>
-      <div ref="groupChart" class="chart-content" style="height: 280px;"></div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { privateFundApi } from '../../api'
@@ -386,22 +380,29 @@ const initProductChart = (data) => {
       formatter: '{b}: {c}万 ({d}%)'
     },
     legend: {
-      orient: 'horizontal',
-      bottom: '5%',
-      left: 'center',
-      itemWidth: 12,
-      itemHeight: 12,
+      orient: 'vertical',
+      right: '3%',
+      top: 'center',
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 12,
       textStyle: {
-        fontSize: 11
+        fontSize: 11,
+        width: 100,
+        overflow: 'truncate'
+      },
+      formatter: function(name) {
+        const item = pieData.find(d => d.name === name)
+        return name + '  ' + item.value + '万'
       }
     },
     series: [{
       type: 'pie',
-      radius: ['45%', '70%'],
-      center: ['50%', '45%'],
+      radius: ['40%', '65%'],
+      center: ['35%', '50%'],
       avoidLabelOverlap: false,
       itemStyle: {
-        borderRadius: 8,
+        borderRadius: 6,
         borderColor: '#fff',
         borderWidth: 2
       },
@@ -410,10 +411,12 @@ const initProductChart = (data) => {
       },
       emphasis: {
         label: {
-          show: true,
-          fontSize: 14,
-          fontWeight: 'bold',
-          formatter: '{b}\n{c}万\n({d}%)'
+          show: false
+        },
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.2)'
         }
       },
       data: pieData
@@ -527,6 +530,18 @@ const handleResize = () => {
   productChartInstance?.resize()
   groupChartInstance?.resize()
 }
+
+// 监听视图模式变化，当切换到营业部视图时渲染图表
+watch(viewMode, async (newMode) => {
+  if (newMode === 'group') {
+    await nextTick()
+    if (groupChartInstance) {
+      groupChartInstance.resize()
+    } else if (salesRecords.value.length > 0) {
+      initGroupChart(salesRecords.value)
+    }
+  }
+})
 
 onMounted(() => {
   loadStats()
@@ -721,8 +736,23 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.group-chart-card {
-  margin-top: 20px;
+/* 营业部销量对比图表样式 */
+.group-chart-section {
+  padding: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: #FAFAFB;
+}
+
+.group-chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.group-chart-content {
+  height: 240px;
 }
 
 @media (min-width: 1024px) {
