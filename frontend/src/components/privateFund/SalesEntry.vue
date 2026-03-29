@@ -48,17 +48,35 @@
             </div>
           </el-form-item>
 
+          <el-form-item label="营业部" required>
+            <el-select
+              v-model="selectedGroupId"
+              placeholder="请选择营业部"
+              style="width: 100%"
+              filterable
+              @change="onGroupChange"
+            >
+              <el-option
+                v-for="group in groups"
+                :key="group.id"
+                :label="group.name"
+                :value="group.id"
+              />
+            </el-select>
+          </el-form-item>
+
           <el-form-item label="销售人员" required>
             <el-select
               v-model="form.member_id"
-              placeholder="请选择销售人员"
+              placeholder="请先选择营业部"
               style="width: 100%"
               filterable
+              :disabled="!selectedGroupId"
             >
               <el-option
-                v-for="member in members"
+                v-for="member in filteredMembers"
                 :key="member.id"
-                :label="`${member.name} - ${member.group_name}`"
+                :label="member.name"
                 :value="member.id"
               />
             </el-select>
@@ -164,11 +182,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { TrendCharts, Money } from '@element-plus/icons-vue'
-import { privateFundApi, organizationApi } from '../../api'
+import { privateFundApi, groupsApi, membersApi } from '../../api'
 
 const entryType = ref('sale') // 'sale' 或 'redeem'
 const products = ref([])
+const groups = ref([])
 const members = ref([])
+const selectedGroupId = ref(null)
 const recentRecords = ref([])
 
 const form = ref({
@@ -183,6 +203,11 @@ const selectedProduct = computed(() => {
   return products.value.find(p => p.id === form.value.product_id)
 })
 
+const filteredMembers = computed(() => {
+  if (!selectedGroupId.value) return []
+  return members.value.filter(m => m.group_id === selectedGroupId.value)
+})
+
 const calculatedAssessedAmount = computed(() => {
   if (!form.value.amount || !selectedProduct.value) return '0.0'
   return (form.value.amount * selectedProduct.value.sales_coefficient).toFixed(1)
@@ -190,6 +215,11 @@ const calculatedAssessedAmount = computed(() => {
 
 const onProductChange = () => {
   // 产品选择变化时自动更新销售系数显示
+}
+
+const onGroupChange = () => {
+  // 切换营业部时，清空已选员工
+  form.value.member_id = null
 }
 
 const onAmountChange = () => {
@@ -243,15 +273,21 @@ const loadProducts = async () => {
   }
 }
 
+const loadGroups = async () => {
+  try {
+    const res = await groupsApi.list()
+    groups.value = res
+  } catch (error) {
+    ElMessage.error('加载营业部列表失败')
+  }
+}
+
 const loadMembers = async () => {
   try {
-    const res = await organizationApi.getMembers()
-    members.value = res.map(m => ({
-      ...m,
-      group_name: m.group?.name || '未知营业部'
-    }))
+    const res = await membersApi.getAll()
+    members.value = res
   } catch (error) {
-    ElMessage.error('加载销售人员列表失败')
+    ElMessage.error('加载营销人员列表失败')
   }
 }
 
@@ -273,10 +309,12 @@ watch(entryType, () => {
     amount: null,
     remark: ''
   }
+  selectedGroupId.value = null
 })
 
 onMounted(() => {
   loadProducts()
+  loadGroups()
   loadMembers()
   loadRecentRecords()
 })

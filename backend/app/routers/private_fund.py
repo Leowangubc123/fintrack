@@ -447,46 +447,98 @@ def get_product_holdings(db: Session = Depends(get_db)):
 
 @router.get("/holdings/trend")
 def get_holding_trend(period: str = "week", db: Session = Depends(get_db)):
-    """获取保有量趋势数据（模拟数据）"""
-    today = date.today()
+    """获取保有量趋势数据（基于真实交易计算）"""
+    from datetime import datetime
+    from collections import defaultdict
 
+    today = date.today()
+    transactions = db.query(PrivateFundTransaction).all()
+    products = db.query(PrivateFundProduct).all()
+    product_map = {p.id: p for p in products}
+
+    # 生成时间段列表
+    periods = []
     if period == "week":
         # 最近12周
-        periods = []
         for i in range(11, -1, -1):
-            week_start = today - timedelta(days=today.weekday() + i * 7)
+            week_end = today - timedelta(days=today.weekday() + i * 7 - 6)
+            week_start = week_end - timedelta(days=6)
             periods.append({
-                "period": f"{week_start.month}/{week_start.day}",
-                "assessed_holding": 12000 + i * 200 + (i % 3) * 500
+                "label": f"{week_start.month}/{week_start.day}",
+                "end_date": week_end,
+                "start_date": week_start
             })
     elif period == "month":
         # 最近12个月
-        periods = []
         for i in range(11, -1, -1):
             month = today.month - i
             year = today.year
             if month <= 0:
                 month += 12
                 year -= 1
+            # 该月最后一天
+            if month == 12:
+                next_month = date(year + 1, 1, 1)
+            else:
+                next_month = date(year, month + 1, 1)
+            month_end = next_month - timedelta(days=1)
             periods.append({
-                "period": f"{year}-{month:02d}",
-                "assessed_holding": 10000 + i * 300 + (i % 4) * 800
+                "label": f"{year}-{month:02d}",
+                "end_date": month_end,
+                "start_date": date(year, month, 1)
             })
     else:  # quarter
         # 最近8个季度
-        periods = []
         for i in range(7, -1, -1):
             quarter = (today.month - 1) // 3 + 1 - i
             year = today.year
             if quarter <= 0:
                 quarter += 4
                 year -= 1
+            # 季度末最后一天
+            quarter_end_month = quarter * 3
+            if quarter_end_month == 12:
+                next_q = date(year + 1, 1, 1)
+            else:
+                next_q = date(year, quarter_end_month + 1, 1)
+            quarter_end = next_q - timedelta(days=1)
             periods.append({
-                "period": f"{year}Q{quarter}",
-                "assessed_holding": 9000 + i * 500 + (i % 2) * 1000
+                "label": f"{year}Q{quarter}",
+                "end_date": quarter_end,
+                "start_date": date(year, (quarter - 1) * 3 + 1, 1)
             })
 
-    return periods
+    # 按时间段累计计算保有量
+    result = []
+    for period_info in periods:
+        end_date = period_info["end_date"]
+
+        # 计算到该时间点为止的累计保有
+        product_holdings = defaultdict(float)
+
+        for t in transactions:
+            if t.transaction_date > end_date:
+                continue  # 该时间点之后的交易不计入
+
+            if t.transaction_type == 'sale':
+                product_holdings[t.product_id] += float(t.amount)
+            else:  # redeem
+                product_holdings[t.product_id] -= float(t.amount)
+
+        # 计算考核保有量（考虑保有系数）
+        total_assessed_holding = 0
+        for pid, holding in product_holdings.items():
+            if holding > 0:
+                product = product_map.get(pid)
+                coeff = float(product.holding_coefficient) if product and product.holding_coefficient else 1.0
+                total_assessed_holding += holding * coeff
+
+        result.append({
+            "period": period_info["label"],
+            "assessed_holding": round(total_assessed_holding, 2)
+        })
+
+    return result
 
 
 @router.get("/holdings/groups")
