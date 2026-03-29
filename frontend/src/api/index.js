@@ -127,6 +127,7 @@ export const privateFundApi = {
 
   // 交易记录
   createTransaction: (data) => api.post('/private-fund/transactions', data),
+  deleteTransaction: (id) => api.delete(`/private-fund/transactions/${id}`),
   getRecentTransactions: (limit = 10) => api.get('/private-fund/transactions/recent', { params: { limit } }),
 
   // 年度统计

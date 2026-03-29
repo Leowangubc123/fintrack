@@ -171,6 +171,15 @@
                 {{ record.transaction_type === 'sale' ? `销售 系数${record.sales_coefficient}` : '赎回' }}
               </div>
             </div>
+            <el-button
+              type="danger"
+              link
+              size="small"
+              class="delete-btn"
+              @click="deleteRecord(record.id)"
+            >
+              <el-icon><Delete /></el-icon>
+            </el-button>
           </div>
         </div>
       </div>
@@ -180,8 +189,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { TrendCharts, Money } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { TrendCharts, Money, Delete } from '@element-plus/icons-vue'
 import { privateFundApi, groupsApi, membersApi } from '../../api'
 
 const entryType = ref('sale') // 'sale' 或 'redeem'
@@ -297,6 +306,23 @@ const loadRecentRecords = async () => {
     recentRecords.value = res
   } catch (error) {
     ElMessage.error('加载最近记录失败')
+  }
+}
+
+const deleteRecord = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条记录吗？', '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await privateFundApi.deleteTransaction(id)
+    ElMessage.success('删除成功')
+    loadRecentRecords()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
   }
 }
 
@@ -556,5 +582,15 @@ onMounted(() => {
 .record-label {
   font-size: 11px;
   color: #8E8E93;
+}
+
+.delete-btn {
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.record-item:hover .delete-btn {
+  opacity: 1;
 }
 </style>

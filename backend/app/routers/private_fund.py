@@ -305,6 +305,22 @@ def get_recent_transactions(limit: int = 10, db: Session = Depends(get_db)):
     return result
 
 
+@router.delete("/transactions/{transaction_id}")
+def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    """删除交易记录"""
+    transaction = db.query(PrivateFundTransaction).filter(
+        PrivateFundTransaction.id == transaction_id
+    ).first()
+
+    if not transaction:
+        raise HTTPException(status_code=404, detail="交易记录不存在")
+
+    db.delete(transaction)
+    db.commit()
+
+    return {"message": "删除成功", "id": transaction_id}
+
+
 # ============== 年度统计API ==============
 
 @router.get("/stats/annual")
