@@ -130,6 +130,17 @@
         </table>
       </div>
     </div>
+
+    <!-- 营业部销量对比柱状图 -->
+    <div class="chart-card group-chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">营业部销量对比</div>
+          <div class="chart-subtitle">各营业部考核销量排名</div>
+        </div>
+      </div>
+      <div ref="groupChart" class="chart-content" style="height: 280px;"></div>
+    </div>
   </div>
 </template>
 
@@ -151,10 +162,12 @@ const salesRecords = ref([])
 const monthlyChart = ref(null)
 const memberChart = ref(null)
 const productChart = ref(null)
+const groupChart = ref(null)
 
 let monthlyChartInstance = null
 let memberChartInstance = null
 let productChartInstance = null
+let groupChartInstance = null
 
 const tableData = computed(() => {
   const sortedRecords = [...salesRecords.value].sort((a, b) => {
@@ -300,12 +313,18 @@ const initMemberChart = (data) => {
     grid: {
       left: '3%',
       right: '15%',
-      bottom: '3%',
+      top: '5%',
+      bottom: '12%',
       containLabel: true
     },
     xAxis: {
       type: 'value',
       name: '考核销量(万)',
+      nameLocation: 'end',
+      nameGap: 8,
+      axisLine: { show: true },
+      axisTick: { show: true },
+      axisLabel: { show: true },
       splitLine: {
         lineStyle: { type: 'dashed' }
       }
@@ -376,36 +395,25 @@ const initProductChart = (data) => {
         fontSize: 11
       }
     },
-    grid: {
-      top: 10,
-      bottom: 10
-    },
     series: [{
       type: 'pie',
-      radius: ['35%', '60%'],
+      radius: ['45%', '70%'],
       center: ['50%', '45%'],
-      avoidLabelOverlap: true,
+      avoidLabelOverlap: false,
       itemStyle: {
         borderRadius: 8,
         borderColor: '#fff',
         borderWidth: 2
       },
       label: {
-        show: true,
-        position: 'outside',
-        formatter: '{b}\n{c}万',
-        fontSize: 11
-      },
-      labelLine: {
-        show: true,
-        length: 10,
-        length2: 5
+        show: false
       },
       emphasis: {
         label: {
           show: true,
-          fontSize: 12,
-          fontWeight: 'bold'
+          fontSize: 14,
+          fontWeight: 'bold',
+          formatter: '{b}\n{c}万\n({d}%)'
         }
       },
       data: pieData
@@ -413,6 +421,80 @@ const initProductChart = (data) => {
   }
 
   productChartInstance.setOption(option)
+}
+
+const initGroupChart = (data) => {
+  if (!groupChart.value) return
+
+  groupChartInstance = echarts.init(groupChart.value)
+
+  // 按营业部汇总考核销量
+  const groupStats = {}
+  data.forEach(d => {
+    if (!groupStats[d.group_name]) {
+      groupStats[d.group_name] = 0
+    }
+    groupStats[d.group_name] += d.assessed_amount || 0
+  })
+
+  const sortedGroups = Object.entries(groupStats)
+    .sort((a, b) => b[1] - a[1])
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: '{b}: {c}万'
+    },
+    grid: {
+      left: '3%',
+      right: '15%',
+      top: '5%',
+      bottom: '5%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      name: '考核销量(万)',
+      nameLocation: 'end',
+      nameGap: 8,
+      axisLine: { show: true },
+      axisTick: { show: true },
+      axisLabel: { show: true },
+      splitLine: {
+        lineStyle: { type: 'dashed' }
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: sortedGroups.map(g => g[0]).reverse(),
+      axisLabel: {
+        fontSize: 12,
+        width: 100,
+        overflow: 'truncate'
+      }
+    },
+    series: [{
+      type: 'bar',
+      data: sortedGroups.map(g => g[1]).reverse(),
+      barWidth: '50%',
+      itemStyle: {
+        borderRadius: [0, 4, 4, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#007AFF' },
+          { offset: 1, color: '#5856D6' }
+        ])
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{c}万',
+        fontSize: 11
+      }
+    }]
+  }
+
+  groupChartInstance.setOption(option)
 }
 
 const loadStats = async () => {
@@ -433,6 +515,7 @@ const loadSalesRecords = async () => {
     initMonthlyChart(res)
     initMemberChart(res)
     initProductChart(res)
+    initGroupChart(res)
   } catch (error) {
     ElMessage.error('加载销售记录失败')
   }
@@ -442,6 +525,7 @@ const handleResize = () => {
   monthlyChartInstance?.resize()
   memberChartInstance?.resize()
   productChartInstance?.resize()
+  groupChartInstance?.resize()
 }
 
 onMounted(() => {
@@ -635,6 +719,10 @@ onMounted(() => {
 .assessed-highlight {
   color: #007AFF;
   font-weight: 700;
+}
+
+.group-chart-card {
+  margin-top: 20px;
 }
 
 @media (min-width: 1024px) {
