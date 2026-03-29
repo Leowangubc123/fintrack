@@ -136,5 +136,6 @@ export const privateFundApi = {
   // 保有统计
   getHoldingStats: () => api.get('/private-fund/holdings/stats'),
   getProductHoldings: () => api.get('/private-fund/holdings/products'),
+  getGroupHoldings: () => api.get('/private-fund/holdings/groups'),
   getHoldingTrend: (period) => api.get('/private-fund/holdings/trend', { params: { period } })
 }

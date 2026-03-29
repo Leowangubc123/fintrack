@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { privateFundApi } from '../../api'
@@ -99,74 +99,11 @@ const stats = ref({
   total_assessed_holding: 0
 })
 
-const transactions = ref([])
-const products = ref([])
+const groupHoldings = ref([])
 const period = ref('week')
 const trendChart = ref(null)
 
 let trendChartInstance = null
-
-// 计算各营业部保有数据
-const groupHoldings = computed(() => {
-  // 按营业部统计
-  const groupStats = {}
-
-  transactions.value.forEach(t => {
-    if (t.transaction_type !== 'sale') return // 只统计销售
-
-    const groupId = t.group_id || 'unknown'
-    const groupName = t.group_name || '未知营业部'
-
-    if (!groupStats[groupId]) {
-      groupStats[groupId] = {
-        group_id: groupId,
-        group_name: groupName,
-        total_holding: 0,
-        total_coeff: 0,
-        product_count: 0,
-        products: new Set()
-      }
-    }
-
-    // 计算该交易的当前保有（销售 - 赎回）
-    const netHolding = calculateNetHolding(t.product_id, t.member_id)
-    if (netHolding > 0) {
-      groupStats[groupId].total_holding += netHolding
-      groupStats[groupId].total_coeff += netHolding * (t.holding_coefficient || 1.0)
-      groupStats[groupId].products.add(t.product_id)
-    }
-  })
-
-  // 转换为数组并计算考核保有量
-  return Object.values(groupStats)
-    .map(g => {
-      const avgCoeff = g.total_holding > 0 ? g.total_coeff / g.total_holding : 1.0
-      return {
-        group_id: g.group_id,
-        group_name: g.group_name,
-        holding_amount: g.total_holding,
-        avg_holding_coeff: avgCoeff,
-        assessed_holding: g.total_holding * avgCoeff,
-        product_count: g.products.size
-      }
-    })
-    .sort((a, b) => b.assessed_holding - a.assessed_holding)
-})
-
-// 计算某个产品的净保有（简化计算）
-function calculateNetHolding(productId, memberId) {
-  let holding = 0
-  transactions.value
-    .filter(t => t.product_id === productId && t.member_id === memberId)
-    .forEach(t => {
-      if (t.transaction_type === 'sale') {
-        holding += t.amount
-      } else {
-        holding -= t.amount
-      }
-    })
-  return Math.max(0, holding)
-}
 
 const formatNumber = (num) => {
   if (!num) return '0'
@@ -234,13 +171,12 @@ const loadStats = async () => {
   }
 }
 
-const loadTransactions = async () => {
+const loadGroupHoldings = async () => {
   try {
-    // 获取所有交易记录
-    const res = await privateFundApi.getRecentTransactions(1000)
-    transactions.value = res
+    const res = await privateFundApi.getGroupHoldings()
+    groupHoldings.value = res
   } catch (error) {
-    ElMessage.error('加载交易记录失败')
+    ElMessage.error('加载营业部保有数据失败')
   }
 }
 
@@ -264,7 +200,7 @@ const handleResize = () => {
 
 onMounted(() => {
   loadStats()
-  loadTransactions()
+  loadGroupHoldings()
   loadTrendData()
   window.addEventListener('resize', handleResize)
 })

@@ -357,6 +357,7 @@ def get_annual_sales(year: Optional[int] = None, db: Session = Depends(get_db)):
             "id": t.id,
             "transaction_date": t.transaction_date.isoformat(),
             "product_name": product.name if product else '未知产品',
+            "strategy_type": product.strategy_type if product else '',
             "member_name": member.name if member else '未知人员',
             "group_name": group.name if group else '未知营业部',
             "amount": float(t.amount),
@@ -416,7 +417,7 @@ def get_product_holdings(db: Session = Depends(get_db)):
         if t.product_id not in product_stats:
             product_stats[t.product_id] = {
                 "holding": 0,
-                "product_name": t.product.name if t.product else '未知产品'
+                "product_name": None  # 稍后从数据库查询
             }
         if t.transaction_type == 'sale':
             product_stats[t.product_id]["holding"] += float(t.amount)
@@ -488,6 +489,84 @@ def get_holding_trend(period: str = "week", db: Session = Depends(get_db)):
     return periods
 
 
+@router.get("/holdings/groups")
+def get_group_holdings(db: Session = Depends(get_db)):
+    """获取各营业部保有明细（按成员和产品维度计算）"""
+    # 获取所有交易记录
+    transactions = db.query(PrivateFundTransaction).all()
+    products = db.query(PrivateFundProduct).all()
+    members = db.query(Member).all()
+    groups = db.query(Group).all()
+
+    # 构建查询映射
+    product_map = {p.id: p for p in products}
+    member_map = {m.id: m for m in members}
+    group_map = {g.id: g for g in groups}
+
+    # 计算每个成员每个产品的净保有
+    member_product_holding = {}  # {(member_id, product_id): net_holding}
+    for t in transactions:
+        key = (t.member_id, t.product_id)
+        if key not in member_product_holding:
+            member_product_holding[key] = 0
+        if t.transaction_type == 'sale':
+            member_product_holding[key] += float(t.amount)
+        else:
+            member_product_holding[key] -= float(t.amount)
+
+    # 按营业部汇总
+    group_stats = {}
+    for (member_id, product_id), holding in member_product_holding.items():
+        if holding <= 0:
+            continue
+
+        member = member_map.get(member_id)
+        if not member:
+            continue
+
+        group_id = member.group_id
+        group = group_map.get(group_id)
+        if not group:
+            continue
+
+        product = product_map.get(product_id)
+        holding_coeff = product.holding_coefficient if product else 1.0
+        if isinstance(holding_coeff, Decimal):
+            holding_coeff = float(holding_coeff)
+
+        if group_id not in group_stats:
+            group_stats[group_id] = {
+                "group_id": group_id,
+                "group_name": group.name,
+                "total_holding": 0,
+                "total_assessed": 0,
+                "total_coeff_weighted": 0,
+                "product_count": set()
+            }
+
+        group_stats[group_id]["total_holding"] += holding
+        group_stats[group_id]["total_assessed"] += holding * holding_coeff
+        group_stats[group_id]["total_coeff_weighted"] += holding * holding_coeff
+        group_stats[group_id]["product_count"].add(product_id)
+
+    # 组装结果
+    result = []
+    for stats in group_stats.values():
+        total_holding = stats["total_holding"]
+        avg_coeff = stats["total_coeff_weighted"] / total_holding if total_holding > 0 else 1.0
+        result.append({
+            "group_id": stats["group_id"],
+            "group_name": stats["group_name"],
+            "holding_amount": round(total_holding, 2),
+            "avg_holding_coeff": round(avg_coeff, 2),
+            "assessed_holding": round(stats["total_assessed"], 2),
+            "product_count": len(stats["product_count"])
+        })
+
+    # 按考核保有量降序排列
+    return sorted(result, key=lambda x: x["assessed_holding"], reverse=True)
+
+
 # ============== 数据迁移API（一次性使用） ==============
 
 @router.post("/migrate-from-pickle")
@@ -556,7 +635,93 @@ def migrate_from_pickle(db: Session = Depends(get_db)):
         db.commit()
         return {"message": f"成功迁移 {migrated} 个产品", "migrated": migrated}
 
+@router.post("/migrate-sales-to-private-fund")
+def migrate_sales_to_private_fund(db: Session = Depends(get_db)):
+    """将2026年销售记录迁移到私募交易表"""
+    from app.models import SalesRecord, Product
+    from sqlalchemy import func
+
+    try:
+        # 1. 获取2026年的销售记录
+        sales_records = db.query(SalesRecord).filter(
+            extract('year', SalesRecord.sale_date) == 2026
+        ).all()
+
+        # 2. 获取所有私募产品，建立映射
+        private_products = db.query(PrivateFundProduct).all()
+        private_product_by_code = {p.code: p for p in private_products}
+        private_product_by_name = {p.name: p for p in private_products}
+
+        # 3. 获取普通产品信息
+        products = db.query(Product).all()
+        product_map = {p.id: p for p in products}
+
+        # 4. 处理每条销售记录
+        migrated = 0
+        skipped = 0
+        errors = []
+
+        for record in sales_records:
+            product = product_map.get(record.product_id)
+            if not product:
+                skipped += 1
+                errors.append(f"记录ID {record.id}: 找不到对应的产品")
+                continue
+
+            # 尝试匹配私募产品
+            private_product = None
+            if product.name in private_product_by_name:
+                private_product = private_product_by_name[product.name]
+            elif product.code and product.code in private_product_by_code:
+                private_product = private_product_by_code[product.code]
+
+            if not private_product:
+                skipped += 1
+                continue
+
+            # 检查是否已存在
+            existing = db.query(PrivateFundTransaction).filter(
+                PrivateFundTransaction.product_id == private_product.id,
+                PrivateFundTransaction.member_id == record.member_id,
+                PrivateFundTransaction.transaction_date == record.sale_date,
+                PrivateFundTransaction.amount == record.amount
+            ).first()
+
+            if existing:
+                skipped += 1
+                continue
+
+            # 创建私募交易记录
+            sales_coefficient = float(private_product.sales_coefficient)
+            assessed_amount = float(record.amount) * sales_coefficient
+
+            transaction = PrivateFundTransaction(
+                product_id=private_product.id,
+                member_id=record.member_id,
+                transaction_date=record.sale_date,
+                amount=record.amount,
+                transaction_type='sale',
+                sales_coefficient=Decimal(str(sales_coefficient)),
+                assessed_amount=Decimal(str(assessed_amount)),
+                holding_coefficient=private_product.holding_coefficient or Decimal('1.0'),
+                remark="从销售记录迁移"
+            )
+
+            db.add(transaction)
+            migrated += 1
+
+        db.commit()
+
+        return {
+            "message": "迁移完成",
+            "total_sales_records": len(sales_records),
+            "migrated": migrated,
+            "skipped": skipped,
+            "errors": errors[:10] if errors else []
+        }
+
     except Exception as e:
+        db.rollback()
         import traceback
         traceback.print_exc()
-        return {"message": f"迁移失败: {str(e)}", "migrated": 0}
+        raise HTTPException(status_code=500, detail=f"迁移失败: {str(e)}")
