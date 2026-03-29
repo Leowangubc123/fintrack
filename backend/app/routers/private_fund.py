@@ -635,6 +635,13 @@ def migrate_from_pickle(db: Session = Depends(get_db)):
         db.commit()
         return {"message": f"成功迁移 {migrated} 个产品", "migrated": migrated}
 
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        return {"message": f"迁移失败: {str(e)}", "migrated": 0}
+
+
 @router.post("/migrate-sales-to-private-fund")
 def migrate_sales_to_private_fund(db: Session = Depends(get_db)):
     """将2026年销售记录迁移到私募交易表"""
