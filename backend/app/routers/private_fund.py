@@ -882,6 +882,13 @@ def upload_holdings(
         success_count = 0
         errors = []
 
+        # 调试：记录第一条数据
+        if data:
+            first_item = data[0]
+            print(f"[DEBUG] 第一条原始数据: product_code={first_item.product_code}, group_name={first_item.group_name}, holding_market_value={first_item.holding_market_value}")
+
+        total_input_value = 0  # 统计输入总值
+
         for item in data:
             # 查找产品（仅通过产品代码）
             product = product_by_code.get(item.product_code)
@@ -900,6 +907,11 @@ def upload_holdings(
 
             # 将元转换为万元（保留一位小数）
             market_value_wan = round(item.holding_market_value / 10000, 1)
+            total_input_value += market_value_wan
+
+            # 调试：输出前几条数据的转换过程
+            if len(errors) < 3 and item.product_code:
+                print(f"[DEBUG] {item.product_code}: 输入={item.holding_market_value}, 转换后={market_value_wan}万")
 
             # 计算考核保有量（万元）
             assessed_holding = round(market_value_wan * holding_coefficient, 1)
@@ -932,10 +944,13 @@ def upload_holdings(
 
         db.commit()
 
+        print(f"[DEBUG] 总输入数据条数: {len(data)}, 成功处理: {success_count}, 输入总值: {total_input_value}万")
+
         return {
             "message": "上传成功",
             "record_date": record_date.isoformat(),
             "success_count": success_count,
+            "total_input_value": round(total_input_value, 2),  # 返回输入总值（万元）
             "errors": errors
         }
 
@@ -1011,6 +1026,9 @@ def get_holding_stats(db: Session = Depends(get_db)):
             trend_data=[]
         )
 
+    # 调试：显示最新日期
+    print(f"[DEBUG] 统计最新日期: {latest_date}")
+
     # 获取最新日期的所有保有数据，同时使用产品库最新系数重新计算
     holdings_with_coeff = db.query(
         PrivateFundHolding,
@@ -1021,6 +1039,8 @@ def get_holding_stats(db: Session = Depends(get_db)):
         PrivateFundHolding.record_date == latest_date
     ).all()
 
+    print(f"[DEBUG] 最新日期记录数: {len(holdings_with_coeff)}")
+
     # 使用最新系数重新计算总考核保有量
     total_assessed = 0.0
     total_market = 0.0
@@ -1029,6 +1049,8 @@ def get_holding_stats(db: Session = Depends(get_db)):
         coeff = float(product_coeff) if product_coeff is not None else 1.0
         total_market += market_value
         total_assessed += market_value * coeff
+
+    print(f"[DEBUG] 统计结果: 总保有市值={total_market}万, 总考核保有量={total_assessed}万")
 
     record_count = len(holdings_with_coeff)
 
