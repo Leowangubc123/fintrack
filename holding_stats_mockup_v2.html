@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>私募保有统计 - UI设计示意图 V2</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 40px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 24px;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #6e6e73;
+      margin-bottom: 30px;
+    }
+
+    /* KPI 卡片区域 - 3个 */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .kpi-card.primary::before { background: linear-gradient(90deg, #007AFF, #5856D6); }
+    .kpi-card.secondary::before { background: linear-gradient(90deg, #34C759, #30D158); }
+    .kpi-card.info::before { background: linear-gradient(90deg, #FF9500, #FF6B35); }
+
+    .kpi-label {
+      font-size: 13px;
+      color: #6E6E73;
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1D1D1F;
+    }
+    .kpi-value.primary {
+      background: linear-gradient(135deg, #007AFF, #5856D6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .kpi-value.secondary {
+      color: #34C759;
+    }
+    .kpi-value.info {
+      color: #FF9500;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: #8E8E93;
+      margin-top: 4px;
+    }
+
+    /* 图表区域布局 */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+    }
+    .chart-header {
+      padding: 20px 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chart-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1D1D1F;
+    }
+    .update-date {
+      font-size: 12px;
+      color: #8E8E93;
+      background: #F5F5F7;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+    .chart-subtitle {
+      font-size: 13px;
+      color: #8E8E93;
+      margin-top: 4px;
+      padding-left: 20px;
+    }
+    .chart-content {
+      padding: 20px;
+      height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 趋势图模拟 */
+    .trend-mock {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    .trend-mock svg {
+      width: 100%;
+      height: calc(100% - 30px);
+    }
+    .trend-labels {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      font-size: 11px;
+      color: #8E8E93;
+    }
+
+    /* 柱状图模拟 */
+    .bar-chart-mock {
+      width: 100%;
+      padding: 0 10px;
+    }
+    .bar-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .bar-label {
+      width: 80px;
+      font-size: 13px;
+      color: #1d1d1f;
+      text-align: right;
+      padding-right: 12px;
+    }
+    .bar-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bar {
+      height: 24px;
+      background: linear-gradient(90deg, #007AFF, #5856D6);
+      border-radius: 0 4px 4px 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .bar-value {
+      font-size: 13px;
+      color: #1d1d1f;
+      font-weight: 600;
+      min-width: 60px;
+    }
+
+    /* 数据表格 */
+    .data-table-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .table-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1D1D1F;
+    }
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+    }
+    .filter-tab {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      background: #F5F5F7;
+      color: #6E6E73;
+      transition: all 0.2s;
+      border: none;
+    }
+    .filter-tab:hover {
+      background: #E5E5EA;
+    }
+    .filter-tab.active {
+      background: #7C3AED;
+      color: white;
+    }
+    .upload-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      background: #7C3AED;
+      color: white;
+      transition: all 0.2s;
+    }
+    .upload-btn:hover {
+      background: #6d28d9;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      background: #FAFAFB;
+      padding: 14px 16px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #6E6E73;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .data-table td {
+      padding: 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      font-size: 14px;
+      color: #1D1D1F;
+    }
+    .data-table tr:hover {
+      background: #FAFAFB;
+    }
+    .coefficient-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      background: rgba(124, 58, 237, 0.1);
+      color: #7C3AED;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .assessed-highlight {
+      color: #007AFF;
+      font-weight: 700;
+    }
+    .market-value {
+      color: #6E6E73;
+    }
+
+    @media (max-width: 1024px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 私募保有统计</h1>
+    <p class="subtitle">基于上传的保有量数据进行时点统计</p>
+
+    <!-- KPI 卡片 - 3个 -->
+    <div class="kpi-grid">
+      <div class="kpi-card primary">
+        <div class="kpi-label">考核保有量</div>
+        <div class="kpi-value primary">12,580.5万</div>
+        <div class="kpi-sub">保有市值 × 保有系数</div>
+      </div>
+      <div class="kpi-card secondary">
+        <div class="kpi-label">实际保有市值</div>
+        <div class="kpi-value secondary">15,200.0万</div>
+        <div class="kpi-sub">原始保有市值合计</div>
+      </div>
+      <div class="kpi-card info">
+        <div class="kpi-label">最近更新日期</div>
+        <div class="kpi-value info">2026年3月30日</div>
+        <div class="kpi-sub">数据时点更新时间</div>
+      </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="charts-grid">
+      <!-- 左侧：考核保有量趋势 -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title-wrap">
+            <div class="chart-title">考核保有量趋势</div>
+            <div class="update-date">更新于 2026-03-30</div>
+          </div>
+        </div>
+        <div class="chart-subtitle">根据数据上传时点更新</div>
+        <div class="chart-content">
+          <div class="trend-mock">
+            <svg viewBox="0 0 500 240" preserveAspectRatio="none">
+              <!-- 网格线 -->
+              <line x1="40" y1="200" x2="480" y2="200" stroke="#E5E5EA" stroke-width="1"/>
+              <line x1="40" y1="150" x2="480" y2="150" stroke="#E5E5EA" stroke-width="1" stroke-dasharray="4"/>
+              <line x1="40" y1="100" x2="480" y2="100" stroke="#E5E5EA" stroke-width="1" stroke-dasharray="4"/>
+              <line x1="40" y1="50" x2="480" y2="50" stroke="#E5E5EA" stroke-width="1" stroke-dasharray="4"/>
+
+              <!-- 趋势线 -->
+              <polyline
+                fill="none"
+                stroke="#007AFF"
+                stroke-width="2"
+                points="60,160 170,140 280,120 390,80 460,40"
+              />
+
+              <!-- 数据点 -->
+              <circle cx="60" cy="160" r="5" fill="#007AFF"/>
+              <circle cx="170" cy="140" r="5" fill="#007AFF"/>
+              <circle cx="280" cy="120" r="5" fill="#007AFF"/>
+              <circle cx="390" cy="80" r="5" fill="#007AFF"/>
+              <circle cx="460" cy="40" r="7" fill="#34C759" stroke="white" stroke-width="2"/>
+
+              <!-- 数值标签 -->
+              <text x="60" y="180" text-anchor="middle" font-size="10" fill="#8E8E93">8,520万</text>
+              <text x="170" y="160" text-anchor="middle" font-size="10" fill="#8E8E93">9,800万</text>
+              <text x="280" y="140" text-anchor="middle" font-size="10" fill="#8E8E93">10,500万</text>
+              <text x="390" y="100" text-anchor="middle" font-size="10" fill="#8E8E93">11,200万</text>
+              <text x="460" y="25" text-anchor="middle" font-size="11" fill="#34C759" font-weight="bold">12,580万</text>
+            </svg>
+            <div class="trend-labels">
+              <span>2025-12-31</span>
+              <span>2026-01-31</span>
+              <span>2026-02-28</span>
+              <span style="color: #34C759; font-weight: 600;">2026-03-30</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：营业部考核保有量分布 -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title-wrap">
+            <div class="chart-title">营业部考核保有量分布</div>
+            <div class="update-date">更新于 2026-03-30</div>
+          </div>
+        </div>
+        <div class="chart-subtitle">各营业部考核保有量排名</div>
+        <div class="chart-content">
+          <div class="bar-chart-mock">
+            <div class="bar-item">
+              <div class="bar-label">世纪大道</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 100%;">3,520.5万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">陆家嘴</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 75%;">2,650.0万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">南京西路</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 60%;">2,120.0万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">虹桥路</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 45%;">1,580.0万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">徐家汇</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 35%;">1,210.0万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">张江高科</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 28%;">980.0万</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 保有明细表格 -->
+    <div class="data-table-container">
+      <div class="table-header">
+        <div class="table-title-wrap">
+          <div class="table-title">保有明细</div>
+          <div class="update-date">更新于 2026-03-30</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <!-- 营业部筛选 -->
+          <div class="filter-tabs">
+            <button class="filter-tab active">全部</button>
+            <button class="filter-tab">世纪大道</button>
+            <button class="filter-tab">陆家嘴</button>
+            <button class="filter-tab">南京西路</button>
+            <button class="filter-tab">更多 ▼</button>
+          </div>
+          <!-- 上传按钮 -->
+          <button class="upload-btn">+ 上传保有数据</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>产品名称</th>
+              <th>产品代码</th>
+              <th>营业部</th>
+              <th>保有市值(万)</th>
+              <th>保有系数</th>
+              <th>考核保有量(万)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>赫富跃升中证1000量化指数增强2号</td>
+              <td>HF1000A</td>
+              <td>世纪大道</td>
+              <td class="market-value">1,000.00</td>
+              <td><span class="coefficient-badge">1.2</span></td>
+              <td class="assessed-highlight">1,200.00</td>
+            </tr>
+            <tr>
+              <td>赫富城盈500指数增强二号A类</td>
+              <td>HF500A</td>
+              <td>世纪大道</td>
+              <td class="market-value">800.00</td>
+              <td><span class="coefficient-badge">1.0</span></td>
+              <td class="assessed-highlight">800.00</td>
+            </tr>
+            <tr>
+              <td>长信基金-金选CTA多策略1号</td>
+              <td>CXCTA01</td>
+              <td>陆家嘴</td>
+              <td class="market-value">1,200.00</td>
+              <td><span class="coefficient-badge">1.5</span></td>
+              <td class="assessed-highlight">1,800.00</td>
+            </tr>
+            <tr>
+              <td>星阔城盈红利低波100指数增强1号</td>
+              <td>XKHL100</td>
+              <td>南京西路</td>
+              <td class="market-value">900.00</td>
+              <td><span class="coefficient-badge">1.1</span></td>
+              <td class="assessed-highlight">990.00</td>
+            </tr>
+            <tr>
+              <td>因诺城盈300增强一号</td>
+              <td>YN300A</td>
+              <td>虹桥路</td>
+              <td class="market-value">750.00</td>
+              <td><span class="coefficient-badge">1.3</span></td>
+              <td class="assessed-highlight">975.00</td>
+            </tr>
+            <tr>
+              <td>优美利城盈灵活配置12号A类</td>
+              <td>YML12A</td>
+              <td>徐家汇</td>
+              <td class="market-value">600.00</td>
+              <td><span class="coefficient-badge">1.0</span></td>
+              <td class="assessed-highlight">600.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

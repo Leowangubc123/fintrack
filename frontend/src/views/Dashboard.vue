@@ -61,8 +61,8 @@
           <div class="product-name" :title="product.name">{{ product.name }}</div>
           <div class="product-meta">
             <span class="product-code">{{ product.code || '—' }}</span>
-            <span class="deadline-tag" :class="product.days_left <= 7 ? 'urgent' : ''">
-              剩 {{ product.days_left }} 天
+            <span class="deadline-tag" :class="{ urgent: product.days_left <= 7 && product.days_left >= 0, ended: product.days_left < 0 }">
+              {{ product.days_left < 0 ? '已结束' : `剩 ${product.days_left} 天` }}
             </span>
           </div>
           <div class="completion-block">
@@ -313,6 +313,10 @@ function getMedalClass(idx) {
 .deadline-tag.urgent {
   color: #FF3B30; background: #FFF0EF;
   border-color: rgba(255,59,48,.2);
+}
+.deadline-tag.ended {
+  color: #8E8E93; background: #F2F2F7;
+  border-color: rgba(142,142,147,.3);
 }
 
 /* 完成率大字 */

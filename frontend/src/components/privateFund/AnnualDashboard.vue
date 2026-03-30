@@ -1,6 +1,6 @@
 <template>
   <div class="annual-dashboard">
-    <!-- 四个KPI卡片 -->
+    <!-- 三个KPI卡片 -->
     <div class="kpi-grid">
       <div class="kpi-card assessed">
         <div class="kpi-label">本年度总考核销量</div>
@@ -12,15 +12,10 @@
         <div class="kpi-value">{{ formatNumber(stats.total_actual_sales) }}万</div>
         <div class="kpi-sub">原始销售金额</div>
       </div>
-      <div class="kpi-card redeem">
-        <div class="kpi-label">本年度总赎回</div>
-        <div class="kpi-value redeem">{{ formatNumber(stats.total_redemption) }}万</div>
-        <div class="kpi-sub">客户赎回金额</div>
-      </div>
-      <div class="kpi-card net">
-        <div class="kpi-label">本年度净销量</div>
-        <div class="kpi-value net">{{ formatNumber(stats.net_sales) }}万</div>
-        <div class="kpi-sub">实际销量 - 总赎回</div>
+      <div class="kpi-card count">
+        <div class="kpi-label">销售笔数</div>
+        <div class="kpi-value count">{{ stats.transaction_count || 0 }}笔</div>
+        <div class="kpi-sub">本年度销售记录数</div>
       </div>
     </div>
 
@@ -147,8 +142,7 @@ import { privateFundApi } from '../../api'
 const stats = ref({
   total_assessed_sales: 0,
   total_actual_sales: 0,
-  total_redemption: 0,
-  net_sales: 0
+  transaction_count: 0
 })
 
 const viewMode = ref('all')
@@ -557,7 +551,7 @@ onMounted(() => {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -582,8 +576,7 @@ onMounted(() => {
 
 .kpi-card.assessed::before { background: linear-gradient(90deg, #007AFF, #5856D6); }
 .kpi-card.actual::before { background: linear-gradient(90deg, #7C3AED, #A855F7); }
-.kpi-card.redeem::before { background: linear-gradient(90deg, #FF3B30, #FF6B35); }
-.kpi-card.net::before { background: linear-gradient(90deg, #34C759, #30D158); }
+.kpi-card.count::before { background: linear-gradient(90deg, #34C759, #30D158); }
 
 .kpi-label {
   font-size: 13px;
@@ -603,11 +596,7 @@ onMounted(() => {
   -webkit-text-fill-color: transparent;
 }
 
-.kpi-value.redeem {
-  color: #FF3B30;
-}
-
-.kpi-value.net {
+.kpi-value.count {
   color: #34C759;
 }
 

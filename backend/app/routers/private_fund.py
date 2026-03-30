@@ -351,26 +351,23 @@ def get_annual_stats(year: Optional[int] = None, db: Session = Depends(get_db)):
     if not year:
         year = date.today().year
 
-    transactions = db.query(PrivateFundTransaction).filter(
-        extract('year', PrivateFundTransaction.transaction_date) == year
+    # 只统计销售类型的交易
+    sale_transactions = db.query(PrivateFundTransaction).filter(
+        extract('year', PrivateFundTransaction.transaction_date) == year,
+        PrivateFundTransaction.transaction_type == 'sale'
     ).all()
 
     total_assessed_sales = 0
     total_actual_sales = 0
-    total_redemption = 0
 
-    for t in transactions:
-        if t.transaction_type == 'sale':
-            total_actual_sales += float(t.amount)
-            total_assessed_sales += float(t.assessed_amount) if t.assessed_amount else 0
-        else:
-            total_redemption += float(t.amount)
+    for t in sale_transactions:
+        total_actual_sales += float(t.amount)
+        total_assessed_sales += float(t.assessed_amount) if t.assessed_amount else 0
 
     return {
         "total_assessed_sales": round(total_assessed_sales, 2),
         "total_actual_sales": round(total_actual_sales, 2),
-        "total_redemption": round(total_redemption, 2),
-        "net_sales": round(total_actual_sales - total_redemption, 2)
+        "transaction_count": len(sale_transactions)
     }
 
 

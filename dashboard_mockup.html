@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>年度看板布局优化示意图</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 40px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 24px;
+      color: #1d1d1f;
+      margin-bottom: 30px;
+    }
+
+    /* 问题说明 */
+    .issues {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+      border-left: 4px solid #FF3B30;
+    }
+    .issues h2 {
+      font-size: 16px;
+      color: #FF3B30;
+      margin-bottom: 12px;
+    }
+    .issues ul {
+      color: #6e6e73;
+      font-size: 14px;
+      line-height: 1.8;
+      padding-left: 20px;
+    }
+
+    /* 优化后布局 */
+    .optimized-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+    }
+
+    .chart-header {
+      padding: 20px 20px 0;
+    }
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1D1D1F;
+    }
+    .chart-subtitle {
+      font-size: 13px;
+      color: #8E8E93;
+      margin-top: 4px;
+    }
+
+    /* 左侧柱状图 */
+    .bar-chart-container {
+      padding: 10px 20px 20px;
+      height: 320px;
+    }
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      height: 100%;
+    }
+    .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bar-label {
+      width: 60px;
+      font-size: 13px;
+      color: #1d1d1f;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .bar-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bar {
+      height: 20px;
+      background: linear-gradient(90deg, #7C3AED, #A855F7);
+      border-radius: 0 4px 4px 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .bar-value {
+      font-size: 12px;
+      color: #1d1d1f;
+      font-weight: 600;
+      min-width: 45px;
+    }
+    .x-axis-label {
+      text-align: center;
+      font-size: 12px;
+      color: #8E8E93;
+      margin-top: 8px;
+      padding-left: 72px;
+    }
+
+    /* 右侧饼图 */
+    .pie-chart-container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .pie-chart {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #5470c6 0deg 144deg,
+        #91cc75 144deg 252deg,
+        #fac858 252deg 324deg,
+        #ee6666 324deg 360deg
+      );
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .pie-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100px;
+      height: 100px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #6e6e73;
+    }
+    .pie-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      width: 100%;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #1d1d1f;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    .legend-percent {
+      color: #8E8E93;
+      margin-left: 2px;
+    }
+
+    /* 对比区域 */
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .comparison-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .comparison-card h3 {
+      font-size: 14px;
+      color: #1d1d1f;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .comparison-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .comparison-item .icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .comparison-item .icon.good {
+      background: #34C759;
+      color: white;
+    }
+    .comparison-item .icon.bad {
+      background: #FF3B30;
+      color: white;
+    }
+    .comparison-item .text {
+      color: #6e6e73;
+      line-height: 1.5;
+    }
+
+    /* 代码配置提示 */
+    .code-hint {
+      background: #1d1d1f;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+    .code-hint h3 {
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .code-block {
+      background: #2d2d2f;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      color: #a5a5a7;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+    .code-block .key {
+      color: #ff7b72;
+    }
+    .code-block .string {
+      color: #a5d6ff;
+    }
+    .code-block .number {
+      color: #79c0ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 私募销售年度看板 - 布局优化示意图</h1>
+
+    <div class="issues">
+      <h2>当前问题</h2>
+      <ul>
+        <li><strong>左侧柱状图：</strong>图表高度不足导致布局压缩，Y轴标签区域过小，坐标轴名称"考核销量(万)"被截断，标题与图表间留白过多</li>
+        <li><strong>右侧饼图：</strong>产品名称过长直接显示在图表周围导致重叠，图例和标签同时存在造成信息冗余，整体布局混乱</li>
+      </ul>
+    </div>
+
+    <h2 style="font-size: 18px; color: #1d1d1f; margin-bottom: 20px;">优化后效果预览</h2>
+
+    <div class="optimized-layout">
+      <!-- 左侧柱状图 -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">个人考核销量 TOP10</div>
+          <div class="chart-subtitle">销售人员业绩排名（按考核销量）</div>
+        </div>
+        <div class="bar-chart-container">
+          <div class="bar-chart">
+            <div class="bar-item">
+              <div class="bar-label">史万鹏</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 100%;">552万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">刘锦玉</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 76%;">420万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">王嘉洋</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 37%;">202万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">吴双</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 36%;">201万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">于岚</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 36%;">200万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">陈荣毅</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 36%;">200万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">梁胜琪</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 36%;">200万</div>
+              </div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-label">虞辉</div>
+              <div class="bar-wrapper">
+                <div class="bar" style="width: 36%;">200万</div>
+              </div>
+            </div>
+          </div>
+          <div class="x-axis-label">考核销量（万）→</div>
+        </div>
+      </div>
+
+      <!-- 右侧饼图 -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">产品销量分布</div>
+          <div class="chart-subtitle">各产品实际销量对比</div>
+        </div>
+        <div class="pie-chart-container">
+          <div class="pie-chart">
+            <div class="pie-center">总计<br><strong>1012万</strong></div>
+          </div>
+          <div class="pie-legend">
+            <div class="legend-item">
+              <div class="legend-color" style="background: #5470c6;"></div>
+              <span>赫富跃升中证1000</span>
+              <span class="legend-percent">40%</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #91cc75;"></div>
+              <span>赫富城盈500指数</span>
+              <span class="legend-percent">30%</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #fac858;"></div>
+              <span>长信基金CTA</span>
+              <span class="legend-percent">20%</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #ee6666;"></div>
+              <span>星阔城盈红利</span>
+              <span class="legend-percent">10%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="font-size: 18px; color: #1d1d1f; margin-bottom: 20px;">优化要点对比</h2>
+
+    <div class="comparison">
+      <div class="comparison-card">
+        <h3>左侧柱状图优化</h3>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">增加图表高度至 320px，给数据展示留足空间</div>
+        </div>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">调整 grid 配置：top: 10px, bottom: 25px，消除多余留白</div>
+        </div>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">增加右侧空间 right: 12%，确保数据标签完整显示</div>
+        </div>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">坐标轴名称完整显示，不再被截断</div>
+        </div>
+      </div>
+
+      <div class="comparison-card">
+        <h3>右侧饼图优化</h3>
+        <div class="comparison-item">
+          <div class="icon bad">✗</div>
+          <div class="text">移除饼图外侧的直接标签，避免与图形重叠</div>
+        </div>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">增大饼图半径，居中显示，视觉更突出</div>
+        </div>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">图例移至底部水平排列，带百分比显示</div>
+        </div>
+        <div class="comparison-item">
+          <div class="icon good">✓</div>
+          <div class="text">悬停时通过 tooltip 显示详细数据</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-hint">
+      <h3>ECharts 配置代码（关键部分）</h3>
+      <div class="code-block">
+<span class="key">// 左侧柱状图配置</span>
+grid: {
+  left: <span class="string">'3%'</span>,
+  right: <span class="string">'12%'</span>,     <span class="key">// 增加右侧空间</span>
+  top: <span class="number">10</span>,          <span class="key">// 减少顶部留白</span>
+  bottom: <span class="number">25</span>,       <span class="key">// 确保坐标轴名称显示</span>
+  containLabel: <span class="key">true</span>
+},
+xAxis: {
+  name: <span class="string">'考核销量(万)'</span>,
+  nameLocation: <span class="string">'end'</span>,
+  nameGap: <span class="number">10</span>
+}
+
+<span class="key">// 右侧饼图配置</span>
+series: [{
+  type: <span class="string">'pie'</span>,
+  radius: [<span class="string">'45%'</span>, <span class="number">70</span>],    <span class="key">// 增大环形半径</span>
+  center: [<span class="string">'50%'</span>, <span class="string">'45%'</span>],   <span class="key">// 居中偏上</span>
+  label: { show: <span class="key">false</span> },          <span class="key">// 关闭直接标签</span>
+  emphasis: {
+    label: { show: <span class="key">true</span>, fontSize: <span class="number">14</span> }
+  }
+}],
+legend: {
+  orient: <span class="string">'horizontal'</span>,
+  bottom: <span class="string">'5%'</span>,
+  left: <span class="string">'center'</span>,
+  formatter: <span class="string">'{name} {c}%'</span>
+}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
