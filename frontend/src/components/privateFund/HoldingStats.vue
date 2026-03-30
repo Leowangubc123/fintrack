@@ -571,11 +571,21 @@ const submitUpload = async () => {
       // 显示缺失产品列表
       const missingProducts = res.errors.filter(e => e.includes('产品库中不存在'))
       if (missingProducts.length > 0) {
-        ElMessage.error({
-          message: `上传失败：发现 ${missingProducts.length} 个未入库的产品，请先添加产品`,
-          duration: 5000
+        // 提取产品代码
+        const productCodes = missingProducts.map(e => {
+          const match = e.match(/:\s*(.+)$/)
+          return match ? match[1] : e
         })
-        console.error('缺失的产品：', missingProducts)
+
+        // 显示具体产品代码，最多显示前10个
+        const displayCodes = productCodes.slice(0, 10).join('、')
+        const moreText = productCodes.length > 10 ? ` 等${productCodes.length}个产品` : ''
+
+        ElMessage.error({
+          message: `上传失败：产品 ${displayCodes}${moreText} 未入库，请先添加产品`,
+          duration: 8000
+        })
+        console.error('缺失的产品：', productCodes)
         uploading.value = false
         return
       }
