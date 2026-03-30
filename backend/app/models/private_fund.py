@@ -49,3 +49,21 @@ class PrivateFundTransaction(Base):
     # Relationships
     product = relationship("PrivateFundProduct", back_populates="transactions")
     member = relationship("Member", back_populates="private_fund_transactions")
+
+
+class PrivateFundHolding(Base):
+    """私募保有数据模型 - 时点数据"""
+    __tablename__ = "private_fund_holdings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("private_fund_products.id"), nullable=False)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
+    holding_market_value = Column(Numeric(15, 2), nullable=False)  # 保有市值
+    holding_coefficient = Column(Numeric(4, 2), nullable=False)  # 保有系数
+    assessed_holding = Column(Numeric(15, 2), nullable=False)  # 考核保有量
+    record_date = Column(Date, nullable=False)  # 数据日期
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    product = relationship("PrivateFundProduct")
+    group = relationship("Group")

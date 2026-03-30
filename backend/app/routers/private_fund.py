@@ -800,3 +800,255 @@ def migrate_sales_to_private_fund(db: Session = Depends(get_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"迁移失败: {str(e)}")
+
+
+# ============== 保有数据管理API ==============
+
+from app.models import PrivateFundHolding
+
+class HoldingUploadItem(BaseModel):
+    product_name: str
+    product_code: str
+    group_name: str
+    holding_market_value: float
+
+class HoldingDataResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_name: str
+    product_code: str
+    group_name: str
+    holding_market_value: float
+    holding_coefficient: float
+    assessed_holding: float
+    record_date: date
+    created_at: Optional[datetime] = None
+
+class HoldingStatsResponse(BaseModel):
+    total_assessed_holding: float
+    total_market_value: float
+    record_count: int
+    latest_record_date: Optional[date] = None
+    group_stats: List[dict]
+    trend_data: List[dict]
+
+@router.post("/holdings/upload")
+def upload_holdings(
+    data: List[HoldingUploadItem],
+    record_date: date,
+    db: Session = Depends(get_db)
+):
+    """上传保有数据
+
+    参数:
+    - data: 保有数据列表，包含产品名称、代码、营业部、保有市值
+    - record_date: 数据日期（时点）
+
+    系统会自动:
+    1. 根据产品代码匹配产品库中的保有系数
+    2. 计算考核保有量 = 保有市值 × 保有系数
+    3. 保存到数据库
+    """
+    try:
+        # 获取所有产品
+        products = db.query(PrivateFundProduct).all()
+        product_by_code = {p.code: p for p in products}
+        product_by_name = {p.name: p for p in products}
+
+        # 获取所有营业部
+        groups = db.query(Group).all()
+        group_by_name = {g.name: g for g in groups}
+
+        success_count = 0
+        errors = []
+
+        for item in data:
+            # 查找产品
+            product = product_by_code.get(item.product_code) or product_by_name.get(item.product_name)
+            if not product:
+                errors.append(f"未找到产品: {item.product_name} ({item.product_code})")
+                continue
+
+            # 查找营业部
+            group = group_by_name.get(item.group_name)
+            if not group:
+                errors.append(f"未找到营业部: {item.group_name}")
+                continue
+
+            # 获取保有系数
+            holding_coefficient = float(product.holding_coefficient) if product.holding_coefficient else 1.0
+
+            # 计算考核保有量
+            assessed_holding = item.holding_market_value * holding_coefficient
+
+            # 检查是否已存在该日期该产品该营业部的记录
+            existing = db.query(PrivateFundHolding).filter(
+                PrivateFundHolding.product_id == product.id,
+                PrivateFundHolding.group_id == group.id,
+                PrivateFundHolding.record_date == record_date
+            ).first()
+
+            if existing:
+                # 更新现有记录
+                existing.holding_market_value = Decimal(str(item.holding_market_value))
+                existing.holding_coefficient = Decimal(str(holding_coefficient))
+                existing.assessed_holding = Decimal(str(assessed_holding))
+            else:
+                # 创建新记录
+                holding = PrivateFundHolding(
+                    product_id=product.id,
+                    group_id=group.id,
+                    holding_market_value=Decimal(str(item.holding_market_value)),
+                    holding_coefficient=Decimal(str(holding_coefficient)),
+                    assessed_holding=Decimal(str(assessed_holding)),
+                    record_date=record_date
+                )
+                db.add(holding)
+
+            success_count += 1
+
+        db.commit()
+
+        return {
+            "message": "上传成功",
+            "record_date": record_date.isoformat(),
+            "success_count": success_count,
+            "errors": errors
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+@router.get("/holdings", response_model=List[HoldingDataResponse])
+def get_holdings(
+    group_id: Optional[int] = None,
+    record_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """获取保有数据列表"""
+    query = db.query(
+        PrivateFundHolding,
+        PrivateFundProduct.name.label("product_name"),
+        PrivateFundProduct.code.label("product_code"),
+        Group.name.label("group_name")
+    ).join(
+        PrivateFundProduct, PrivateFundHolding.product_id == PrivateFundProduct.id
+    ).join(
+        Group, PrivateFundHolding.group_id == Group.id
+    )
+
+    if group_id:
+        query = query.filter(PrivateFundHolding.group_id == group_id)
+
+    if record_date:
+        query = query.filter(PrivateFundHolding.record_date == record_date)
+    else:
+        # 默认获取最新日期的数据
+        latest_date = db.query(func.max(PrivateFundHolding.record_date)).scalar()
+        if latest_date:
+            query = query.filter(PrivateFundHolding.record_date == latest_date)
+
+    results = query.order_by(PrivateFundHolding.assessed_holding.desc()).all()
+
+    return [
+        HoldingDataResponse(
+            id=h.PrivateFundHolding.id,
+            product_name=h.product_name,
+            product_code=h.product_code,
+            group_name=h.group_name,
+            holding_market_value=float(h.PrivateFundHolding.holding_market_value),
+            holding_coefficient=float(h.PrivateFundHolding.holding_coefficient),
+            assessed_holding=float(h.PrivateFundHolding.assessed_holding),
+            record_date=h.PrivateFundHolding.record_date,
+            created_at=h.PrivateFundHolding.created_at
+        ) for h in results
+    ]
+
+@router.get("/holdings/stats", response_model=HoldingStatsResponse)
+def get_holding_stats(db: Session = Depends(get_db)):
+    """获取保有统计数据"""
+    # 获取最新日期的数据
+    latest_date = db.query(func.max(PrivateFundHolding.record_date)).scalar()
+
+    if not latest_date:
+        return HoldingStatsResponse(
+            total_assessed_holding=0,
+            total_market_value=0,
+            record_count=0,
+            latest_record_date=None,
+            group_stats=[],
+            trend_data=[]
+        )
+
+    # 总考核保有量和总保有市值
+    totals = db.query(
+        func.sum(PrivateFundHolding.assessed_holding).label("total_assessed"),
+        func.sum(PrivateFundHolding.holding_market_value).label("total_market"),
+        func.count(PrivateFundHolding.id).label("count")
+    ).filter(
+        PrivateFundHolding.record_date == latest_date
+    ).first()
+
+    # 按营业部统计
+    group_stats_query = db.query(
+        Group.name.label("group_name"),
+        func.sum(PrivateFundHolding.assessed_holding).label("assessed_holding"),
+        func.sum(PrivateFundHolding.holding_market_value).label("market_value")
+    ).join(
+        Group, PrivateFundHolding.group_id == Group.id
+    ).filter(
+        PrivateFundHolding.record_date == latest_date
+    ).group_by(
+        Group.id, Group.name
+    ).order_by(
+        func.sum(PrivateFundHolding.assessed_holding).desc()
+    ).all()
+
+    group_stats = [
+        {
+            "group_name": g.group_name,
+            "assessed_holding": float(g.assessed_holding or 0),
+            "market_value": float(g.market_value or 0)
+        } for g in group_stats_query
+    ]
+
+    # 趋势数据（按record_date分组）
+    trend_query = db.query(
+        PrivateFundHolding.record_date,
+        func.sum(PrivateFundHolding.assessed_holding).label("total_assessed"),
+        func.sum(PrivateFundHolding.holding_market_value).label("total_market")
+    ).group_by(
+        PrivateFundHolding.record_date
+    ).order_by(
+        PrivateFundHolding.record_date
+    ).all()
+
+    trend_data = [
+        {
+            "record_date": t.record_date.isoformat(),
+            "assessed_holding": float(t.total_assessed or 0),
+            "market_value": float(t.total_market or 0)
+        } for t in trend_query
+    ]
+
+    return HoldingStatsResponse(
+        total_assessed_holding=float(totals.total_assessed or 0),
+        total_market_value=float(totals.total_market or 0),
+        record_count=totals.count or 0,
+        latest_record_date=latest_date,
+        group_stats=group_stats,
+        trend_data=trend_data
+    )
+
+@router.get("/holdings/dates")
+def get_holding_dates(db: Session = Depends(get_db)):
+    """获取所有有数据的日期列表"""
+    dates = db.query(
+        PrivateFundHolding.record_date
+    ).distinct().order_by(
+        PrivateFundHolding.record_date.desc()
+    ).all()
+
+    return [d.record_date.isoformat() for d in dates]

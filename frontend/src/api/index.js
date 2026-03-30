@@ -134,8 +134,13 @@ export const privateFundApi = {
   getAnnualStats: (year) => api.get('/private-fund/stats/annual', { params: { year } }),
   getAnnualSales: (year) => api.get('/private-fund/sales/annual', { params: { year } }),
 
-  // 保有统计
+  // 保有统计 - 新版API
+  getHoldings: (params) => api.get('/private-fund/holdings', { params }),
   getHoldingStats: () => api.get('/private-fund/holdings/stats'),
+  uploadHoldings: (data, recordDate) => api.post(`/private-fund/holdings/upload?record_date=${recordDate}`, data),
+  getHoldingDates: () => api.get('/private-fund/holdings/dates'),
+
+  // 保有统计 - 旧版API（兼容）
   getProductHoldings: () => api.get('/private-fund/holdings/products'),
   getGroupHoldings: () => api.get('/private-fund/holdings/groups'),
   getHoldingTrend: (period) => api.get('/private-fund/holdings/trend', { params: { period } })
