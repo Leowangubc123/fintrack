@@ -205,10 +205,17 @@ const formatDate = (dateStr) => {
 }
 
 const initTrendChart = () => {
-  if (!trendChart.value) return
+  console.log('initTrendChart - DOM元素:', trendChart.value)
+  console.log('initTrendChart - 数据:', stats.value.trend_data)
+
+  if (!trendChart.value) {
+    console.warn('trendChart DOM元素不存在')
+    return
+  }
 
   // 检查是否有数据
   if (!stats.value.trend_data || stats.value.trend_data.length === 0) {
+    console.warn('没有趋势数据')
     return
   }
 
@@ -282,10 +289,17 @@ const initTrendChart = () => {
 }
 
 const initGroupChart = () => {
-  if (!groupChart.value) return
+  console.log('initGroupChart - DOM元素:', groupChart.value)
+  console.log('initGroupChart - 数据:', stats.value.group_stats)
+
+  if (!groupChart.value) {
+    console.warn('groupChart DOM元素不存在')
+    return
+  }
 
   // 检查是否有数据
   if (!stats.value.group_stats || stats.value.group_stats.length === 0) {
+    console.warn('没有营业部统计数据')
     return
   }
 
@@ -355,8 +369,25 @@ const initGroupChart = () => {
 const loadStats = async () => {
   try {
     const res = await privateFundApi.getHoldingStats()
+    console.log('loadStats 返回:', res)
     stats.value = res
+    // 强制触发图表更新
+    if (res.trend_data?.length > 0 || res.group_stats?.length > 0) {
+      nextTick(() => {
+        if (trendChartInstance) {
+          trendChartInstance.dispose()
+          trendChartInstance = null
+        }
+        if (groupChartInstance) {
+          groupChartInstance.dispose()
+          groupChartInstance = null
+        }
+        initTrendChart()
+        initGroupChart()
+      })
+    }
   } catch (error) {
+    console.error('loadStats 错误:', error)
     ElMessage.error('加载统计数据失败')
   }
 }
