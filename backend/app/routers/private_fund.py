@@ -22,7 +22,7 @@ class PrivateFundProductBase(BaseModel):
     lock_period: Optional[str] = None
     open_period: Optional[str] = None
     sales_coefficient: float
-    holding_coefficient: Optional[float] = 1.0
+    holding_coefficient: float = 1.0
     subscription_fee: Optional[float] = None
     service_fee: Optional[float] = None
     management_fee: Optional[float] = None
@@ -88,10 +88,10 @@ def get_products(db: Session = Depends(get_db)):
             lock_period=p.lock_period,
             open_period=p.open_period,
             sales_coefficient=float(p.sales_coefficient),
-            holding_coefficient=float(p.holding_coefficient) if p.holding_coefficient else 1.0,
-            subscription_fee=float(p.subscription_fee) if p.subscription_fee else None,
-            service_fee=float(p.service_fee) if p.service_fee else None,
-            management_fee=float(p.management_fee) if p.management_fee else None,
+            holding_coefficient=float(p.holding_coefficient) if p.holding_coefficient is not None else 1.0,
+            subscription_fee=float(p.subscription_fee) if p.subscription_fee is not None else None,
+            service_fee=float(p.service_fee) if p.service_fee is not None else None,
+            management_fee=float(p.management_fee) if p.management_fee is not None else None,
             performance_fee=p.performance_fee,
             created_at=p.created_at,
             updated_at=p.updated_at
@@ -117,10 +117,10 @@ def create_product(product: PrivateFundProductCreate, db: Session = Depends(get_
         lock_period=product.lock_period,
         open_period=product.open_period,
         sales_coefficient=Decimal(str(product.sales_coefficient)),
-        holding_coefficient=Decimal(str(product.holding_coefficient)) if product.holding_coefficient else Decimal('1.0'),
-        subscription_fee=Decimal(str(product.subscription_fee)) if product.subscription_fee else None,
-        service_fee=Decimal(str(product.service_fee)) if product.service_fee else None,
-        management_fee=Decimal(str(product.management_fee)) if product.management_fee else None,
+        holding_coefficient=Decimal(str(product.holding_coefficient)) if product.holding_coefficient is not None else Decimal('1.0'),
+        subscription_fee=Decimal(str(product.subscription_fee)) if product.subscription_fee is not None else None,
+        service_fee=Decimal(str(product.service_fee)) if product.service_fee is not None else None,
+        management_fee=Decimal(str(product.management_fee)) if product.management_fee is not None else None,
         performance_fee=product.performance_fee
     )
     db.add(db_product)
@@ -138,10 +138,10 @@ def create_product(product: PrivateFundProductCreate, db: Session = Depends(get_
         lock_period=db_product.lock_period,
         open_period=db_product.open_period,
         sales_coefficient=float(db_product.sales_coefficient),
-        holding_coefficient=float(db_product.holding_coefficient) if db_product.holding_coefficient else 1.0,
-        subscription_fee=float(db_product.subscription_fee) if db_product.subscription_fee else None,
-        service_fee=float(db_product.service_fee) if db_product.service_fee else None,
-        management_fee=float(db_product.management_fee) if db_product.management_fee else None,
+        holding_coefficient=float(db_product.holding_coefficient) if db_product.holding_coefficient is not None else 1.0,
+        subscription_fee=float(db_product.subscription_fee) if db_product.subscription_fee is not None else None,
+        service_fee=float(db_product.service_fee) if db_product.service_fee is not None else None,
+        management_fee=float(db_product.management_fee) if db_product.management_fee is not None else None,
         performance_fee=db_product.performance_fee,
         created_at=db_product.created_at,
         updated_at=db_product.updated_at
@@ -161,6 +161,9 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
         if existing:
             raise HTTPException(status_code=400, detail="产品代码已存在")
 
+    # 记录旧的保有系数，用于判断是否需要更新保有数据
+    old_holding_coefficient = float(db_product.holding_coefficient) if db_product.holding_coefficient is not None else 1.0
+
     db_product.name = product.name
     db_product.code = product.code
     db_product.distribution_scope = product.distribution_scope
@@ -170,14 +173,33 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
     db_product.lock_period = product.lock_period
     db_product.open_period = product.open_period
     db_product.sales_coefficient = Decimal(str(product.sales_coefficient))
-    db_product.holding_coefficient = Decimal(str(product.holding_coefficient)) if product.holding_coefficient else Decimal('1.0')
-    db_product.subscription_fee = Decimal(str(product.subscription_fee)) if product.subscription_fee else None
-    db_product.service_fee = Decimal(str(product.service_fee)) if product.service_fee else None
-    db_product.management_fee = Decimal(str(product.management_fee)) if product.management_fee else None
+    db_product.holding_coefficient = Decimal(str(product.holding_coefficient)) if product.holding_coefficient is not None else Decimal('1.0')
+    db_product.subscription_fee = Decimal(str(product.subscription_fee)) if product.subscription_fee is not None else None
+    db_product.service_fee = Decimal(str(product.service_fee)) if product.service_fee is not None else None
+    db_product.management_fee = Decimal(str(product.management_fee)) if product.management_fee is not None else None
     db_product.performance_fee = product.performance_fee
 
     db.commit()
     db.refresh(db_product)
+
+    # 如果保有系数发生变化，更新所有相关的保有数据记录
+    new_holding_coefficient = float(db_product.holding_coefficient) if db_product.holding_coefficient is not None else 1.0
+    if old_holding_coefficient != new_holding_coefficient:
+        # 获取该产品所有未过期的保有记录（最新日期的记录）
+        latest_date = db.query(func.max(PrivateFundHolding.record_date)).scalar()
+        if latest_date:
+            holdings = db.query(PrivateFundHolding).filter(
+                PrivateFundHolding.product_id == db_product.id,
+                PrivateFundHolding.record_date == latest_date
+            ).all()
+
+            for holding in holdings:
+                holding.holding_coefficient = Decimal(str(new_holding_coefficient))
+                # 重新计算考核保有量
+                market_value = float(holding.holding_market_value)
+                holding.assessed_holding = Decimal(str(round(market_value * new_holding_coefficient, 1)))
+
+            db.commit()
 
     return PrivateFundProductResponse(
         id=db_product.id,
@@ -190,10 +212,10 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
         lock_period=db_product.lock_period,
         open_period=db_product.open_period,
         sales_coefficient=float(db_product.sales_coefficient),
-        holding_coefficient=float(db_product.holding_coefficient) if db_product.holding_coefficient else 1.0,
-        subscription_fee=float(db_product.subscription_fee) if db_product.subscription_fee else None,
-        service_fee=float(db_product.service_fee) if db_product.service_fee else None,
-        management_fee=float(db_product.management_fee) if db_product.management_fee else None,
+        holding_coefficient=float(db_product.holding_coefficient) if db_product.holding_coefficient is not None else 1.0,
+        subscription_fee=float(db_product.subscription_fee) if db_product.subscription_fee is not None else None,
+        service_fee=float(db_product.service_fee) if db_product.service_fee is not None else None,
+        management_fee=float(db_product.management_fee) if db_product.management_fee is not None else None,
         performance_fee=db_product.performance_fee,
         created_at=db_product.created_at,
         updated_at=db_product.updated_at
@@ -877,7 +899,7 @@ def upload_holdings(
                 continue
 
             # 获取保有系数
-            holding_coefficient = float(product.holding_coefficient) if product.holding_coefficient else 1.0
+            holding_coefficient = float(product.holding_coefficient) if product.holding_coefficient is not None else 1.0
 
             # 将元转换为万元（保留一位小数）
             market_value_wan = round(item.holding_market_value / 10000, 1)
