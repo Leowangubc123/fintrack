@@ -879,8 +879,11 @@ def upload_holdings(
             # 获取保有系数
             holding_coefficient = float(product.holding_coefficient) if product.holding_coefficient else 1.0
 
-            # 计算考核保有量
-            assessed_holding = item.holding_market_value * holding_coefficient
+            # 将元转换为万元（保留一位小数）
+            market_value_wan = round(item.holding_market_value / 10000, 1)
+
+            # 计算考核保有量（万元）
+            assessed_holding = round(market_value_wan * holding_coefficient, 1)
 
             # 检查是否已存在该日期该产品该营业部的记录
             existing = db.query(PrivateFundHolding).filter(
@@ -891,7 +894,7 @@ def upload_holdings(
 
             if existing:
                 # 更新现有记录
-                existing.holding_market_value = Decimal(str(item.holding_market_value))
+                existing.holding_market_value = Decimal(str(market_value_wan))
                 existing.holding_coefficient = Decimal(str(holding_coefficient))
                 existing.assessed_holding = Decimal(str(assessed_holding))
             else:
@@ -899,7 +902,7 @@ def upload_holdings(
                 holding = PrivateFundHolding(
                     product_id=product.id,
                     group_id=group.id,
-                    holding_market_value=Decimal(str(item.holding_market_value)),
+                    holding_market_value=Decimal(str(market_value_wan)),
                     holding_coefficient=Decimal(str(holding_coefficient)),
                     assessed_holding=Decimal(str(assessed_holding)),
                     record_date=record_date
