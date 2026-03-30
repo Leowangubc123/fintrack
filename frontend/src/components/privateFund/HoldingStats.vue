@@ -61,6 +61,7 @@
             style="width: 160px"
             @change="onGroupFilterChange"
           >
+            <el-option label="全部营业部" :value="null" />
             <el-option
               v-for="group in availableGroups"
               :key="group.id"
@@ -178,7 +179,7 @@ let trendChartInstance = null
 let groupChartInstance = null
 
 const filteredHoldings = computed(() => {
-  if (!selectedGroup.value) return holdings.value
+  if (selectedGroup.value === null || selectedGroup.value === undefined || selectedGroup.value === '') return holdings.value
   return holdings.value.filter(h => h.group_id === selectedGroup.value || h.group_name === selectedGroup.value)
 })
 
@@ -195,6 +196,11 @@ const formatDate = (dateStr) => {
 
 const initTrendChart = () => {
   if (!trendChart.value) return
+
+  // 检查是否有数据
+  if (!stats.value.trend_data || stats.value.trend_data.length === 0) {
+    return
+  }
 
   trendChartInstance = echarts.init(trendChart.value)
 
@@ -267,6 +273,11 @@ const initTrendChart = () => {
 
 const initGroupChart = () => {
   if (!groupChart.value) return
+
+  // 检查是否有数据
+  if (!stats.value.group_stats || stats.value.group_stats.length === 0) {
+    return
+  }
 
   groupChartInstance = echarts.init(groupChart.value)
 
@@ -464,6 +475,16 @@ const submitUpload = async () => {
     await loadStats()
     await loadHoldings()
     await nextTick()
+
+    // 销毁旧图表实例并重新创建
+    if (trendChartInstance) {
+      trendChartInstance.dispose()
+      trendChartInstance = null
+    }
+    if (groupChartInstance) {
+      groupChartInstance.dispose()
+      groupChartInstance = null
+    }
     initTrendChart()
     initGroupChart()
   } catch (error) {
