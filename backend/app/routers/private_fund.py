@@ -384,10 +384,10 @@ def get_annual_sales(year: Optional[int] = None, db: Session = Depends(get_db)):
     return result
 
 
-# ============== 保有统计API ==============
+# ============== 保有统计API（基于交易计算 - 旧版）=============
 
-@router.get("/holdings/stats")
-def get_holding_stats(db: Session = Depends(get_db)):
+@router.get("/holdings/stats-by-transactions")
+def get_holding_stats_by_transactions(db: Session = Depends(get_db)):
     """获取保有统计数据"""
     # 计算所有产品的实际保有量
     transactions = db.query(PrivateFundTransaction).all()
