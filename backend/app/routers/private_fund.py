@@ -1067,24 +1067,32 @@ def get_holding_stats(db: Session = Depends(get_db)):
         for name, data in sorted(group_data.items(), key=lambda x: x[1]["assessed_holding"], reverse=True)
     ]
 
-    # 趋势数据（按record_date分组，使用当时的产品系数或最新系数）
-    # 趋势数据使用数据库中保存的值，因为历史趋势应该反映当时的情况
-    trend_query = db.query(
+    # 趋势数据（按record_date分组，使用最新产品系数重新计算）
+    # 获取所有日期的保有数据，使用最新系数重新计算
+    all_holdings = db.query(
         PrivateFundHolding.record_date,
-        func.sum(PrivateFundHolding.assessed_holding).label("total_assessed"),
-        func.sum(PrivateFundHolding.holding_market_value).label("total_market")
-    ).group_by(
-        PrivateFundHolding.record_date
-    ).order_by(
-        PrivateFundHolding.record_date
+        PrivateFundHolding.holding_market_value,
+        PrivateFundProduct.holding_coefficient.label("product_holding_coefficient")
+    ).join(
+        PrivateFundProduct, PrivateFundHolding.product_id == PrivateFundProduct.id
     ).all()
+
+    # 按日期汇总，使用最新系数重新计算
+    from collections import defaultdict
+    trend_by_date = defaultdict(lambda: {"assessed": 0.0, "market": 0.0})
+    for h in all_holdings:
+        market_value = float(h.holding_market_value)
+        coeff = float(h.product_holding_coefficient) if h.product_holding_coefficient is not None else 1.0
+        trend_by_date[h.record_date]["market"] += market_value
+        trend_by_date[h.record_date]["assessed"] += market_value * coeff
 
     trend_data = [
         {
-            "record_date": t.record_date.isoformat(),
-            "assessed_holding": float(t.total_assessed or 0),
-            "market_value": float(t.total_market or 0)
-        } for t in trend_query
+            "record_date": date.isoformat(),
+            "assessed_holding": round(data["assessed"], 2),
+            "market_value": round(data["market"], 2)
+        }
+        for date, data in sorted(trend_by_date.items())
     ]
 
     return HoldingStatsResponse(
