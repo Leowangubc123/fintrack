@@ -807,10 +807,10 @@ def migrate_sales_to_private_fund(db: Session = Depends(get_db)):
 from app.models import PrivateFundHolding
 
 class HoldingUploadItem(BaseModel):
-    product_name: str
     product_code: str
     group_name: str
     holding_market_value: float
+    product_name: Optional[str] = None  # 可选，仅用于错误提示
 
 class HoldingDataResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -854,7 +854,6 @@ def upload_holdings(
         # 获取所有产品
         products = db.query(PrivateFundProduct).all()
         product_by_code = {p.code: p for p in products}
-        product_by_name = {p.name: p for p in products}
 
         # 获取所有营业部
         groups = db.query(Group).all()
@@ -864,10 +863,10 @@ def upload_holdings(
         errors = []
 
         for item in data:
-            # 查找产品
-            product = product_by_code.get(item.product_code) or product_by_name.get(item.product_name)
+            # 查找产品（仅通过产品代码）
+            product = product_by_code.get(item.product_code)
             if not product:
-                errors.append(f"未找到产品: {item.product_name} ({item.product_code})")
+                errors.append(f"未找到产品: {item.product_code}")
                 continue
 
             # 查找营业部

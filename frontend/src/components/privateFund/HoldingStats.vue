@@ -127,8 +127,8 @@
             <el-button type="primary">选择文件</el-button>
             <template #tip>
               <div class="upload-tip">
-                请上传Excel文件，包含以下列：产品名称、产品代码、所属营业部、保有市值<br>
-                系统将根据产品代码自动匹配保有系数并计算考核保有量
+                请上传Excel文件，必需列：产品代码（或基金代码/代码）、所属营业部（或营业部）、保有市值（或日均保有市值）<br>
+                系统将根据产品代码匹配产品信息，自动获取保有系数并计算考核保有量
               </div>
             </template>
           </el-upload>
@@ -395,18 +395,44 @@ const submitUpload = async () => {
     // 调试：输出解析的表头
     console.log('解析到的表头:', headers)
 
-    const uploadData = rows.map((row, rowIndex) => {
-      const item = {}
-      headers.forEach((header, index) => {
-        // 表头可能是对象或字符串，统一处理
-        const headerStr = typeof header === 'string' ? header.trim() : String(header || '').trim()
-        const value = row[index]
+    // 定义表头映射规则
+    const headerMappings = {
+      product_code: ['产品代码', '基金代码', '代码'],
+      group_name: ['所属营业部', '营业部', '营业部名称'],
+      holding_market_value: ['保有市值', '日均保有市值', '日均保有市值（自然日）']
+    }
 
-        if (headerStr.includes('产品名称')) item.product_name = String(value || '').trim()
-        if (headerStr.includes('产品代码')) item.product_code = String(value || '').trim()
-        if (headerStr.includes('营业部')) item.group_name = String(value || '').trim()
-        if (headerStr.includes('保有市值')) item.holding_market_value = parseFloat(value) || 0
-      })
+    // 查找列索引
+    let productCodeIndex = -1
+    let groupNameIndex = -1
+    let marketValueIndex = -1
+
+    headers.forEach((header, index) => {
+      const headerStr = typeof header === 'string' ? header.trim() : String(header || '').trim()
+
+      if (headerMappings.product_code.some(h => headerStr.includes(h))) {
+        productCodeIndex = index
+      }
+      if (headerMappings.group_name.some(h => headerStr.includes(h))) {
+        groupNameIndex = index
+      }
+      if (headerMappings.holding_market_value.some(h => headerStr.includes(h))) {
+        marketValueIndex = index
+      }
+    })
+
+    console.log('列索引映射:', {
+      productCodeIndex,
+      groupNameIndex,
+      marketValueIndex
+    })
+
+    const uploadData = rows.map((row, rowIndex) => {
+      const item = {
+        product_code: productCodeIndex >= 0 ? String(row[productCodeIndex] || '').trim() : '',
+        group_name: groupNameIndex >= 0 ? String(row[groupNameIndex] || '').trim() : '',
+        holding_market_value: marketValueIndex >= 0 ? parseFloat(row[marketValueIndex]) || 0 : 0
+      }
 
       // 调试：输出前几行解析结果
       if (rowIndex < 3) {
@@ -414,11 +440,16 @@ const submitUpload = async () => {
       }
 
       return item
-    }).filter(item => item.product_name && item.group_name && item.holding_market_value > 0)
+    }).filter(item => item.product_code && item.group_name && item.holding_market_value > 0)
 
     if (uploadData.length === 0) {
       console.log('原始解析数据:', jsonData)
-      ElMessage.warning(`未能解析到有效数据。请检查Excel是否包含以下列：产品名称、产品代码、所属营业部、保有市值。解析到的表头：[${headers.join(', ')}]`)
+      const missingColumns = []
+      if (productCodeIndex < 0) missingColumns.push('产品代码/基金代码/代码')
+      if (groupNameIndex < 0) missingColumns.push('所属营业部/营业部')
+      if (marketValueIndex < 0) missingColumns.push('保有市值/日均保有市值')
+
+      ElMessage.warning(`未能解析到有效数据。缺少必需列：${missingColumns.join('、')}。解析到的表头：[${headers.map(h => typeof h === 'string' ? h : String(h)).join(', ')}]`)
       return
     }
 
