@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
@@ -179,8 +179,18 @@ let trendChartInstance = null
 let groupChartInstance = null
 
 const filteredHoldings = computed(() => {
-  if (selectedGroup.value === null || selectedGroup.value === undefined || selectedGroup.value === '') return holdings.value
-  return holdings.value.filter(h => h.group_id === selectedGroup.value || h.group_name === selectedGroup.value)
+  console.log('筛选 - selectedGroup:', selectedGroup.value, '类型:', typeof selectedGroup.value)
+  if (selectedGroup.value === null || selectedGroup.value === undefined || selectedGroup.value === '') {
+    return holdings.value
+  }
+  // selectedGroup 是数字ID，需要与 holdings 中的 group_id 匹配
+  const filtered = holdings.value.filter(h => {
+    const match = Number(h.group_id) === Number(selectedGroup.value)
+    console.log('对比:', h.group_id, 'vs', selectedGroup.value, '结果:', match)
+    return match
+  })
+  console.log('筛选结果:', filtered.length, '条')
+  return filtered
 })
 
 const formatNumber = (num) => {
@@ -498,6 +508,25 @@ const handleResize = () => {
   trendChartInstance?.resize()
   groupChartInstance?.resize()
 }
+
+// 监听 stats 变化，数据更新时重绘图表
+watch(() => stats.value, (newStats) => {
+  console.log('stats 更新:', newStats)
+  if (newStats.trend_data?.length > 0 || newStats.group_stats?.length > 0) {
+    nextTick(() => {
+      if (trendChartInstance) {
+        trendChartInstance.dispose()
+        trendChartInstance = null
+      }
+      if (groupChartInstance) {
+        groupChartInstance.dispose()
+        groupChartInstance = null
+      }
+      initTrendChart()
+      initGroupChart()
+    })
+  }
+}, { deep: true })
 
 onMounted(() => {
   loadStats()

@@ -819,6 +819,7 @@ class HoldingDataResponse(BaseModel):
     product_name: str
     product_code: str
     group_name: str
+    group_id: int
     holding_market_value: float
     holding_coefficient: float
     assessed_holding: float
@@ -957,6 +958,7 @@ def get_holdings(
             product_name=h.product_name,
             product_code=h.product_code,
             group_name=h.group_name,
+            group_id=h.PrivateFundHolding.group_id,
             holding_market_value=float(h.PrivateFundHolding.holding_market_value),
             holding_coefficient=float(h.PrivateFundHolding.holding_coefficient),
             assessed_holding=float(h.PrivateFundHolding.assessed_holding),
