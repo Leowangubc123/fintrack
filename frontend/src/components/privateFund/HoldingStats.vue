@@ -392,20 +392,33 @@ const submitUpload = async () => {
     const headers = jsonData[0]
     const rows = jsonData.slice(1)
 
-    const uploadData = rows.map(row => {
+    // 调试：输出解析的表头
+    console.log('解析到的表头:', headers)
+
+    const uploadData = rows.map((row, rowIndex) => {
       const item = {}
       headers.forEach((header, index) => {
+        // 表头可能是对象或字符串，统一处理
+        const headerStr = typeof header === 'string' ? header.trim() : String(header || '').trim()
         const value = row[index]
-        if (header.includes('产品名称')) item.product_name = String(value || '')
-        if (header.includes('产品代码')) item.product_code = String(value || '')
-        if (header.includes('营业部')) item.group_name = String(value || '')
-        if (header.includes('保有市值')) item.holding_market_value = parseFloat(value) || 0
+
+        if (headerStr.includes('产品名称')) item.product_name = String(value || '').trim()
+        if (headerStr.includes('产品代码')) item.product_code = String(value || '').trim()
+        if (headerStr.includes('营业部')) item.group_name = String(value || '').trim()
+        if (headerStr.includes('保有市值')) item.holding_market_value = parseFloat(value) || 0
       })
+
+      // 调试：输出前几行解析结果
+      if (rowIndex < 3) {
+        console.log(`第${rowIndex + 2}行解析结果:`, item)
+      }
+
       return item
-    }).filter(item => item.product_name && item.group_name)
+    }).filter(item => item.product_name && item.group_name && item.holding_market_value > 0)
 
     if (uploadData.length === 0) {
-      ElMessage.warning('未能解析到有效数据，请检查文件格式')
+      console.log('原始解析数据:', jsonData)
+      ElMessage.warning(`未能解析到有效数据。请检查Excel是否包含以下列：产品名称、产品代码、所属营业部、保有市值。解析到的表头：[${headers.join(', ')}]`)
       return
     }
 
