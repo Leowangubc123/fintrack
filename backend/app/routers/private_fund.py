@@ -957,6 +957,7 @@ def get_holdings(
         PrivateFundHolding,
         PrivateFundProduct.name.label("product_name"),
         PrivateFundProduct.code.label("product_code"),
+        PrivateFundProduct.holding_coefficient.label("product_holding_coefficient"),
         Group.name.label("group_name")
     ).join(
         PrivateFundProduct, PrivateFundHolding.product_id == PrivateFundProduct.id
@@ -985,8 +986,13 @@ def get_holdings(
             group_name=h.group_name,
             group_id=h.PrivateFundHolding.group_id,
             holding_market_value=float(h.PrivateFundHolding.holding_market_value),
-            holding_coefficient=float(h.PrivateFundHolding.holding_coefficient),
-            assessed_holding=float(h.PrivateFundHolding.assessed_holding),
+            # 使用产品库中最新的保有系数
+            holding_coefficient=float(h.product_holding_coefficient) if h.product_holding_coefficient is not None else 1.0,
+            # 根据最新系数重新计算考核保有量
+            assessed_holding=round(
+                float(h.PrivateFundHolding.holding_market_value) *
+                (float(h.product_holding_coefficient) if h.product_holding_coefficient is not None else 1.0), 2
+            ),
             record_date=h.PrivateFundHolding.record_date,
             created_at=h.PrivateFundHolding.created_at
         ) for h in results
@@ -1008,39 +1014,61 @@ def get_holding_stats(db: Session = Depends(get_db)):
             trend_data=[]
         )
 
-    # 总考核保有量和总保有市值
-    totals = db.query(
-        func.sum(PrivateFundHolding.assessed_holding).label("total_assessed"),
-        func.sum(PrivateFundHolding.holding_market_value).label("total_market"),
-        func.count(PrivateFundHolding.id).label("count")
-    ).filter(
-        PrivateFundHolding.record_date == latest_date
-    ).first()
-
-    # 按营业部统计
-    group_stats_query = db.query(
-        Group.name.label("group_name"),
-        func.sum(PrivateFundHolding.assessed_holding).label("assessed_holding"),
-        func.sum(PrivateFundHolding.holding_market_value).label("market_value")
+    # 获取最新日期的所有保有数据，同时使用产品库最新系数重新计算
+    holdings_with_coeff = db.query(
+        PrivateFundHolding,
+        PrivateFundProduct.holding_coefficient.label("product_holding_coefficient")
     ).join(
-        Group, PrivateFundHolding.group_id == Group.id
+        PrivateFundProduct, PrivateFundHolding.product_id == PrivateFundProduct.id
     ).filter(
         PrivateFundHolding.record_date == latest_date
-    ).group_by(
-        Group.id, Group.name
-    ).order_by(
-        func.sum(PrivateFundHolding.assessed_holding).desc()
     ).all()
+
+    # 使用最新系数重新计算总考核保有量
+    total_assessed = 0.0
+    total_market = 0.0
+    for h, product_coeff in holdings_with_coeff:
+        market_value = float(h.holding_market_value)
+        coeff = float(product_coeff) if product_coeff is not None else 1.0
+        total_market += market_value
+        total_assessed += market_value * coeff
+
+    record_count = len(holdings_with_coeff)
+
+    # 按营业部统计（使用最新系数重新计算）
+    group_holdings = db.query(
+        Group.id.label("group_id"),
+        Group.name.label("group_name"),
+        PrivateFundHolding.holding_market_value,
+        PrivateFundProduct.holding_coefficient.label("product_holding_coefficient")
+    ).join(
+        PrivateFundHolding, Group.id == PrivateFundHolding.group_id
+    ).join(
+        PrivateFundProduct, PrivateFundHolding.product_id == PrivateFundProduct.id
+    ).filter(
+        PrivateFundHolding.record_date == latest_date
+    ).all()
+
+    # 按营业部汇总计算
+    from collections import defaultdict
+    group_data = defaultdict(lambda: {"market_value": 0.0, "assessed_holding": 0.0})
+    for gh in group_holdings:
+        market_value = float(gh.holding_market_value)
+        coeff = float(gh.product_holding_coefficient) if gh.product_holding_coefficient is not None else 1.0
+        group_data[gh.group_name]["market_value"] += market_value
+        group_data[gh.group_name]["assessed_holding"] += market_value * coeff
 
     group_stats = [
         {
-            "group_name": g.group_name,
-            "assessed_holding": float(g.assessed_holding or 0),
-            "market_value": float(g.market_value or 0)
-        } for g in group_stats_query
+            "group_name": name,
+            "assessed_holding": round(data["assessed_holding"], 2),
+            "market_value": round(data["market_value"], 2)
+        }
+        for name, data in sorted(group_data.items(), key=lambda x: x[1]["assessed_holding"], reverse=True)
     ]
 
-    # 趋势数据（按record_date分组）
+    # 趋势数据（按record_date分组，使用当时的产品系数或最新系数）
+    # 趋势数据使用数据库中保存的值，因为历史趋势应该反映当时的情况
     trend_query = db.query(
         PrivateFundHolding.record_date,
         func.sum(PrivateFundHolding.assessed_holding).label("total_assessed"),
@@ -1060,9 +1088,9 @@ def get_holding_stats(db: Session = Depends(get_db)):
     ]
 
     return HoldingStatsResponse(
-        total_assessed_holding=float(totals.total_assessed or 0),
-        total_market_value=float(totals.total_market or 0),
-        record_count=totals.count or 0,
+        total_assessed_holding=round(total_assessed, 2),
+        total_market_value=round(total_market, 2),
+        record_count=record_count,
         latest_record_date=latest_date,
         group_stats=group_stats,
         trend_data=trend_data
