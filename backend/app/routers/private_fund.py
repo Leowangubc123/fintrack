@@ -879,6 +879,21 @@ def upload_holdings(
         groups = db.query(Group).all()
         group_by_name = {g.name: g for g in groups}
 
+        # 预检查：收集所有上传数据中唯一的产品代码
+        uploaded_product_codes = set(item.product_code for item in data if item.product_code)
+        existing_product_codes = set(product_by_code.keys())
+        missing_products = uploaded_product_codes - existing_product_codes
+
+        # 如果有产品库中不存在的产品，返回错误提示
+        if missing_products:
+            return {
+                "message": "上传失败：发现未入库的产品",
+                "record_date": record_date.isoformat(),
+                "success_count": 0,
+                "total_input_value": 0,
+                "errors": [f"产品库中不存在，请先添加产品: {code}" for code in sorted(missing_products)]
+            }
+
         success_count = 0
         errors = []
 
@@ -890,11 +905,8 @@ def upload_holdings(
         total_input_value = 0  # 统计输入总值
 
         for item in data:
-            # 查找产品（仅通过产品代码）
+            # 查找产品（预检查已通过，产品一定存在）
             product = product_by_code.get(item.product_code)
-            if not product:
-                errors.append(f"未找到产品: {item.product_code}")
-                continue
 
             # 查找营业部
             group = group_by_name.get(item.group_name)

@@ -565,6 +565,22 @@ const submitUpload = async () => {
     }
 
     const res = await privateFundApi.uploadHoldings(uploadData, uploadForm.value.recordDate)
+
+    // 检查是否有缺失的产品
+    if (res.success_count === 0 && res.errors && res.errors.length > 0) {
+      // 显示缺失产品列表
+      const missingProducts = res.errors.filter(e => e.includes('产品库中不存在'))
+      if (missingProducts.length > 0) {
+        ElMessage.error({
+          message: `上传失败：发现 ${missingProducts.length} 个未入库的产品，请先添加产品`,
+          duration: 5000
+        })
+        console.error('缺失的产品：', missingProducts)
+        uploading.value = false
+        return
+      }
+    }
+
     ElMessage.success(`上传成功，共导入 ${res.success_count} 条记录`)
 
     showUploadDialog.value = false
