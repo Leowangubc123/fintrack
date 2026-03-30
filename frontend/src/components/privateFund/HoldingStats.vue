@@ -369,10 +369,23 @@ const initGroupChart = () => {
 const loadStats = async () => {
   try {
     const res = await privateFundApi.getHoldingStats()
-    console.log('loadStats 返回:', res)
-    stats.value = res
+    console.log('loadStats 返回原始数据:', res)
+    console.log('返回数据类型:', typeof res)
+    console.log('是否有 trend_data:', 'trend_data' in res, res.trend_data)
+    console.log('是否有 group_stats:', 'group_stats' in res, res.group_stats)
+
+    // 如果返回的是包装过的响应，取 data 字段
+    if (res && res.data) {
+      console.log('检测到包装响应，使用 res.data')
+      stats.value = res.data
+    } else {
+      stats.value = res
+    }
+
+    console.log('设置后的 stats:', stats.value)
+
     // 强制触发图表更新
-    if (res.trend_data?.length > 0 || res.group_stats?.length > 0) {
+    if (stats.value.trend_data?.length > 0 || stats.value.group_stats?.length > 0) {
       nextTick(() => {
         if (trendChartInstance) {
           trendChartInstance.dispose()
