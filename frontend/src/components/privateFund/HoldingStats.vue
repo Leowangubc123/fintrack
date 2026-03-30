@@ -75,6 +75,30 @@
         </div>
       </div>
 
+      <!-- 营业部汇总信息 -->
+      <div v-if="groupSummary" class="group-summary">
+        <div class="summary-item">
+          <span class="summary-label">营业部：</span>
+          <span class="summary-value">{{ groupSummary.groupName }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">产品数量：</span>
+          <span class="summary-value">{{ groupSummary.productCount }} 只</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">保有市值合计：</span>
+          <span class="summary-value">{{ formatNumber(groupSummary.totalMarketValue) }} 万</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">考核保有量合计：</span>
+          <span class="summary-value assessed">{{ formatNumber(groupSummary.totalAssessedHolding) }} 万</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">加权平均系数：</span>
+          <span class="summary-value">{{ groupSummary.avgCoefficient.toFixed(2) }}</span>
+        </div>
+      </div>
+
       <div class="table-wrapper">
         <el-table :data="filteredHoldings" style="width: 100%" v-loading="loading">
           <el-table-column prop="product_name" label="产品名称" min-width="200" show-overflow-tooltip />
@@ -191,6 +215,28 @@ const filteredHoldings = computed(() => {
   })
   console.log('筛选结果:', filtered.length, '条')
   return filtered
+})
+
+// 计算当前筛选营业部的汇总数据
+const groupSummary = computed(() => {
+  const list = filteredHoldings.value
+  if (list.length === 0) return null
+
+  // 如果筛选了特定营业部，计算汇总
+  if (selectedGroup.value) {
+    const totalMarketValue = list.reduce((sum, item) => sum + (parseFloat(item.holding_market_value) || 0), 0)
+    const totalAssessedHolding = list.reduce((sum, item) => sum + (parseFloat(item.assessed_holding) || 0), 0)
+    const groupName = list[0]?.group_name || ''
+
+    return {
+      groupName,
+      productCount: list.length,
+      totalMarketValue,
+      totalAssessedHolding,
+      avgCoefficient: totalMarketValue > 0 ? (totalAssessedHolding / totalMarketValue) : 0
+    }
+  }
+  return null
 })
 
 const formatNumber = (num) => {
@@ -764,6 +810,41 @@ onMounted(() => {
   color: #6E6E73;
 }
 
+/* 营业部汇总信息 */
+.group-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 20px;
+  margin: 0 20px 16px;
+  background: linear-gradient(135deg, #F0F7FF 0%, #E6F0FF 100%);
+  border-radius: 12px;
+  border-left: 4px solid #007AFF;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary-label {
+  font-size: 13px;
+  color: #6E6E73;
+}
+
+.summary-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+.summary-value.assessed {
+  color: #007AFF;
+  font-size: 15px;
+}
+
 .upload-tip {
   font-size: 12px;
   color: #8E8E93;
@@ -777,6 +858,11 @@ onMounted(() => {
   }
   .charts-grid {
     grid-template-columns: 1fr;
+  }
+  .group-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
 </style>
