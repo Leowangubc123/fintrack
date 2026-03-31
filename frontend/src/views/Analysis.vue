@@ -763,8 +763,24 @@ function getGanttBarStyle(product) {
   const ce = Math.min(pe.getTime() + 86400000, ve.getTime() + 86400000)
   const left = Math.max(0, (cs - vs.getTime()) / totalMs * 100)
   const width = Math.max(0.8, (ce - cs) / totalMs * 100)
+
+  // 根据当前日期和起止日期动态计算状态
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const startDate = new Date(product.start_date)
+  const endDate = product.end_date ? new Date(product.end_date) : startDate
+
+  let status
+  if (today < startDate) {
+    status = '即将开始'
+  } else if (today > endDate) {
+    status = '已结束'
+  } else {
+    status = '募集中'
+  }
+
   const colors = { '募集中': '#007AFF', '即将开始': '#FF9500', '已结束': '#8E8E93' }
-  return { left: left + '%', width: width + '%', background: colors[product.status] || '#5856D6' }
+  return { left: left + '%', width: width + '%', background: colors[status] || '#5856D6' }
 }
 
 
