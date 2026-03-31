@@ -47,7 +47,19 @@
         <div class="chart-header">
           <div>
             <div class="chart-title">产品销量分布</div>
-            <div class="chart-subtitle">各产品实际销量对比</div>
+            <div class="chart-subtitle">{{ productFilterMode === 'product' ? '各产品实际销量对比' : '各策略类型实际销量对比' }}</div>
+          </div>
+          <div class="chart-filter-tabs">
+            <span
+              class="chart-filter-tab"
+              :class="{ active: productFilterMode === 'product' }"
+              @click="productFilterMode = 'product'"
+            >按产品</span>
+            <span
+              class="chart-filter-tab"
+              :class="{ active: productFilterMode === 'strategy' }"
+              @click="productFilterMode = 'strategy'"
+            >按策略</span>
           </div>
         </div>
         <div ref="productChart" class="chart-content" style="height: 280px;"></div>
@@ -146,6 +158,7 @@ const stats = ref({
 })
 
 const viewMode = ref('all')
+const productFilterMode = ref('product') // 'product' 或 'strategy'
 const salesRecords = ref([])
 const monthlyChart = ref(null)
 const memberChart = ref(null)
@@ -354,16 +367,28 @@ const initProductChart = (data) => {
 
   productChartInstance = echarts.init(productChart.value)
 
-  // 按产品汇总实际销量
-  const productStats = {}
-  data.forEach(d => {
-    if (!productStats[d.product_name]) {
-      productStats[d.product_name] = 0
-    }
-    productStats[d.product_name] += d.amount || 0
-  })
+  // 根据筛选模式决定汇总维度
+  const stats = {}
+  if (productFilterMode.value === 'product') {
+    // 按产品名称汇总
+    data.forEach(d => {
+      if (!stats[d.product_name]) {
+        stats[d.product_name] = 0
+      }
+      stats[d.product_name] += d.amount || 0
+    })
+  } else {
+    // 按策略类型汇总
+    data.forEach(d => {
+      const strategy = d.strategy_type || '未知策略'
+      if (!stats[strategy]) {
+        stats[strategy] = 0
+      }
+      stats[strategy] += d.amount || 0
+    })
+  }
 
-  const pieData = Object.entries(productStats).map(([name, value]) => ({
+  const pieData = Object.entries(stats).map(([name, value]) => ({
     name,
     value: parseFloat(value.toFixed(2))
   }))
@@ -537,6 +562,17 @@ watch(viewMode, async (newMode) => {
   }
 })
 
+// 监听产品筛选模式变化，重新渲染产品销量分布图
+watch(productFilterMode, () => {
+  if (salesRecords.value.length > 0) {
+    if (productChartInstance) {
+      productChartInstance.dispose()
+      productChartInstance = null
+    }
+    initProductChart(salesRecords.value)
+  }
+})
+
 onMounted(() => {
   loadStats()
   loadSalesRecords()
@@ -628,6 +664,34 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.chart-filter-tabs {
+  display: flex;
+  gap: 6px;
+  background: #F5F5F7;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.chart-filter-tab {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #6E6E73;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.chart-filter-tab:hover {
+  color: #1D1D1F;
+}
+
+.chart-filter-tab.active {
+  background: white;
+  color: #7C3AED;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .chart-title {
