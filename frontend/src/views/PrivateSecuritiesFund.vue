@@ -35,13 +35,13 @@ import AnnualDashboard from '../components/privateFund/AnnualDashboard.vue'
 import HoldingStats from '../components/privateFund/HoldingStats.vue'
 
 const tabs = [
-  { key: 'products', label: '产品库' },
-  { key: 'entry', label: '销售录入' },
   { key: 'stats', label: '年度看板' },
-  { key: 'holding', label: '保有统计' }
+  { key: 'holding', label: '保有统计' },
+  { key: 'entry', label: '销售录入' },
+  { key: 'products', label: '产品库' }
 ]
 
-const activeTab = ref('products')
+const activeTab = ref('stats')
 </script>
 
 <style scoped>

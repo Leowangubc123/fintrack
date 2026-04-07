@@ -94,9 +94,6 @@ def get_member_summary(member_id: int, db: Session = Depends(get_db)):
     if not member:
         raise HTTPException(status_code=404, detail="成员不存在")
 
-    # 计算平均销售额
-    avg_sales = float(total_sales) / record_count if record_count > 0 else 0
-
     # 获取该成员的任务目标（从ProductTarget表）
     targets = db.query(
         ProductTarget.product_id,
@@ -107,6 +104,9 @@ def get_member_summary(member_id: int, db: Session = Depends(get_db)):
 
     # 产品数量 = 有任务分配的产品数量
     product_count = len(targets)
+
+    # 计算平均销售额 = 总销售额 / 有任务分配的产品数量
+    avg_sales = float(total_sales) / product_count if product_count > 0 else 0
 
     target_list = [
         {

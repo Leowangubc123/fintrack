@@ -667,8 +667,8 @@ async function loadMemberDetail(memberId) {
         rate: rate,
         hasTask: hasTask,  // 标记是否有任务分配
         month: new Date().getMonth() + 1, // 使用当前月份
-        status: rate >= 100 ? 'success' : (showIncomplete ? 'danger' : (rate >= 50 ? 'warning' : 'danger')),
-        statusText: rate >= 100 ? '超额完成' : (showIncomplete ? '未完成' : (rate >= 50 ? '进行中' : '需努力'))
+        status: rate > 100 ? 'success' : (rate === 100 ? 'success' : (showIncomplete ? 'danger' : (rate >= 50 ? 'warning' : 'danger'))),
+        statusText: rate > 100 ? '超额完成' : (rate === 100 ? '已完成' : (showIncomplete ? '未完成' : (rate >= 50 ? '进行中' : '未完成')))
       }
     })
 
