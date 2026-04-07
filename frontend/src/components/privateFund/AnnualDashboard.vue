@@ -70,22 +70,28 @@
     <div class="data-table-container">
       <div class="table-header">
         <div class="table-title">年度销售明细</div>
-        <div class="table-tabs">
-          <span
-            class="table-tab"
-            :class="{ active: viewMode === 'all' }"
-            @click="viewMode = 'all'"
-          >全部</span>
-          <span
-            class="table-tab"
-            :class="{ active: viewMode === 'group' }"
-            @click="viewMode = 'group'"
-          >按营业部</span>
-          <span
-            class="table-tab"
-            :class="{ active: viewMode === 'member' }"
-            @click="viewMode = 'member'"
-          >按个人</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="table-tabs">
+            <span
+              class="table-tab"
+              :class="{ active: viewMode === 'all' }"
+              @click="viewMode = 'all'"
+            >全部</span>
+            <span
+              class="table-tab"
+              :class="{ active: viewMode === 'group' }"
+              @click="viewMode = 'group'"
+            >按营业部</span>
+            <span
+              class="table-tab"
+              :class="{ active: viewMode === 'member' }"
+              @click="viewMode = 'member'"
+            >按个人</span>
+          </div>
+          <el-button type="primary" size="small" @click="exportToExcel">
+            <el-icon><Download /></el-icon>
+            导出 Excel
+          </el-button>
         </div>
       </div>
       <div class="table-wrapper">
@@ -148,6 +154,8 @@
 <script setup>
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
+import * as XLSX from 'xlsx'
 import * as echarts from 'echarts'
 import { privateFundApi } from '../../api'
 
@@ -548,6 +556,50 @@ const handleResize = () => {
   memberChartInstance?.resize()
   productChartInstance?.resize()
   groupChartInstance?.resize()
+}
+
+const exportToExcel = () => {
+  const data = tableData.value
+  if (!data || data.length === 0) {
+    ElMessage.warning('暂无可导出数据')
+    return
+  }
+
+  let rows = []
+  let filename = ''
+
+  if (viewMode.value === 'all') {
+    rows = data.map(r => ({
+      '日期': r.transaction_date,
+      '产品': r.product_name,
+      '策略类型': r.strategy_type,
+      '销售人员': r.member_name,
+      '营业部': r.group_name,
+      '实际销量(万)': r.amount,
+      '考核销量(万)': r.assessed_amount
+    }))
+    filename = '年度销售明细-全部.xlsx'
+  } else if (viewMode.value === 'group') {
+    rows = data.map(r => ({
+      '营业部': r.group_name,
+      '实际销量合计(万)': typeof r.amount === 'number' ? r.amount.toFixed(2) : r.amount,
+      '考核销量合计(万)': typeof r.assessed_amount === 'number' ? r.assessed_amount.toFixed(2) : r.assessed_amount
+    }))
+    filename = '年度销售明细-按营业部.xlsx'
+  } else if (viewMode.value === 'member') {
+    rows = data.map(r => ({
+      '销售人员': r.member_name,
+      '营业部': r.group_name,
+      '实际销量合计(万)': typeof r.amount === 'number' ? r.amount.toFixed(2) : r.amount,
+      '考核销量合计(万)': typeof r.assessed_amount === 'number' ? r.assessed_amount.toFixed(2) : r.assessed_amount
+    }))
+    filename = '年度销售明细-按个人.xlsx'
+  }
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '年度销售明细')
+  XLSX.writeFile(wb, filename)
 }
 
 // 监听视图模式变化，当切换到营业部视图时渲染图表
