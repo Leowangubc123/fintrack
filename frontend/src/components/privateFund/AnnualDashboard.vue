@@ -88,10 +88,10 @@
               @click="viewMode = 'member'"
             >按个人</span>
           </div>
-          <el-button type="primary" size="small" @click="exportToExcel">
+          <span class="export-btn" @click="exportToExcel">
             <el-icon><Download /></el-icon>
             导出 Excel
-          </el-button>
+          </span>
         </div>
       </div>
       <div class="table-wrapper">
@@ -804,6 +804,23 @@ onMounted(() => {
 .table-tab.active {
   background: #7C3AED;
   color: white;
+}
+
+.export-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #34C759;
+  color: white;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.export-btn:hover {
+  background: #2DAF4D;
 }
 
 .table-wrapper {
