@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.database import engine, Base
-from app.routers import groups, members, products, import_data, dashboard, analysis, private_fund
+from app.routers import groups, members, products, import_data, dashboard, analysis, private_fund, advisory
 
 app = FastAPI(title="FinTrack API", version="1.0.0")
 
@@ -47,6 +47,7 @@ app.include_router(import_data.router)
 app.include_router(dashboard.router)
 app.include_router(analysis.router)
 app.include_router(private_fund.router)
+app.include_router(advisory.router)
 
 
 @app.get("/health")
