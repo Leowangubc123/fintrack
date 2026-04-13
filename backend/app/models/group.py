@@ -14,3 +14,5 @@ class Group(Base):
 
     members = relationship("Member", back_populates="group", cascade="all, delete-orphan")
     targets = relationship("ProductTarget", back_populates="group")
+    advisory_subscriptions = relationship("InvestmentAdvisorySubscription", back_populates="group", cascade="all, delete-orphan")
+    advisory_target = relationship("InvestmentAdvisoryTarget", back_populates="group", uselist=False, cascade="all, delete-orphan")
