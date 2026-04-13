@@ -11,7 +11,7 @@ class InvestmentAdvisorySubscription(Base):
     id = Column(Integer, primary_key=True, index=True)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
-    product_type = Column(String(20), nullable=False)  # '千1', '千3', '万2', '网格', '量化T', 'GWT'
+    product_type = Column(String(20), nullable=False)  # '万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT'
     subscription_date = Column(Date, nullable=False)  # 签约日期
     asset_amount = Column(Numeric(15, 2), nullable=False)  # 签约资产(万元)
     advisory_income = Column(Numeric(15, 2), nullable=False)  # 投顾收入(元)
@@ -41,3 +41,17 @@ class InvestmentAdvisoryTarget(Base):
 
     # Relationships
     group = relationship("Group", back_populates="advisory_target")
+
+
+class AdvisoryImportLog(Base):
+    """投顾数据导入日志"""
+    __tablename__ = "advisory_import_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    import_date = Column(Date, nullable=False)
+    product_type = Column(String(20), nullable=False)
+    record_count = Column(Integer, default=0)
+    success_count = Column(Integer, default=0)
+    error_count = Column(Integer, default=0)
+    operator = Column(String(50), default='admin')
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

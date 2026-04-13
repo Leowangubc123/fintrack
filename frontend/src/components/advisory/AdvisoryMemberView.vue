@@ -49,12 +49,12 @@
           <el-table-column prop="products.万2.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="网格" align="center">
-          <el-table-column prop="products.网格.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="ETF投顾" align="center">
+          <el-table-column prop="products.ETF投顾.households" label="户" width="80" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="量化T" align="center">
-          <el-table-column prop="products.量化T.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="量化T策略" align="center">
+          <el-table-column prop="products.量化T策略.households" label="户" width="80" align="right" sortable />
         </el-table-column>
 
         <el-table-column label="GWT" align="center">
@@ -67,15 +67,9 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="total_assets" label="签约资产" width="120" align="right" sortable>
+        <el-table-column prop="total_assets" label="签约资产" width="150" align="right" sortable>
           <template #default="{ row }">
             {{ row.total_assets.toFixed(2) }}万
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="total_income" label="投顾收入" width="120" align="right" sortable>
-          <template #default="{ row }">
-            {{ Math.round(row.total_income).toLocaleString() }}元
           </template>
         </el-table-column>
       </el-table>
@@ -124,7 +118,7 @@ const pageSize = ref(20)
 const sortProp = ref('')
 const sortOrder = ref('')
 
-const productOptions = ['千1', '千3', '万2', '网格', '量化T', 'GWT']
+const productOptions = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 
 const fetchGroups = async () => {
   try {
@@ -269,15 +263,14 @@ const exportToExcel = () => {
   const exportData = filteredData.value.map(m => ({
     '员工': m.member_name,
     '营业部': m.group_name,
+    '万2(户)': m.products.万2.households,
     '千1(户)': m.products.千1.households,
     '千3(户)': m.products.千3.households,
-    '万2(户)': m.products.万2.households,
-    '网格(户)': m.products.网格.households,
-    '量化T(户)': m.products.量化T.households,
+    'ETF投顾(户)': m.products.ETF投顾.households,
+    '量化T策略(户)': m.products.量化T策略.households,
     'GWT(户)': m.products.GWT.households,
     '合计户数': m.total_households,
-    '签约资产(万)': m.total_assets.toFixed(2),
-    '投顾收入(元)': Math.round(m.total_income)
+    '签约资产(万)': m.total_assets.toFixed(2)
   }))
 
   const ws = XLSX.utils.json_to_sheet(exportData)

@@ -8,7 +8,7 @@ from decimal import Decimal
 from collections import defaultdict
 
 from app.database import get_db
-from app.models import Member, Group, InvestmentAdvisorySubscription, InvestmentAdvisoryTarget
+from app.models import Member, Group, InvestmentAdvisorySubscription, InvestmentAdvisoryTarget, AdvisoryImportLog
 
 router = APIRouter(prefix="/api/advisory", tags=["advisory"])
 
@@ -44,17 +44,39 @@ class SubscriptionImportItem(BaseModel):
     product_type: str
     subscription_date: date
     asset_amount: float
+    advisory_income: float = 0
+    order_status: str = "支付成功"
+
+
+class IncomeImportItem(BaseModel):
+    group_name: str
     advisory_income: float
 
 
 class SubscriptionImportRequest(BaseModel):
     record_date: date
-    data: List[SubscriptionImportItem]
+    product_type: str  # '万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT', '投顾收入'
+    data: List[dict]
 
 
 class SubscriptionImportResponse(BaseModel):
     success_count: int
+    error_count: int
     errors: List[str]
+    log_id: Optional[int] = None
+
+
+class ImportLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    import_date: date
+    product_type: str
+    record_count: int
+    success_count: int
+    error_count: int
+    operator: str
+    created_at: Optional[datetime] = None
 
 
 class StatsResponse(BaseModel):
@@ -249,75 +271,201 @@ def get_subscriptions(
 @router.post("/subscriptions/import", response_model=SubscriptionImportResponse)
 def import_subscriptions(
     request: SubscriptionImportRequest,
+    operator: str = "admin",
     db: Session = Depends(get_db)
 ):
-    """导入签约数据（时点更新机制）
+    """导入签约数据（产品特定时点更新机制）
 
-    逻辑：删除该record_date的所有现有记录，然后插入新记录
+    逻辑：
+    1. 如果是投顾收入类型，更新相应记录的收入字段
+    2. 如果是产品类型，只删除该产品在该日期的记录，然后插入新记录
     """
     record_date = request.record_date
+    product_type = request.product_type
 
     try:
-        # 1. 删除该日期的所有现有记录（时点更新机制）
-        deleted = db.query(InvestmentAdvisorySubscription).filter(
-            InvestmentAdvisorySubscription.record_date == record_date
-        ).delete()
-
-        # 2. 获取所有成员和营业部用于匹配
+        # 获取所有成员和营业部用于匹配
         members = db.query(Member).all()
         groups = db.query(Group).all()
 
         member_by_name = {m.name: m for m in members}
         group_by_name = {g.name: g for g in groups}
 
-        # 3. 插入新记录
         success_count = 0
         errors = []
 
-        for item in request.data:
-            # 查找成员
-            member = member_by_name.get(item.member_name)
-            if not member:
-                errors.append(f"未找到成员: {item.member_name}")
-                continue
+        # 验证产品类型
+        valid_product_types = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT', '投顾收入']
+        if product_type not in valid_product_types:
+            raise HTTPException(status_code=400, detail=f"无效的产品类型: {product_type}")
 
-            # 查找营业部
-            group = group_by_name.get(item.group_name)
-            if not group:
-                errors.append(f"未找到营业部: {item.group_name}")
-                continue
+        # 如果是投顾收入类型，处理方式不同
+        if product_type == '投顾收入':
+            # 更新各营业部的投顾收入
+            for item in request.data:
+                group_name = item.get('group_name') or item.get('营业部', '')
+                income_value = item.get('advisory_income') or item.get('投顾收入', 0)
 
-            # 验证产品类型
-            valid_product_types = ['千1', '千3', '万2', '网格', '量化T', 'GWT']
-            if item.product_type not in valid_product_types:
-                errors.append(f"无效的产品类型: {item.product_type} (成员: {item.member_name})")
-                continue
+                if not group_name:
+                    errors.append(f"缺少营业部信息")
+                    continue
 
-            # 创建记录
-            subscription = InvestmentAdvisorySubscription(
-                member_id=member.id,
-                group_id=group.id,
-                product_type=item.product_type,
-                subscription_date=item.subscription_date,
-                asset_amount=Decimal(str(item.asset_amount)),
-                advisory_income=Decimal(str(item.advisory_income)),
-                original_households=1,
-                converted_households=1,
-                record_date=record_date
-            )
-            db.add(subscription)
-            success_count += 1
+                group = group_by_name.get(group_name)
+                if not group:
+                    errors.append(f"未找到营业部: {group_name}")
+                    continue
 
+                # 将元转换为万元
+                try:
+                    income_yuan = float(income_value)
+                    income_wan = income_yuan / 10000
+                except (ValueError, TypeError):
+                    errors.append(f"无效的收入金额: {income_value} (营业部: {group_name})")
+                    continue
+
+                # 更新该营业部该日期的所有记录的收入
+                db.query(InvestmentAdvisorySubscription).filter(
+                    InvestmentAdvisorySubscription.group_id == group.id,
+                    InvestmentAdvisorySubscription.record_date == record_date
+                ).update({
+                    'advisory_income': Decimal(str(income_yuan))
+                })
+
+                success_count += 1
+
+        else:
+            # 1. 只删除该日期该产品类型的记录（而不是全部）
+            deleted = db.query(InvestmentAdvisorySubscription).filter(
+                InvestmentAdvisorySubscription.record_date == record_date,
+                InvestmentAdvisorySubscription.product_type == product_type
+            ).delete()
+
+            # 2. 插入新产品数据
+            for item in request.data:
+                # 提取字段（支持多种表头命名）
+                group_name = item.get('group_name') or item.get('营业部', '')
+                member_name = item.get('member_name') or item.get('认领员工', '')
+                subscription_date_str = item.get('subscription_date') or item.get('订购日期', '')
+                asset_amount = item.get('asset_amount') or item.get('昨日净资产', 0)
+                order_status = item.get('order_status') or item.get('订单状态', '支付成功')
+
+                # 检查订单状态
+                if order_status != '支付成功':
+                    continue  # 跳过非支付成功订单
+
+                # 验证必填字段
+                if not member_name:
+                    errors.append(f"第 {success_count + len(errors) + 1} 行: 缺少认领员工信息")
+                    continue
+
+                if not group_name:
+                    errors.append(f"第 {success_count + len(errors) + 1} 行 (员工: {member_name}): 缺少营业部信息")
+                    continue
+
+                # 查找成员
+                member = member_by_name.get(member_name)
+                if not member:
+                    errors.append(f"未找到员工: {member_name}，请先在营销人员中录入")
+                    continue
+
+                # 查找营业部
+                group = group_by_name.get(group_name)
+                if not group:
+                    errors.append(f"未找到营业部: {group_name}")
+                    continue
+
+                # 解析日期（格式：YYYYMMDD）
+                try:
+                    if isinstance(subscription_date_str, int):
+                        date_str = str(subscription_date_str)
+                    else:
+                        date_str = str(subscription_date_str).replace('-', '').replace('/', '')
+
+                    if len(date_str) == 8:
+                        subscription_date = date(
+                            int(date_str[:4]),
+                            int(date_str[4:6]),
+                            int(date_str[6:8])
+                        )
+                    else:
+                        subscription_date = date.today()
+                except (ValueError, TypeError):
+                    errors.append(f"日期格式错误: {subscription_date_str} (员工: {member_name})")
+                    continue
+
+                # 解析资产金额
+                try:
+                    asset_value = float(asset_amount) if asset_amount else 0
+                except (ValueError, TypeError):
+                    errors.append(f"资产金额格式错误: {asset_amount} (员工: {member_name})")
+                    continue
+
+                # 创建记录
+                subscription = InvestmentAdvisorySubscription(
+                    member_id=member.id,
+                    group_id=group.id,
+                    product_type=product_type,
+                    subscription_date=subscription_date,
+                    asset_amount=Decimal(str(asset_value)),
+                    advisory_income=Decimal('0'),  # 产品数据默认收入为0
+                    original_households=1,
+                    converted_households=1,
+                    record_date=record_date
+                )
+                db.add(subscription)
+                success_count += 1
+
+        db.commit()
+
+        # 记录导入日志
+        log = AdvisoryImportLog(
+            import_date=record_date,
+            product_type=product_type,
+            record_count=len(request.data),
+            success_count=success_count,
+            error_count=len(errors),
+            operator=operator
+        )
+        db.add(log)
         db.commit()
 
         return SubscriptionImportResponse(
             success_count=success_count,
-            errors=errors
+            error_count=len(errors),
+            errors=errors[:20],  # 只返回前20个错误
+            log_id=log.id
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
+
+
+@router.get("/import-logs", response_model=List[ImportLogResponse])
+def get_import_logs(
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """获取导入日志"""
+    logs = db.query(AdvisoryImportLog).order_by(
+        AdvisoryImportLog.created_at.desc()
+    ).limit(limit).all()
+
+    return [
+        ImportLogResponse(
+            id=log.id,
+            import_date=log.import_date,
+            product_type=log.product_type,
+            record_count=log.record_count,
+            success_count=log.success_count,
+            error_count=log.error_count,
+            operator=log.operator,
+            created_at=log.created_at
+        )
+        for log in logs
+    ]
 
 
 @router.put("/subscriptions/{subscription_id}", response_model=SubscriptionResponse)

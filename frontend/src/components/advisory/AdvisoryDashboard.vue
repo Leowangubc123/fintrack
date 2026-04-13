@@ -127,7 +127,7 @@ const trendChart = ref(null)
 let productChartInstance = null
 let trendChartInstance = null
 
-const productOrder = ['千1', '千3', '万2', '网格', '量化T', 'GWT']
+const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'

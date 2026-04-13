@@ -17,5 +17,8 @@ export const advisoryApi = {
   getTargets: (params) => api.get('/advisory/targets', { params }),
 
   // 保存目标
-  saveTarget: (data) => api.post('/advisory/targets', data)
+  saveTarget: (data) => api.post('/advisory/targets', data),
+
+  // 获取导入日志
+  getImportLogs: (limit = 50) => api.get('/advisory/import-logs', { params: { limit } })
 }

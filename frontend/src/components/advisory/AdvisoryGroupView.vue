@@ -91,9 +91,6 @@
               <el-table-column prop="asset_amount" label="资产(万)" width="100">
                 <template #default="{ row }">{{ row.asset_amount }}万</template>
               </el-table-column>
-              <el-table-column prop="advisory_income" label="收入(元)" width="100">
-                <template #default="{ row }">{{ row.advisory_income }}元</template>
-              </el-table-column>
             </el-table>
           </div>
         </div>
@@ -120,7 +117,7 @@ const subscriptions = ref([])
 const targets = ref([])
 const expandedGroup = ref(null)
 
-const productOrder = ['千1', '千3', '万2', '网格', '量化T', 'GWT']
+const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'
