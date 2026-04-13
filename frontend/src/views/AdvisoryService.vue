@@ -20,7 +20,7 @@
 
     <!-- 营业部视图 -->
     <div v-if="activeTab === 'group-view'" class="tab-content">
-      营业部视图
+      <AdvisoryGroupView />
     </div>
 
     <!-- 个人视图 -->
@@ -43,6 +43,7 @@
 <script setup>
 import { ref } from 'vue'
 import AdvisoryDashboard from '../components/advisory/AdvisoryDashboard.vue'
+import AdvisoryGroupView from '../components/advisory/AdvisoryGroupView.vue'
 
 const tabs = [
   { key: 'annual-dashboard', label: '年度看板' },
