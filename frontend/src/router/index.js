@@ -7,6 +7,7 @@ import Import from '../views/Import.vue'
 import Analysis from '../views/Analysis.vue'
 import Login from '../views/Login.vue'
 import PrivateSecuritiesFund from '../views/PrivateSecuritiesFund.vue'
+import AdvisoryService from '../views/AdvisoryService.vue'
 
 const routes = [
   {
@@ -25,6 +26,7 @@ const routes = [
       { path: 'import', name: 'Import', component: Import, meta: { title: '数据导入' } },
       { path: 'analysis', name: 'Analysis', component: Analysis, meta: { title: '数据分析' } },
       { path: 'private-fund', name: 'PrivateSecuritiesFund', component: PrivateSecuritiesFund, meta: { title: '私募销售' } },
+      { path: 'advisory', name: 'AdvisoryService', component: AdvisoryService, meta: { title: '投顾签约' } },
     ]
   }
 ]

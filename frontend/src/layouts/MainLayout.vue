@@ -65,7 +65,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton, Collection } from '@element-plus/icons-vue'
+import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton, Collection, DocumentChecked } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -76,6 +76,7 @@ const menuItems = ref([
   { path: '/organization', title: '营销人员', icon: UserFilled },
   { path: '/import', title: '数据导入', icon: Upload },
   { path: '/private-fund', title: '私募销售', icon: Collection },
+  { path: '/advisory', title: '投顾签约', icon: DocumentChecked },
 ])
 
 function handleLogout() {
