@@ -35,7 +35,7 @@
 
     <!-- 考核管理 -->
     <div v-if="activeTab === 'target'" class="tab-content">
-      考核管理
+      <AdvisoryTarget />
     </div>
   </div>
 </template>
@@ -46,6 +46,7 @@ import AdvisoryDashboard from '../components/advisory/AdvisoryDashboard.vue'
 import AdvisoryGroupView from '../components/advisory/AdvisoryGroupView.vue'
 import AdvisoryMemberView from '../components/advisory/AdvisoryMemberView.vue'
 import AdvisoryImport from '../components/advisory/AdvisoryImport.vue'
+import AdvisoryTarget from '../components/advisory/AdvisoryTarget.vue'
 
 const tabs = [
   { key: 'annual-dashboard', label: '年度看板' },
