@@ -30,7 +30,7 @@
 
     <!-- 数据导入 -->
     <div v-if="activeTab === 'import'" class="tab-content">
-      数据导入
+      <AdvisoryImport />
     </div>
 
     <!-- 考核管理 -->
@@ -45,6 +45,7 @@ import { ref } from 'vue'
 import AdvisoryDashboard from '../components/advisory/AdvisoryDashboard.vue'
 import AdvisoryGroupView from '../components/advisory/AdvisoryGroupView.vue'
 import AdvisoryMemberView from '../components/advisory/AdvisoryMemberView.vue'
+import AdvisoryImport from '../components/advisory/AdvisoryImport.vue'
 
 const tabs = [
   { key: 'annual-dashboard', label: '年度看板' },
