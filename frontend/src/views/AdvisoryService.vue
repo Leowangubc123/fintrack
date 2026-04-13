@@ -25,7 +25,7 @@
 
     <!-- 个人视图 -->
     <div v-if="activeTab === 'member-view'" class="tab-content">
-      个人视图
+      <AdvisoryMemberView />
     </div>
 
     <!-- 数据导入 -->
@@ -44,6 +44,7 @@
 import { ref } from 'vue'
 import AdvisoryDashboard from '../components/advisory/AdvisoryDashboard.vue'
 import AdvisoryGroupView from '../components/advisory/AdvisoryGroupView.vue'
+import AdvisoryMemberView from '../components/advisory/AdvisoryMemberView.vue'
 
 const tabs = [
   { key: 'annual-dashboard', label: '年度看板' },
