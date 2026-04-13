@@ -15,7 +15,7 @@
 
     <!-- 年度看板 -->
     <div v-if="activeTab === 'annual-dashboard'" class="tab-content">
-      年度看板
+      <AdvisoryDashboard />
     </div>
 
     <!-- 营业部视图 -->
@@ -42,6 +42,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import AdvisoryDashboard from '../components/advisory/AdvisoryDashboard.vue'
 
 const tabs = [
   { key: 'annual-dashboard', label: '年度看板' },
