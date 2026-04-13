@@ -181,7 +181,12 @@ def get_stats(
 
 # ============== 签约明细API ==============
 
-@router.get("/subscriptions", response_model=List[SubscriptionResponse])
+class SubscriptionListResponse(BaseModel):
+    items: List[SubscriptionResponse]
+    total: int
+
+
+@router.get("/subscriptions", response_model=SubscriptionListResponse)
 def get_subscriptions(
     year: Optional[int] = None,
     group_id: Optional[int] = None,
@@ -218,7 +223,7 @@ def get_subscriptions(
         (page - 1) * page_size
     ).limit(page_size).all()
 
-    return [
+    items = [
         SubscriptionResponse(
             id=s.InvestmentAdvisorySubscription.id,
             member_id=s.InvestmentAdvisorySubscription.member_id,
@@ -237,6 +242,8 @@ def get_subscriptions(
         )
         for s in results
     ]
+
+    return SubscriptionListResponse(items=items, total=total)
 
 
 @router.post("/subscriptions/import", response_model=SubscriptionImportResponse)
