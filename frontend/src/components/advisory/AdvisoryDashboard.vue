@@ -3,30 +3,34 @@
     <!-- KPI Cards -->
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">累计签约户数</div>
+        <div class="kpi-label">
+          累计签约户数
+          <span class="kpi-date-sub">（最近更新：{{ stats.last_product_update_date || '-' }}）</span>
+        </div>
         <div class="kpi-value">{{ formatNumber(stats.total_households) }}<span class="unit">户</span></div>
         <div class="kpi-change" :class="{ 'is-positive': stats.households_change >= 0, 'is-negative': stats.households_change < 0 }">
           较上次更新 {{ stats.households_change >= 0 ? '新增' : '减少' }} {{ Math.abs(stats.households_change || 0) }}户
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">累计签约资产</div>
+        <div class="kpi-label">
+          累计签约资产
+          <span class="kpi-date-sub">（最近更新：{{ stats.last_product_update_date || '-' }}）</span>
+        </div>
         <div class="kpi-value">{{ formatNumber(stats.total_assets) }}<span class="unit">万</span></div>
         <div class="kpi-change" :class="{ 'is-positive': stats.assets_change >= 0, 'is-negative': stats.assets_change < 0 }">
           较上次更新 {{ stats.assets_change >= 0 ? '新增' : '减少' }} {{ Math.abs(stats.assets_change || 0) }}万
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">本年投顾收入</div>
+        <div class="kpi-label">
+          本年投顾收入
+          <span class="kpi-date-sub">（最近更新：{{ stats.last_income_update_date || '-' }}）</span>
+        </div>
         <div class="kpi-value">{{ formatNumber(stats.total_income) }}<span class="unit">元</span></div>
         <div class="kpi-change" :class="{ 'is-positive': stats.income_change >= 0, 'is-negative': stats.income_change < 0 }">
           较上次更新 {{ stats.income_change >= 0 ? '新增' : '减少' }} {{ Math.abs(stats.income_change || 0) }}元
         </div>
-      </div>
-      <div class="kpi-card kpi-date">
-        <div class="kpi-label">最近更新日期</div>
-        <div class="kpi-value date">{{ stats.last_update_date || '-' }}</div>
-        <div class="kpi-sub">数据时点更新</div>
       </div>
     </div>
 
@@ -84,6 +88,8 @@ const stats = ref({
   assets_change: 0,
   income_change: 0,
   last_update_date: null,
+  last_product_update_date: null,
+  last_income_update_date: null,
   product_distribution: [],
   trend_data: []
 })
@@ -256,7 +262,7 @@ onMounted(() => {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -312,9 +318,11 @@ onMounted(() => {
   color: #9CA3AF;
 }
 
-.kpi-card.kpi-date {
-  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
-  border-color: #80DEEA;
+.kpi-date-sub {
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 400;
+  margin-left: 4px;
 }
 
 .charts-grid {

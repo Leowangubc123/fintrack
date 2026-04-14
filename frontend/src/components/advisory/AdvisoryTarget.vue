@@ -19,9 +19,9 @@
           <div class="th" style="flex: 1">营业部</div>
           <div class="th" style="width: 120px" align="right">收入目标</div>
           <div class="th" style="width: 100px" align="right">户数目标</div>
-          <div class="th" style="width: 100px" align="right">考核户数</div>
           <div class="th" style="width: 100px" align="right">当前收入</div>
           <div class="th" style="width: 90px" align="right">签约户数</div>
+          <div class="th" style="width: 100px" align="right">考核户数</div>
           <div class="th" style="width: 140px">收入完成率</div>
           <div class="th" style="width: 140px">户数完成率</div>
           <div class="th" style="width: 100px" align="center">操作</div>
@@ -49,14 +49,14 @@
             </div>
             <span v-else>{{ row.households_target || 0 }}户</span>
           </div>
+          <div class="td" style="width: 100px" align="right" data-label="当前收入">{{ row.current_income?.toFixed(2) || '0.00' }}万</div>
+          <div class="td" style="width: 90px" align="right" data-label="签约户数">{{ row.current_households || 0 }}户</div>
           <div class="td" style="width: 100px" align="right" data-label="考核户数">
             <div v-if="editingRow === row.group_id" class="edit-field">
               <el-input-number v-model="editForm.assessed_households" :min="0" size="small" style="width: 90px" />
             </div>
             <span v-else>{{ row.assessed_households || 0 }}户</span>
           </div>
-          <div class="td" style="width: 100px" align="right" data-label="当前收入">{{ row.current_income?.toFixed(2) || '0.00' }}万</div>
-          <div class="td" style="width: 90px" align="right" data-label="签约户数">{{ row.current_households || 0 }}户</div>
           <div class="td" style="width: 140px" data-label="收入完成率">
             <div class="rate-cell">
               <div class="rate-bar-bg">

@@ -76,6 +76,8 @@
               v-for="product in productOrder"
               :key="product"
               class="product-cell"
+              :class="{ selected: selectedProduct === product }"
+              @click.stop="selectProduct(product)"
             >
               <div class="product-name">{{ product }}</div>
               <div class="product-households">
@@ -87,9 +89,9 @@
             </div>
           </div>
 
-          <!-- Recent Subscriptions -->
-          <div class="recent-section">
-            <div class="section-title">最近签约明细</div>
+          <!-- Product Subscriptions -->
+          <div v-if="selectedProduct" class="recent-section">
+            <div class="section-title">{{ selectedProduct }} - 签约明细</div>
             <div class="subscription-table">
               <div class="table-header">
                 <div class="th" style="width: 120px">签约日期</div>
@@ -98,7 +100,7 @@
                 <div class="th" style="width: 140px" align="right">签约资产</div>
               </div>
               <div
-                v-for="row in group.recent_subscriptions"
+                v-for="row in paginatedGroupSubscriptions"
                 :key="row.id || row.subscription_date + row.member_name"
                 class="table-row"
               >
@@ -109,10 +111,24 @@
                 </div>
                 <div class="td" style="width: 140px" align="right">¥{{ ((row.asset_amount || 0) / 10000).toFixed(1) }}万</div>
               </div>
-              <div v-if="group.recent_subscriptions.length === 0" class="table-empty">
+              <div v-if="paginatedGroupSubscriptions.length === 0" class="table-empty">
                 暂无签约明细
               </div>
             </div>
+
+            <el-pagination
+              v-if="filteredGroupSubscriptions.length > detailPageSize"
+              v-model:current-page="detailPage"
+              v-model:page-size="detailPageSize"
+              :total="filteredGroupSubscriptions.length"
+              layout="prev, pager, next"
+              small
+              class="detail-pagination"
+            />
+          </div>
+
+          <div v-else class="product-hint">
+            点击上方产品查看该营业部该产品的签约明细
           </div>
         </div>
       </div>
@@ -137,6 +153,7 @@ const groups = ref([])
 const subscriptions = ref([])
 const targets = ref([])
 const expandedGroup = ref(null)
+const selectedProduct = ref('')
 
 const productOrder = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 
@@ -184,6 +201,9 @@ const fetchTargets = async () => {
   }
 }
 
+const detailPage = ref(1)
+const detailPageSize = ref(10)
+
 const groupStats = computed(() => {
   const stats = {}
 
@@ -194,8 +214,7 @@ const groupStats = computed(() => {
       total_households: 0,
       total_assets: 0,
       total_income: 0,
-      product_stats: {},
-      recent_subscriptions: []
+      product_stats: {}
     }
     productOrder.forEach(p => {
       stats[group.id].product_stats[p] = { households: 0, assets: 0 }
@@ -218,14 +237,6 @@ const groupStats = computed(() => {
     }
   })
 
-  Object.keys(stats).forEach(groupId => {
-    const groupSubs = subscriptions.value
-      .filter(s => s.group_id === parseInt(groupId))
-      .sort((a, b) => new Date(b.subscription_date) - new Date(a.subscription_date))
-      .slice(0, 5)
-    stats[groupId].recent_subscriptions = groupSubs
-  })
-
   Object.values(stats).forEach(group => {
     const target = targets.value.find(t => t.group_id === group.group_id)
     if (target) {
@@ -244,6 +255,18 @@ const groupStats = computed(() => {
   return Object.values(stats).sort((a, b) => b.total_households - a.total_households)
 })
 
+const filteredGroupSubscriptions = computed(() => {
+  if (!expandedGroup.value || !selectedProduct.value) return []
+  return subscriptions.value
+    .filter(s => s.group_id === expandedGroup.value && s.product_type === selectedProduct.value)
+    .sort((a, b) => new Date(b.subscription_date) - new Date(a.subscription_date))
+})
+
+const paginatedGroupSubscriptions = computed(() => {
+  const start = (detailPage.value - 1) * detailPageSize.value
+  return filteredGroupSubscriptions.value.slice(start, start + detailPageSize.value)
+})
+
 const totalStats = computed(() => {
   return groupStats.value.reduce((acc, group) => ({
     households: acc.households + group.total_households,
@@ -253,7 +276,17 @@ const totalStats = computed(() => {
 })
 
 const toggleExpand = (groupId) => {
-  expandedGroup.value = expandedGroup.value === groupId ? null : groupId
+  if (expandedGroup.value === groupId) {
+    expandedGroup.value = null
+    selectedProduct.value = ''
+  } else {
+    expandedGroup.value = groupId
+    selectedProduct.value = ''
+  }
+}
+
+const selectProduct = (product) => {
+  selectedProduct.value = selectedProduct.value === product ? '' : product
 }
 
 const getProgressClass = (rate) => {
@@ -270,7 +303,13 @@ const loadData = async () => {
 }
 
 watch(selectedYear, () => {
+  expandedGroup.value = null
+  selectedProduct.value = ''
   loadData()
+})
+
+watch(selectedProduct, () => {
+  detailPage.value = 1
 })
 
 onMounted(() => {
@@ -488,6 +527,18 @@ onMounted(() => {
   padding: 18px 12px;
   text-align: center;
   border: 1px solid #E5E7EB;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.product-cell:hover {
+  border-color: #1EAEDB;
+  box-shadow: 0 2px 8px rgba(30, 174, 219, 0.1);
+}
+
+.product-cell.selected {
+  border-color: #1EAEDB;
+  background: #EFF6FF;
 }
 
 .product-name {
@@ -595,6 +646,21 @@ onMounted(() => {
   text-align: center;
   color: #9CA3AF;
   font-size: 14px;
+}
+
+.product-hint {
+  padding: 32px 0;
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 14px;
+  background: white;
+  border-radius: 10px;
+  border: 1px dashed #E5E7EB;
+}
+
+.detail-pagination {
+  margin-top: 16px;
+  justify-content: flex-end;
 }
 
 @media (max-width: 1200px) {

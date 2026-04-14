@@ -145,40 +145,18 @@
       </el-table>
     </div>
 
-    <!-- Import History -->
-    <div class="history-card">
-      <div class="history-title">最近导入记录</div>
-      <el-table :data="importHistory" size="small" stripe>
-        <el-table-column prop="import_date" label="数据日期" width="120" />
-        <el-table-column prop="product_type" label="数据类型" width="120" />
-        <el-table-column prop="record_count" label="总条数" width="80" align="center" />
-        <el-table-column prop="success_count" label="成功" width="70" align="center" />
-        <el-table-column prop="error_count" label="失败" width="70" align="center">
-          <template #default="{ row }">
-            <span :class="{ 'has-error': row.error_count > 0 }">{{ row.error_count }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="operator" label="操作人" width="100" />
-        <el-table-column prop="created_at" label="导入时间" min-width="150">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
-
     <!-- Latest Update Times -->
     <div class="history-card latest-update-card">
       <div class="history-title">各数据类型最新更新时间</div>
       <el-table :data="latestUpdates" size="small" stripe>
         <el-table-column prop="product_type" label="数据类型" width="120" />
         <el-table-column prop="import_date" label="数据日期" width="120" />
+        <el-table-column prop="record_count" label="总条数" width="80" align="center" />
         <el-table-column prop="created_at" label="最新导入时间" min-width="150">
           <template #default="{ row }">
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column prop="operator" label="操作人" width="100" />
       </el-table>
     </div>
   </div>

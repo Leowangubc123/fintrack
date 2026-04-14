@@ -89,6 +89,8 @@ class StatsResponse(BaseModel):
     product_distribution: List[dict]
     trend_data: List[dict]
     last_update_date: Optional[date] = None
+    last_product_update_date: Optional[date] = None
+    last_income_update_date: Optional[date] = None
 
 
 class TargetResponse(BaseModel):
@@ -200,6 +202,21 @@ def get_stats(
         func.max(InvestmentAdvisorySubscription.record_date)
     ).filter(extract('year', InvestmentAdvisorySubscription.record_date) == year).scalar()
 
+    # 产品数据和收入数据分别的最新更新日期
+    last_product_update_date = db.query(
+        func.max(InvestmentAdvisorySubscription.record_date)
+    ).filter(
+        extract('year', InvestmentAdvisorySubscription.record_date) == year,
+        InvestmentAdvisorySubscription.product_type != '投顾收入'
+    ).scalar()
+
+    last_income_update_date = db.query(
+        func.max(InvestmentAdvisorySubscription.record_date)
+    ).filter(
+        extract('year', InvestmentAdvisorySubscription.record_date) == year,
+        InvestmentAdvisorySubscription.product_type == '投顾收入'
+    ).scalar()
+
     # 计算较上次更新变化
     record_dates = db.query(
         InvestmentAdvisorySubscription.record_date
@@ -252,7 +269,9 @@ def get_stats(
         income_change=income_change,
         product_distribution=product_distribution,
         trend_data=trend_data,
-        last_update_date=last_update_date
+        last_update_date=last_update_date,
+        last_product_update_date=last_product_update_date,
+        last_income_update_date=last_income_update_date
     )
 
 
