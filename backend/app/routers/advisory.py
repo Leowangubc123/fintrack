@@ -100,6 +100,7 @@ class TargetResponse(BaseModel):
     year: int
     income_target: float
     households_target: int
+    assessed_households: int
     current_income: float
     current_households: int
     income_completion_rate: float
@@ -113,6 +114,7 @@ class TargetCreateRequest(BaseModel):
     year: int
     income_target: float
     households_target: int
+    assessed_households: int = 0
 
 
 # ============== 统计数据API ==============
@@ -148,9 +150,12 @@ def get_stats(
     # 产品分布统计
     product_stats = defaultdict(lambda: {"count": 0, "assets": 0.0, "income": 0.0})
     for s in subscriptions:
-        product_stats[s.product_type]["count"] += s.converted_households
-        product_stats[s.product_type]["assets"] += float(s.asset_amount) / 10000
-        product_stats[s.product_type]["income"] += float(s.advisory_income)
+        pt = s.product_type
+        if pt == '万2':
+            pt = '万2及其他'
+        product_stats[pt]["count"] += s.converted_households
+        product_stats[pt]["assets"] += float(s.asset_amount) / 10000
+        product_stats[pt]["income"] += float(s.advisory_income)
 
     product_distribution = [
         {
@@ -345,7 +350,7 @@ def import_subscriptions(
         errors = []
 
         # 验证产品类型
-        valid_product_types = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT', '投顾收入']
+        valid_product_types = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT', '投顾收入']
         if product_type not in valid_product_types:
             raise HTTPException(status_code=400, detail=f"无效的产品类型: {product_type}")
 
@@ -400,8 +405,13 @@ def import_subscriptions(
                 order_status = item.get('order_status') or item.get('订单状态', '支付成功')
 
                 # 检查订单状态
-                if order_status != '支付成功':
-                    continue  # 跳过非支付成功订单
+                if product_type == '量化T策略':
+                    if '取消' in str(order_status) or '退订' in str(order_status):
+                        continue  # 跳过取消/退订订单
+                else:
+                    valid_statuses = ['支付成功', '已支付', '成功', '正常', '有效', '已成交', '确认', '完成']
+                    if not any(s in str(order_status) for s in valid_statuses):
+                        continue  # 跳过非成功订单
 
                 # 验证必填字段
                 if not member_name:
@@ -616,9 +626,10 @@ def get_targets(
 
         income_target = float(target.income_target) if target.income_target else 0
         households_target = target.households_target if target.households_target else 0
+        assessed_households = target.assessed_households if target.assessed_households else 0
 
         income_completion_rate = (current_income / income_target * 100) if income_target > 0 else 0
-        households_completion_rate = (current_households / households_target * 100) if households_target > 0 else 0
+        households_completion_rate = (assessed_households / households_target * 100) if households_target > 0 else 0
 
         result.append(TargetResponse(
             id=target.id,
@@ -627,6 +638,7 @@ def get_targets(
             year=target.year,
             income_target=income_target,
             households_target=households_target,
+            assessed_households=assessed_households,
             current_income=round(current_income, 2),
             current_households=current_households,
             income_completion_rate=round(income_completion_rate, 2),
@@ -659,13 +671,15 @@ def create_or_update_target(
         # 更新现有记录
         target.income_target = Decimal(str(request.income_target))
         target.households_target = request.households_target
+        target.assessed_households = request.assessed_households
     else:
         # 创建新记录
         target = InvestmentAdvisoryTarget(
             group_id=request.group_id,
             year=request.year,
             income_target=Decimal(str(request.income_target)),
-            households_target=request.households_target
+            households_target=request.households_target,
+            assessed_households=request.assessed_households
         )
         db.add(target)
 
@@ -685,7 +699,7 @@ def create_or_update_target(
     current_households = int(actual_stats.total_households) if actual_stats.total_households else 0
 
     income_completion_rate = (current_income / request.income_target * 100) if request.income_target > 0 else 0
-    households_completion_rate = (current_households / request.households_target * 100) if request.households_target > 0 else 0
+    households_completion_rate = (request.assessed_households / request.households_target * 100) if request.households_target > 0 else 0
 
     return TargetResponse(
         id=target.id,
@@ -694,6 +708,7 @@ def create_or_update_target(
         year=target.year,
         income_target=request.income_target,
         households_target=request.households_target,
+        assessed_households=request.assessed_households,
         current_income=round(current_income, 2),
         current_households=current_households,
         income_completion_rate=round(income_completion_rate, 2),

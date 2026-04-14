@@ -39,6 +39,19 @@ async def general_exception_handler(request: Request, exc: Exception):
 # 创建数据表
 Base.metadata.create_all(bind=engine)
 
+# 迁移：为 investment_advisory_targets 添加 assessed_households 列（如果不存在）
+from sqlalchemy import inspect, text
+try:
+    inspector = inspect(engine)
+    columns = [c['name'] for c in inspector.get_columns('investment_advisory_targets')]
+    if 'assessed_households' not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE investment_advisory_targets ADD COLUMN assessed_households INTEGER DEFAULT 0"))
+            conn.commit()
+            print("[MIGRATION] Added assessed_households column to investment_advisory_targets")
+except Exception as e:
+    print(f"[MIGRATION WARNING] {e}")
+
 # 注册路由
 app.include_router(groups.router)
 app.include_router(members.router)

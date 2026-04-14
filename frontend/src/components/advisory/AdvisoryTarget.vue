@@ -19,8 +19,9 @@
           <div class="th" style="flex: 1">营业部</div>
           <div class="th" style="width: 120px" align="right">收入目标</div>
           <div class="th" style="width: 100px" align="right">户数目标</div>
+          <div class="th" style="width: 100px" align="right">考核户数</div>
           <div class="th" style="width: 100px" align="right">当前收入</div>
-          <div class="th" style="width: 90px" align="right">当前户数</div>
+          <div class="th" style="width: 90px" align="right">签约户数</div>
           <div class="th" style="width: 140px">收入完成率</div>
           <div class="th" style="width: 140px">户数完成率</div>
           <div class="th" style="width: 100px" align="center">操作</div>
@@ -48,8 +49,14 @@
             </div>
             <span v-else>{{ row.households_target || 0 }}户</span>
           </div>
+          <div class="td" style="width: 100px" align="right" data-label="考核户数">
+            <div v-if="editingRow === row.group_id" class="edit-field">
+              <el-input-number v-model="editForm.assessed_households" :min="0" size="small" style="width: 90px" />
+            </div>
+            <span v-else>{{ row.assessed_households || 0 }}户</span>
+          </div>
           <div class="td" style="width: 100px" align="right" data-label="当前收入">{{ row.current_income?.toFixed(2) || '0.00' }}万</div>
-          <div class="td" style="width: 90px" align="right" data-label="当前户数">{{ row.current_households || 0 }}户</div>
+          <div class="td" style="width: 90px" align="right" data-label="签约户数">{{ row.current_households || 0 }}户</div>
           <div class="td" style="width: 140px" data-label="收入完成率">
             <div class="rate-cell">
               <div class="rate-bar-bg">
@@ -217,6 +224,9 @@
         <el-form-item label="户数目标">
           <el-input-number v-model="batchForm.households_target" :min="0" style="width: 100%" />
         </el-form-item>
+        <el-form-item label="考核户数">
+          <el-input-number v-model="batchForm.assessed_households" :min="0" style="width: 100%" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showBatchDialog = false">取消</el-button>
@@ -247,14 +257,16 @@ const loading = ref(false)
 const editingRow = ref(null)
 const editForm = ref({
   income_target: 0,
-  households_target: 0
+  households_target: 0,
+  assessed_households: 0
 })
 
 const showBatchDialog = ref(false)
 const batchForm = ref({
   group_id: null,
   income_target: 0,
-  households_target: 0
+  households_target: 0,
+  assessed_households: 0
 })
 
 const selectedGroupId = ref(null)
@@ -318,8 +330,9 @@ const tableData = computed(() => {
     const incomeRate = target.income_target > 0
       ? Math.round((current.income / target.income_target) * 100)
       : 0
+    const assessedHouseholds = target.assessed_households || 0
     const householdsRate = target.households_target > 0
-      ? Math.round((current.households / target.households_target) * 100)
+      ? Math.round((assessedHouseholds / target.households_target) * 100)
       : 0
 
     return {
@@ -327,6 +340,7 @@ const tableData = computed(() => {
       group_name: group.name,
       income_target: target.income_target || 0,
       households_target: target.households_target || 0,
+      assessed_households: assessedHouseholds,
       current_income: current.income,
       current_households: current.households,
       income_rate: incomeRate,
@@ -364,7 +378,8 @@ const startEdit = (row) => {
   editingRow.value = row.group_id
   editForm.value = {
     income_target: row.income_target,
-    households_target: row.households_target
+    households_target: row.households_target,
+    assessed_households: row.assessed_households
   }
 }
 
@@ -378,7 +393,8 @@ const saveEdit = async (row) => {
       group_id: row.group_id,
       year: selectedYear.value,
       income_target: editForm.value.income_target,
-      households_target: editForm.value.households_target
+      households_target: editForm.value.households_target,
+      assessed_households: editForm.value.assessed_households
     })
     ElMessage.success('保存成功')
     editingRow.value = null
@@ -396,7 +412,8 @@ const saveBatchTargets = async () => {
         group_id: batchForm.value.group_id,
         year: selectedYear.value,
         income_target: batchForm.value.income_target,
-        households_target: batchForm.value.households_target
+        households_target: batchForm.value.households_target,
+        assessed_households: batchForm.value.assessed_households
       })
     } else {
       for (const group of groups.value) {
@@ -404,7 +421,8 @@ const saveBatchTargets = async () => {
           group_id: group.id,
           year: selectedYear.value,
           income_target: batchForm.value.income_target,
-          households_target: batchForm.value.households_target
+          households_target: batchForm.value.households_target,
+          assessed_households: batchForm.value.assessed_households
         })
       }
     }

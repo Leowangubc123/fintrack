@@ -91,14 +91,14 @@ const stats = ref({
 const trendChart = ref(null)
 let trendChartInstance = null
 
-const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T', 'GWT']
+const productOrder = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 
 const productColors = {
-  '万2': '#0EA5E9',
+  '万2及其他': '#0EA5E9',
   '千1': '#10B981',
   '千3': '#F59E0B',
   'ETF投顾': '#3B82F6',
-  '量化T': '#8B5CF6',
+  '量化T策略': '#8B5CF6',
   'GWT': '#F43F5E'
 }
 

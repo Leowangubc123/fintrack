@@ -7,12 +7,12 @@
         数据导入说明
       </div>
       <div class="info-content">
-        <p><strong>产品数据导入：</strong>选择产品类型（万2、千1、千3、ETF投顾、量化T策略、GWT），上传该产品对应的Excel表格。</p>
+        <p><strong>产品数据导入：</strong>选择产品类型（万2及其他、千1、千3、ETF投顾、量化T策略、GWT），上传该产品对应的Excel表格。</p>
         <p><strong>收入数据导入：</strong>选择"投顾收入"类型，上传各营业部收入汇总表。</p>
         <p><strong>更新机制：</strong>每次导入只会更新选定产品/收入类型的数据，其他数据不受影响。</p>
         <p><strong>必填字段：</strong></p>
         <ul>
-          <li>产品数据：营业部、认领员工、订购日期(YYYYMMDD)、订单状态、昨日净资产</li>
+          <li>产品数据：营业部、认领员工、订购日期(YYYYMMDD)、订单状态、昨日净资产/当日授权市值</li>
           <li>收入数据：营业部、投顾收入(元)</li>
         </ul>
       </div>
@@ -67,7 +67,7 @@
             <div class="upload-tip">
               支持 .xlsx, .xls 格式
               <span v-if="selectedProductType === '投顾收入'"> - 需包含"营业部"和"投顾收入"列</span>
-              <span v-else-if="selectedProductType"> - 需包含"营业部"、"认领员工"、"订购日期"、"订单状态"、"昨日净资产"列</span>
+              <span v-else-if="selectedProductType"> - 需包含"营业部"、"认领员工"、"订购日期"、"订单状态"、"昨日净资产/当日授权市值"列</span>
             </div>
           </template>
         </el-upload>
@@ -96,7 +96,7 @@
         </span>
         <div class="preview-stats">
           <span class="stat-item">有效: {{ validCount }} 条</span>
-          <span class="stat-item" v-if="skippedCount > 0">跳过(非支付成功): {{ skippedCount }} 条</span>
+          <span class="stat-item" v-if="skippedCount > 0">跳过: {{ skippedCount }} 条</span>
           <span class="stat-item error" v-if="errorCount > 0">错误: {{ errorCount }} 条</span>
         </div>
       </div>
@@ -185,7 +185,7 @@ import * as XLSX from 'xlsx'
 import { advisoryApi } from '../../api/advisory.js'
 import { groupsApi, membersApi } from '../../api/index.js'
 
-const productTypes = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
+const productTypes = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 const selectedProductType = ref('')
 const recordDate = ref(new Date().toISOString().split('T')[0])
 const importing = ref(false)
@@ -295,10 +295,10 @@ const parseProductData = (rawData) => {
   return rawData.map((row, index) => {
     // Extract fields from various possible column names
     const groupName = row['营业部'] || row['部门'] || ''
-    const memberName = row['认领员工'] || row['员工'] || row['员工姓名'] || (selectedProductType.value === '量化T策略' ? row['推荐人'] : '') || ''
+    const memberName = row['认领员工'] || row['服务人员'] || row['开发人员'] || (selectedProductType.value === '量化T策略' ? row['推荐人'] : '') || ''
     const orderDateRaw = row['订购日期'] || row['日期'] || row['签约日期'] || ''
     const orderStatus = row['订单状态'] || row['状态'] || row['交易状态'] || row['处理状态'] || row['支付状态'] || ''
-    const assetAmount = row['昨日净资产'] || row['资产'] || row['签约资产'] || 0
+    const assetAmount = row['昨日净资产'] || row['资产'] || row['签约资产'] || (selectedProductType.value === '量化T策略' ? row['当日授权市值'] : 0) || 0
 
     const group = groupMap[groupName]
     const member = memberMap[memberName]
@@ -338,21 +338,7 @@ const parseProductData = (rawData) => {
       }
     }
 
-    // Validate required fields
-    if (!memberName || !member) {
-      return {
-        row_num: index + 1,
-        group_name: groupName,
-        member_name: memberName || '(空白)',
-        subscription_date: parseDate(orderDateRaw),
-        order_status: orderStatus,
-        asset_amount: parseFloat(assetAmount) || 0,
-        valid: false,
-        skipped: false,
-        error: !memberName ? '缺少认领员工' : `未找到员工: ${memberName}`
-      }
-    }
-
+    // Skip unknown groups silently
     if (!group) {
       return {
         row_num: index + 1,
@@ -362,8 +348,37 @@ const parseProductData = (rawData) => {
         order_status: orderStatus,
         asset_amount: parseFloat(assetAmount) || 0,
         valid: false,
-        skipped: false,
+        skipped: true,
         error: !groupName ? '缺少营业部' : `未找到营业部: ${groupName}`
+      }
+    }
+
+    // Validate required fields
+    if (!memberName) {
+      return {
+        row_num: index + 1,
+        group_name: groupName,
+        member_name: '(空白)',
+        subscription_date: parseDate(orderDateRaw),
+        order_status: orderStatus,
+        asset_amount: parseFloat(assetAmount) || 0,
+        valid: false,
+        skipped: true,
+        error: '无开发关系'
+      }
+    }
+
+    if (!member) {
+      return {
+        row_num: index + 1,
+        group_name: groupName,
+        member_name: memberName,
+        subscription_date: parseDate(orderDateRaw),
+        order_status: orderStatus,
+        asset_amount: parseFloat(assetAmount) || 0,
+        valid: false,
+        skipped: false,
+        error: `未找到员工: ${memberName}`
       }
     }
 
