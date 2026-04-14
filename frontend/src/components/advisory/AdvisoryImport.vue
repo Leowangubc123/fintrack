@@ -98,6 +98,7 @@
           <span class="stat-item">有效: {{ validCount }} 条</span>
           <span class="stat-item" v-if="skippedCount > 0">跳过: {{ skippedCount }} 条</span>
           <span class="stat-item error" v-if="errorCount > 0">错误: {{ errorCount }} 条</span>
+          <el-button v-if="invalidCount > 0" type="danger" size="small" @click="removeAllInvalid">一键删除无效数据</el-button>
         </div>
       </div>
 
@@ -203,6 +204,7 @@ const importHistory = ref([])
 const validCount = computed(() => previewData.value.filter(d => d.valid).length)
 const skippedCount = computed(() => previewData.value.filter(d => d.skipped).length)
 const errorCount = computed(() => previewData.value.filter(d => !d.valid && !d.skipped).length)
+const invalidCount = computed(() => previewData.value.filter(d => !d.valid || d.skipped).length)
 const canImport = computed(() => selectedProductType.value && recordDate.value && validCount.value > 0)
 
 const latestUpdates = computed(() => {
@@ -285,6 +287,10 @@ const handleFileRemove = () => {
 
 const removePreviewRow = (index) => {
   previewData.value.splice(index, 1)
+}
+
+const removeAllInvalid = () => {
+  previewData.value = previewData.value.filter(d => d.valid && !d.skipped)
 }
 
 const getFirstValue = (row, keys) => {
