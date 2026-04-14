@@ -111,13 +111,16 @@
         <el-table-column prop="asset_amount" label="昨日净资产(万)" width="120" align="right">
           <template #default="{ row }">{{ (row.asset_amount / 10000).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="状态" min-width="180">
-          <template #default="{ row }">
+        <el-table-column label="状态" min-width="200">
+          <template #default="{ row, $index }">
             <el-tag v-if="row.valid && !row.skipped" type="success" size="small">有效</el-tag>
             <el-tag v-else-if="row.skipped" type="info" size="small">跳过</el-tag>
-            <el-tooltip v-else :content="row.error" placement="top" :show-after="200">
-              <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
-            </el-tooltip>
+            <template v-else>
+              <el-tooltip :content="row.error" placement="top" :show-after="200">
+                <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
+              </el-tooltip>
+              <el-button link type="danger" size="small" style="margin-left: 8px" @click="removePreviewRow($index)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -127,12 +130,15 @@
         <el-table-column type="index" label="序号" width="50" />
         <el-table-column prop="group_name" label="营业部" width="200" />
         <el-table-column prop="advisory_income" label="投顾收入(元)" width="150" align="right" />
-        <el-table-column label="状态" min-width="180">
-          <template #default="{ row }">
+        <el-table-column label="状态" min-width="200">
+          <template #default="{ row, $index }">
             <el-tag v-if="row.valid" type="success" size="small">有效</el-tag>
-            <el-tooltip v-else :content="row.error" placement="top" :show-after="200">
-              <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
-            </el-tooltip>
+            <template v-else>
+              <el-tooltip :content="row.error" placement="top" :show-after="200">
+                <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
+              </el-tooltip>
+              <el-button link type="danger" size="small" style="margin-left: 8px" @click="removePreviewRow($index)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -275,6 +281,10 @@ const handleFileChange = (file) => {
 
 const handleFileRemove = () => {
   previewData.value = []
+}
+
+const removePreviewRow = (index) => {
+  previewData.value.splice(index, 1)
 }
 
 // Parse product subscription data
