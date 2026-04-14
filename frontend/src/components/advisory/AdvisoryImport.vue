@@ -295,7 +295,7 @@ const parseProductData = (rawData) => {
   return rawData.map((row, index) => {
     // Extract fields from various possible column names
     const groupName = row['营业部'] || row['部门'] || ''
-    const memberName = row['认领员工'] || row['员工'] || row['员工姓名'] || (selectedProductType.value === '量化T' ? row['推荐人'] : '') || ''
+    const memberName = row['认领员工'] || row['员工'] || row['员工姓名'] || (selectedProductType.value === '量化T策略' ? row['推荐人'] : '') || ''
     const orderDateRaw = row['订购日期'] || row['日期'] || row['签约日期'] || ''
     const orderStatus = row['订单状态'] || row['状态'] || ''
     const assetAmount = row['昨日净资产'] || row['资产'] || row['签约资产'] || 0
