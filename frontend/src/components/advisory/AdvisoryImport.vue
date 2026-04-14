@@ -102,38 +102,38 @@
       </div>
 
       <!-- Product Data Preview -->
-      <el-table v-if="selectedProductType !== '投顾收入'" :data="previewData.slice(0, 10)" size="small" stripe max-height="400">
+      <el-table v-if="selectedProductType !== '投顾收入'" :data="previewData" size="small" stripe max-height="600">
         <el-table-column type="index" label="序号" width="50" />
         <el-table-column prop="group_name" label="营业部" width="120" />
         <el-table-column prop="member_name" label="认领员工" width="100" />
         <el-table-column prop="subscription_date" label="订购日期" width="110" />
         <el-table-column prop="order_status" label="订单状态" width="90" />
         <el-table-column prop="asset_amount" label="昨日净资产" width="110" align="right" />
-        <el-table-column label="状态" width="120">
+        <el-table-column label="状态" min-width="180">
           <template #default="{ row }">
             <el-tag v-if="row.valid && !row.skipped" type="success" size="small">有效</el-tag>
             <el-tag v-else-if="row.skipped" type="info" size="small">跳过</el-tag>
-            <el-tag v-else type="danger" size="small">{{ row.error }}</el-tag>
+            <el-tooltip v-else :content="row.error" placement="top" :show-after="200">
+              <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- Income Data Preview -->
-      <el-table v-else :data="previewData.slice(0, 10)" size="small" stripe max-height="400">
+      <el-table v-else :data="previewData" size="small" stripe max-height="600">
         <el-table-column type="index" label="序号" width="50" />
         <el-table-column prop="group_name" label="营业部" width="200" />
         <el-table-column prop="advisory_income" label="投顾收入(元)" width="150" align="right" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" min-width="180">
           <template #default="{ row }">
             <el-tag v-if="row.valid" type="success" size="small">有效</el-tag>
-            <el-tag v-else type="danger" size="small">{{ row.error }}</el-tag>
+            <el-tooltip v-else :content="row.error" placement="top" :show-after="200">
+              <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
-
-      <div v-if="previewData.length > 10" class="preview-more">
-        还有 {{ previewData.length - 10 }} 条数据...
-      </div>
     </div>
 
     <!-- Import History -->
