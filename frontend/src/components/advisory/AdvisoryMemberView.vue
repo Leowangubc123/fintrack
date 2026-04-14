@@ -323,7 +323,13 @@ onMounted(() => {
 }
 
 :deep(.el-table td) {
-  padding: 8px 0;
+  padding: 10px 0;
+  color: #111827;
+}
+
+:deep(.el-button--primary) {
+  background: #1456f0;
+  border-color: #1456f0;
 }
 
 .pagination-bar {

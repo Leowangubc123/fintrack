@@ -528,8 +528,8 @@ onMounted(() => {
 }
 
 .info-card {
-  background: linear-gradient(135deg, #ECFEFF 0%, #E0F2FE 100%);
-  border: 1px solid #A5F3FC;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 1px solid #BFDBFE;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
@@ -541,13 +541,13 @@ onMounted(() => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #0E7490;
+  color: #1456f0;
   margin-bottom: 12px;
 }
 
 .info-content {
   font-size: 13px;
-  color: #0F766E;
+  color: #1E40AF;
   line-height: 1.8;
 }
 
@@ -605,8 +605,8 @@ onMounted(() => {
 }
 
 .upload-area :deep(.el-upload-dragger:hover) {
-  border-color: #0891B2;
-  background: #F0FDFA;
+  border-color: #1456f0;
+  background: #EFF6FF;
 }
 
 .upload-area :deep(.el-upload-dragger.is-disabled) {
@@ -623,11 +623,11 @@ onMounted(() => {
 
 .upload-text {
   font-size: 14px;
-  color: #6B7280;
+  color: #374151;
 }
 
 .upload-text em {
-  color: #0891B2;
+  color: #1456f0;
   font-style: normal;
   font-weight: 500;
   margin-left: 4px;
@@ -635,7 +635,7 @@ onMounted(() => {
 
 .upload-tip {
   font-size: 12px;
-  color: #9CA3AF;
+  color: #6B7280;
   margin-top: 8px;
   text-align: center;
 }
@@ -645,6 +645,11 @@ onMounted(() => {
   justify-content: center;
   gap: 16px;
   margin-top: 24px;
+}
+
+.import-actions :deep(.el-button--primary) {
+  background: #1456f0;
+  border-color: #1456f0;
 }
 
 .preview-card {
@@ -695,7 +700,7 @@ onMounted(() => {
 .history-card {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
   border: 1px solid #E5E7EB;
 }
 
@@ -707,7 +712,34 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: #111827;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+/* Table styling improvements */
+.history-card :deep(.el-table) {
+  font-size: 14px;
+}
+
+.history-card :deep(.el-table th) {
+  background: #F9FAFB;
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+.history-card :deep(.el-table td) {
+  color: #111827;
+  padding: 14px 0;
+  font-size: 14px;
+}
+
+.history-card :deep(.el-table__row) {
+  transition: background 0.15s ease;
+}
+
+.history-card :deep(.el-table__row:hover td) {
+  background: #F8FAFC;
 }
 
 .has-error {

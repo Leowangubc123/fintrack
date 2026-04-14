@@ -70,12 +70,26 @@
       <div class="chart-card">
         <div class="chart-header">
           <div class="chart-title">各产品签约分布</div>
-          <div class="chart-legend">
-            <span class="legend-item"><span class="dot households"></span>签约户数</span>
-            <span class="legend-item"><span class="dot assets"></span>签约资产(万)</span>
+          <div class="chart-subtitle">按签约户数统计</div>
+        </div>
+        <div class="product-bars">
+          <div
+            v-for="product in productOrder"
+            :key="product"
+            class="product-bar-row"
+          >
+            <div class="product-label">{{ product }}</div>
+            <div class="product-bar-track">
+              <div
+                class="product-bar-fill"
+                :style="{ width: getBarWidth(product), backgroundColor: getProductColor(product) }"
+              >
+                <span class="bar-value">{{ dataMap[product]?.households || 0 }}户</span>
+              </div>
+            </div>
+            <div class="product-asset-text">¥{{ formatAsset(dataMap[product]?.assets || 0) }}万</div>
           </div>
         </div>
-        <div ref="productChart" class="chart-content" style="height: 320px;"></div>
       </div>
       <div class="chart-card">
         <div class="chart-header">
@@ -122,12 +136,52 @@ const stats = ref({
   trend_data: []
 })
 
-const productChart = ref(null)
 const trendChart = ref(null)
-let productChartInstance = null
 let trendChartInstance = null
 
 const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
+
+const productColors = {
+  '万2': '#0EA5E9',
+  '千1': '#10B981',
+  '千3': '#F59E0B',
+  'ETF投顾': '#3B82F6',
+  '量化T策略': '#8B5CF6',
+  'GWT': '#F43F5E'
+}
+
+const dataMap = computed(() => {
+  const map = {}
+  const distribution = stats.value.product_distribution || []
+  distribution.forEach(item => {
+    map[item.product_type] = {
+      households: item.households || 0,
+      assets: item.assets || 0
+    }
+  })
+  productOrder.forEach(p => {
+    if (!map[p]) map[p] = { households: 0, assets: 0 }
+  })
+  return map
+})
+
+const maxHouseholds = computed(() => {
+  return Math.max(...productOrder.map(p => dataMap.value[p]?.households || 0), 1)
+})
+
+const getBarWidth = (product) => {
+  const val = dataMap.value[product]?.households || 0
+  if (maxHouseholds.value === 0) return '0%'
+  return Math.max((val / maxHouseholds.value) * 100, 3) + '%'
+}
+
+const getProductColor = (product) => productColors[product] || '#1456f0'
+
+const formatAsset = (num) => {
+  if (num === null || num === undefined) return '0'
+  if (num >= 10000) return (num / 10000).toFixed(1) + '亿'
+  return num.toLocaleString('zh-CN')
+}
 
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'
@@ -176,9 +230,6 @@ const fetchStats = async () => {
 }
 
 const initCharts = () => {
-  if (productChart.value) {
-    productChartInstance = echarts.init(productChart.value)
-  }
   if (trendChart.value) {
     trendChartInstance = echarts.init(trendChart.value)
   }
@@ -187,93 +238,13 @@ const initCharts = () => {
 }
 
 const handleResize = () => {
-  productChartInstance?.resize()
   trendChartInstance?.resize()
 }
 
 const updateCharts = () => {
   nextTick(() => {
-    updateProductChart()
     updateTrendChart()
   })
-}
-
-const updateProductChart = () => {
-  if (!productChartInstance) return
-
-  const distribution = stats.value.product_distribution || []
-  const dataMap = {}
-  distribution.forEach(item => {
-    dataMap[item.product_type] = {
-      households: item.households || 0,
-      assets: item.assets || 0
-    }
-  })
-
-  const householdsData = productOrder.map(p => dataMap[p]?.households || 0)
-  const assetsData = productOrder.map(p => dataMap[p]?.assets || 0)
-
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' }
-    },
-    legend: {
-      data: ['签约户数', '签约资产(万)'],
-      right: 0,
-      top: 0,
-      textStyle: { color: '#6B7280', fontSize: 12 }
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '12%',
-      containLabel: true
-    },
-    xAxis: [
-      {
-        type: 'value',
-        name: '户数',
-        axisLine: { show: false },
-        splitLine: { lineStyle: { color: '#F3F4F6' } },
-        axisLabel: { color: '#6B7280' }
-      },
-      {
-        type: 'value',
-        name: '资产(万)',
-        axisLine: { show: false },
-        splitLine: { show: false },
-        axisLabel: { color: '#6B7280' }
-      }
-    ],
-    yAxis: {
-      type: 'category',
-      data: productOrder,
-      axisLine: { lineStyle: { color: '#E5E7EB' } },
-      axisLabel: { color: '#6B7280' },
-      axisTick: { alignWithLabel: true }
-    },
-    series: [
-      {
-        name: '签约户数',
-        type: 'bar',
-        data: householdsData,
-        itemStyle: { color: '#0891B2', borderRadius: [0, 4, 4, 0] },
-        barWidth: '40%'
-      },
-      {
-        name: '签约资产(万)',
-        type: 'bar',
-        xAxisIndex: 1,
-        data: assetsData,
-        itemStyle: { color: '#06B6D4', borderRadius: [0, 4, 4, 0] },
-        barWidth: '40%'
-      }
-    ]
-  }
-
-  productChartInstance.setOption(option, true)
 }
 
 const updateTrendChart = () => {
@@ -300,7 +271,7 @@ const updateTrendChart = () => {
       type: 'category',
       data: months,
       axisLine: { lineStyle: { color: '#E5E7EB' } },
-      axisLabel: { color: '#6B7280' }
+      axisLabel: { color: '#374151' }
     },
     yAxis: [
       {
@@ -309,7 +280,7 @@ const updateTrendChart = () => {
         position: 'left',
         axisLine: { show: false },
         splitLine: { lineStyle: { color: '#F3F4F6' } },
-        axisLabel: { color: '#6B7280' }
+        axisLabel: { color: '#374151' }
       },
       {
         type: 'value',
@@ -317,7 +288,7 @@ const updateTrendChart = () => {
         position: 'right',
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#6B7280' }
+        axisLabel: { color: '#374151' }
       }
     ],
     series: [
@@ -325,7 +296,7 @@ const updateTrendChart = () => {
         name: '投顾收入',
         type: 'bar',
         data: incomeData,
-        itemStyle: { color: '#0891B2', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: '#1456f0', borderRadius: [4, 4, 0, 0] },
         barWidth: '40%'
       },
       {
@@ -392,7 +363,7 @@ onMounted(() => {
 
 .dimension-tab.active {
   background: white;
-  color: #0891B2;
+  color: #1456f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -433,7 +404,7 @@ onMounted(() => {
 
 .kpi-value.date {
   font-size: 20px;
-  color: #0891B2;
+  color: #1456f0;
 }
 
 .kpi-change {
@@ -455,8 +426,8 @@ onMounted(() => {
 }
 
 .kpi-card.kpi-date {
-  background: linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%);
-  border-color: #A5F3FC;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border-color: #BFDBFE;
 }
 
 .charts-grid {
@@ -486,6 +457,12 @@ onMounted(() => {
   color: #111827;
 }
 
+.chart-subtitle {
+  font-size: 13px;
+  color: #9CA3AF;
+  margin-top: 4px;
+}
+
 .chart-legend {
   display: flex;
   gap: 16px;
@@ -506,15 +483,15 @@ onMounted(() => {
 }
 
 .dot.households {
-  background: #0891B2;
+  background: #1456f0;
 }
 
 .dot.assets {
-  background: #06B6D4;
+  background: #1456f0;
 }
 
 .dot.income {
-  background: #0891B2;
+  background: #1456f0;
 }
 
 .dot.line {
@@ -524,6 +501,65 @@ onMounted(() => {
 
 .chart-content {
   width: 100%;
+}
+
+/* Product Bar Chart */
+.product-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.product-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-label {
+  width: 60px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.product-bar-track {
+  flex: 1;
+  height: 28px;
+  background: #F3F4F6;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.product-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  transition: width 0.5s ease;
+  min-width: 0;
+}
+
+.bar-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.product-asset-text {
+  width: 80px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 @media (max-width: 1200px) {
@@ -539,6 +575,16 @@ onMounted(() => {
 @media (max-width: 768px) {
   .kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .product-label {
+    width: 50px;
+    font-size: 13px;
+  }
+
+  .product-asset-text {
+    width: 70px;
+    font-size: 13px;
   }
 }
 </style>

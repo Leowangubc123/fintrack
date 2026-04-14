@@ -1,6 +1,6 @@
 <template>
   <div class="advisory-target">
-    <!-- Header with year selector -->
+    <!-- Header -->
     <div class="view-header">
       <el-select v-model="selectedYear" style="width: 120px">
         <el-option v-for="year in years" :key="year" :label="year + '年'" :value="year" />
@@ -10,45 +10,47 @@
       </el-button>
     </div>
 
-    <!-- Targets Table -->
-    <div class="table-container">
-      <el-table :data="tableData" stripe v-loading="loading">
-        <el-table-column type="index" label="序号" width="60" />
-
-        <el-table-column prop="group_name" label="营业部" min-width="150" />
-
-        <el-table-column label="收入目标" align="right" width="150">
-          <template #default="{ row }">
+    <!-- Targets Table - Apple Style -->
+    <div class="targets-card">
+      <div class="card-title">营业部考核指标</div>
+      <div class="custom-table">
+        <div class="table-head">
+          <div class="th" style="width: 50px">序号</div>
+          <div class="th" style="flex: 1">营业部</div>
+          <div class="th" style="width: 120px" align="right">收入目标</div>
+          <div class="th" style="width: 100px" align="right">户数目标</div>
+          <div class="th" style="width: 100px" align="right">当前收入</div>
+          <div class="th" style="width: 90px" align="right">当前户数</div>
+          <div class="th" style="width: 140px">收入完成率</div>
+          <div class="th" style="width: 140px">户数完成率</div>
+          <div class="th" style="width: 100px" align="center">操作</div>
+        </div>
+        <div
+          v-for="(row, index) in tableData"
+          :key="row.group_id"
+          class="table-body-row"
+          :class="{ selected: selectedGroupId === row.group_id, editing: editingRow === row.group_id }"
+          @click="selectGroup(row.group_id)"
+        >
+          <div class="td" style="width: 50px" data-label="序号">{{ index + 1 }}</div>
+          <div class="td" style="flex: 1" data-label="营业部">
+            <span class="group-name">{{ row.group_name }}</span>
+          </div>
+          <div class="td" style="width: 120px" align="right" data-label="收入目标">
             <div v-if="editingRow === row.group_id" class="edit-field">
-              <el-input-number v-model="editForm.income_target" :min="0" :precision="2" size="small" style="width: 120px" />
+              <el-input-number v-model="editForm.income_target" :min="0" :precision="2" size="small" style="width: 110px" />
             </div>
             <span v-else>{{ row.income_target?.toFixed(2) || '0.00' }}万</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="户数目标" align="right" width="120">
-          <template #default="{ row }">
+          </div>
+          <div class="td" style="width: 100px" align="right" data-label="户数目标">
             <div v-if="editingRow === row.group_id" class="edit-field">
-              <el-input-number v-model="editForm.households_target" :min="0" size="small" style="width: 100px" />
+              <el-input-number v-model="editForm.households_target" :min="0" size="small" style="width: 90px" />
             </div>
             <span v-else>{{ row.households_target || 0 }}户</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="当前收入" align="right" width="120">
-          <template #default="{ row }">
-            <span>{{ row.current_income?.toFixed(2) || '0.00' }}万</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="当前户数" align="right" width="100">
-          <template #default="{ row }">
-            <span>{{ row.current_households || 0 }}户</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="收入完成率" align="center" width="120">
-          <template #default="{ row }">
+          </div>
+          <div class="td" style="width: 100px" align="right" data-label="当前收入">{{ row.current_income?.toFixed(2) || '0.00' }}万</div>
+          <div class="td" style="width: 90px" align="right" data-label="当前户数">{{ row.current_households || 0 }}户</div>
+          <div class="td" style="width: 140px" data-label="收入完成率">
             <div class="rate-cell">
               <div class="rate-bar-bg">
                 <div
@@ -61,11 +63,8 @@
                 {{ row.income_rate || 0 }}%
               </span>
             </div>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="户数完成率" align="center" width="120">
-          <template #default="{ row }">
+          </div>
+          <div class="td" style="width: 140px" data-label="户数完成率">
             <div class="rate-cell">
               <div class="rate-bar-bg">
                 <div
@@ -78,11 +77,8 @@
                 {{ row.households_rate || 0 }}%
               </span>
             </div>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
+          </div>
+          <div class="td" style="width: 100px" align="center" data-label="操作" @click.stop>
             <div v-if="editingRow === row.group_id">
               <el-button type="primary" link size="small" @click="saveEdit(row)">保存</el-button>
               <el-button link size="small" @click="cancelEdit">取消</el-button>
@@ -90,9 +86,81 @@
             <div v-else>
               <el-button type="primary" link size="small" @click="startEdit(row)">编辑</el-button>
             </div>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Group Subscription Details -->
+    <div v-if="selectedGroupId" class="detail-card">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title">{{ selectedGroupName }} - 签约明细</div>
+          <div class="detail-subtitle">点击列表项可编辑折算户数</div>
+        </div>
+        <div class="detail-search">
+          <el-input v-model="detailSearch" placeholder="搜索员工" clearable style="width: 200px" size="small">
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+      </div>
+
+      <div class="subscription-list">
+        <div
+          v-for="row in paginatedGroupSubscriptions"
+          :key="row.id"
+          class="subscription-item"
+          @click="openEditConverted(row)"
+        >
+          <div class="sub-main">
+            <div class="sub-employee">{{ row.member_name }}</div>
+            <div class="sub-product">
+              <span class="product-tag">{{ row.product_type }}</span>
+            </div>
+            <div class="sub-date">{{ row.subscription_date }}</div>
+          </div>
+          <div class="sub-stats">
+            <div class="sub-stat">
+              <span class="sub-stat-label">签约资产</span>
+              <span class="sub-stat-value">¥{{ ((row.asset_amount || 0) / 10000).toFixed(1) }}万</span>
+            </div>
+            <div class="sub-stat">
+              <span class="sub-stat-label">原始户数</span>
+              <span class="sub-stat-value">{{ row.original_households }}户</span>
+            </div>
+            <div class="sub-stat">
+              <span class="sub-stat-label">折算户数</span>
+              <span
+                class="sub-stat-value"
+                :class="{ modified: row.converted_households !== row.original_households }"
+              >
+                {{ row.converted_households }}户
+              </span>
+            </div>
+            <div v-if="row.conversion_note" class="sub-note">
+              {{ row.conversion_note }}
+            </div>
+          </div>
+          <div class="sub-action">
+            <el-button type="primary" link size="small" @click.stop="openEditConverted(row)">编辑</el-button>
+          </div>
+        </div>
+        <div v-if="paginatedGroupSubscriptions.length === 0" class="detail-empty">
+          暂无签约明细
+        </div>
+      </div>
+
+      <el-pagination
+        v-if="filteredGroupSubscriptions.length > detailPageSize"
+        v-model:current-page="detailPage"
+        v-model:page-size="detailPageSize"
+        :total="filteredGroupSubscriptions.length"
+        layout="prev, pager, next"
+        small
+        class="detail-pagination"
+      />
     </div>
 
     <!-- Edit Converted Households Dialog -->
@@ -109,7 +177,7 @@
             <span>{{ editingSubscription.product_type }}</span>
           </el-form-item>
           <el-form-item label="签约资产">
-            <span>{{ editingSubscription.asset_amount }}万</span>
+            <span>¥{{ ((editingSubscription.asset_amount || 0) / 10000).toFixed(1) }}万</span>
           </el-form-item>
           <el-form-item label="原始户数">
             <span>{{ editingSubscription.original_households }}户</span>
@@ -145,11 +213,9 @@
         </el-form-item>
         <el-form-item label="收入目标">
           <el-input-number v-model="batchForm.income_target" :min="0" :precision="2" style="width: 100%" />
-          <template #append>万元</template>
         </el-form-item>
         <el-form-item label="户数目标">
           <el-input-number v-model="batchForm.households_target" :min="0" style="width: 100%" />
-          <template #append>户</template>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -157,57 +223,13 @@
         <el-button type="primary" @click="saveBatchTargets">保存</el-button>
       </template>
     </el-dialog>
-
-    <!-- Detail Section -->
-    <div class="detail-section">
-      <div class="detail-header">
-        <span class="detail-title">签约明细 - 折算户数编辑</span>
-        <div class="detail-filters">
-          <el-select v-model="detailFilterGroup" placeholder="营业部" clearable style="width: 140px">
-            <el-option v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" />
-          </el-select>
-          <el-input v-model="detailSearch" placeholder="搜索员工" clearable style="width: 160px" />
-        </div>
-      </div>
-
-      <el-table :data="paginatedSubscriptions" size="small" stripe max-height="400">
-        <el-table-column prop="group_name" label="营业部" width="140" />
-        <el-table-column prop="member_name" label="员工" width="100" />
-        <el-table-column prop="product_type" label="产品" width="80" />
-        <el-table-column prop="subscription_date" label="签约日期" width="110" />
-        <el-table-column prop="asset_amount" label="资产(万)" width="90" align="right" />
-        <el-table-column prop="original_households" label="原始户数" width="90" align="center" />
-        <el-table-column prop="converted_households" label="折算户数" width="90" align="center">
-          <template #default="{ row }">
-            <span :class="{ 'modified': row.converted_households !== row.original_households }">
-              {{ row.converted_households }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="conversion_note" label="折算说明" min-width="150" show-overflow-tooltip />
-        <el-table-column label="操作" width="80" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="openEditConverted(row)">编辑</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        v-model:current-page="detailPage"
-        v-model:page-size="detailPageSize"
-        :total="filteredSubscriptions.length"
-        layout="prev, pager, next"
-        small
-        class="detail-pagination"
-      />
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Search } from '@element-plus/icons-vue'
 import { advisoryApi } from '../../api/advisory.js'
 import { groupsApi } from '../../api/index.js'
 
@@ -235,10 +257,10 @@ const batchForm = ref({
   households_target: 0
 })
 
-const detailFilterGroup = ref(null)
+const selectedGroupId = ref(null)
 const detailSearch = ref('')
 const detailPage = ref(1)
-const detailPageSize = ref(10)
+const detailPageSize = ref(8)
 
 const showEditDialog = ref(false)
 const editingSubscription = ref(null)
@@ -313,22 +335,30 @@ const tableData = computed(() => {
   })
 })
 
-const filteredSubscriptions = computed(() => {
-  let data = subscriptions.value
-  if (detailFilterGroup.value) {
-    data = data.filter(s => s.group_id === detailFilterGroup.value)
-  }
+const selectedGroupName = computed(() => {
+  const group = groups.value.find(g => g.id === selectedGroupId.value)
+  return group ? group.name : ''
+})
+
+const filteredGroupSubscriptions = computed(() => {
+  let data = subscriptions.value.filter(s => s.group_id === selectedGroupId.value)
   if (detailSearch.value) {
     const search = detailSearch.value.toLowerCase()
     data = data.filter(s => s.member_name.toLowerCase().includes(search))
   }
-  return data
+  return data.sort((a, b) => new Date(b.subscription_date) - new Date(a.subscription_date))
 })
 
-const paginatedSubscriptions = computed(() => {
+const paginatedGroupSubscriptions = computed(() => {
   const start = (detailPage.value - 1) * detailPageSize.value
-  return filteredSubscriptions.value.slice(start, start + detailPageSize.value)
+  return filteredGroupSubscriptions.value.slice(start, start + detailPageSize.value)
 })
+
+const selectGroup = (groupId) => {
+  if (editingRow.value) return
+  selectedGroupId.value = selectedGroupId.value === groupId ? null : groupId
+  detailPage.value = 1
+}
 
 const startEdit = (row) => {
   editingRow.value = row.group_id
@@ -362,7 +392,6 @@ const saveEdit = async (row) => {
 const saveBatchTargets = async () => {
   try {
     if (batchForm.value.group_id) {
-      // Single group
       await advisoryApi.saveTarget({
         group_id: batchForm.value.group_id,
         year: selectedYear.value,
@@ -370,7 +399,6 @@ const saveBatchTargets = async () => {
         households_target: batchForm.value.households_target
       })
     } else {
-      // All groups
       for (const group of groups.value) {
         await advisoryApi.saveTarget({
           group_id: group.id,
@@ -423,6 +451,7 @@ const getProgressClass = (rate) => {
 watch(selectedYear, () => {
   fetchTargets()
   fetchSubscriptions()
+  selectedGroupId.value = null
 })
 
 onMounted(() => {
@@ -444,30 +473,100 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.table-container {
+.view-header :deep(.el-button--primary) {
+  background: #1456f0;
+  border-color: #1456f0;
+}
+
+.targets-card {
   background: white;
   border-radius: 12px;
   border: 1px solid #E5E7EB;
-  overflow: hidden;
-  margin-bottom: 24px;
+  padding: 24px;
+  margin-bottom: 20px;
 }
 
-:deep(.el-table th) {
-  background: #F9FAFB;
+.card-title {
+  font-size: 16px;
   font-weight: 600;
-  color: #374151;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+/* Custom Apple-style Table */
+.custom-table {
+  width: 100%;
+}
+
+.table-head {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: #F9FAFB;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 6px;
+}
+
+.table-body-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.table-body-row:hover {
+  background: #F8FAFC;
+}
+
+.table-body-row.selected {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+}
+
+.table-body-row.editing {
+  background: #FFFBEB;
+  cursor: default;
+}
+
+.th,
+.td {
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.th:first-child,
+.td:first-child {
+  padding-left: 0;
+}
+
+.th:last-child,
+.td:last-child {
+  padding-right: 0;
+}
+
+.group-name {
+  font-weight: 500;
 }
 
 .edit-field {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
 }
 
 .rate-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .rate-bar-bg {
@@ -476,6 +575,7 @@ onMounted(() => {
   background: #F3F4F6;
   border-radius: 3px;
   overflow: hidden;
+  min-width: 60px;
 }
 
 .rate-bar-fill {
@@ -497,9 +597,10 @@ onMounted(() => {
 }
 
 .rate-text {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  min-width: 40px;
+  min-width: 44px;
+  text-align: right;
 }
 
 .rate-text.success {
@@ -514,18 +615,21 @@ onMounted(() => {
   color: #EF4444;
 }
 
-.detail-section {
+/* Detail Card */
+.detail-card {
   background: white;
   border-radius: 12px;
   border: 1px solid #E5E7EB;
-  padding: 20px;
+  padding: 24px;
 }
 
 .detail-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .detail-title {
@@ -534,9 +638,133 @@ onMounted(() => {
   color: #111827;
 }
 
-.detail-filters {
+.detail-subtitle {
+  font-size: 13px;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+.detail-search {
+  flex-shrink: 0;
+}
+
+.subscription-list {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subscription-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #FAFAFB;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subscription-item:hover {
+  background: #F1F5F9;
+  border-color: #E2E8F0;
+}
+
+.sub-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sub-employee {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.sub-product {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.sub-date {
+  font-size: 14px;
+  color: #6B7280;
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.product-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background: #EFF6FF;
+  color: #1456f0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sub-stats {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-shrink: 0;
+}
+
+.sub-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 70px;
+}
+
+.sub-stat-label {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.sub-stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.sub-stat-value.modified {
+  color: #1456f0;
+}
+
+.sub-note {
+  font-size: 12px;
+  color: #6B7280;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub-action {
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.detail-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.detail-pagination {
+  margin-top: 20px;
+  justify-content: flex-end;
 }
 
 .form-tip {
@@ -545,13 +773,68 @@ onMounted(() => {
   margin-top: 4px;
 }
 
-.modified {
-  color: #0891B2;
+:deep(.el-dialog__header) {
   font-weight: 600;
 }
 
-.detail-pagination {
-  margin-top: 16px;
-  justify-content: flex-end;
+@media (max-width: 1100px) {
+  .sub-main {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+
+  .sub-stats {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    justify-content: flex-end;
+  }
+
+  .subscription-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .sub-action {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 900px) {
+  .table-head {
+    display: none;
+  }
+
+  .table-body-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 16px;
+    margin-bottom: 8px;
+    border: 1px solid #F3F4F6;
+  }
+
+  .table-body-row.selected {
+    border-color: #BFDBFE;
+  }
+
+  .td {
+    width: 100% !important;
+    padding: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: #6B7280;
+    font-size: 13px;
+  }
+
+  .rate-cell {
+    width: 100%;
+  }
 }
 </style>

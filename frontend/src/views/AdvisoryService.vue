@@ -90,9 +90,9 @@ const activeTab = ref('annual-dashboard')
 }
 
 .tab-item.active {
-  color: #0891B2;
-  border-bottom-color: #0891B2;
-  background: rgba(8, 145, 178, 0.05);
+  color: #1456f0;
+  border-bottom-color: #1456f0;
+  background: rgba(20, 86, 240, 0.05);
 }
 
 .tab-content {

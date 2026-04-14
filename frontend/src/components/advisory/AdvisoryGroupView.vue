@@ -8,9 +8,14 @@
         </el-select>
       </div>
       <div class="summary-stats" v-if="totalStats">
-        <span>全辖区合计：签约户数 {{ formatNumber(totalStats.households) }}户</span>
-        <span>签约资产 {{ formatNumber(totalStats.assets) }}万</span>
-        <span>投顾收入 {{ formatNumber(totalStats.income) }}元</span>
+        <span class="summary-item">
+          <span class="summary-label">全辖区合计</span>
+          <span class="summary-value">签约户数 {{ formatNumber(totalStats.households) }}户</span>
+          <span class="summary-dot">·</span>
+          <span class="summary-value">签约资产 {{ formatNumber(totalStats.assets) }}万</span>
+          <span class="summary-dot">·</span>
+          <span class="summary-value">投顾收入 {{ formatNumber(totalStats.income) }}元</span>
+        </span>
       </div>
     </div>
 
@@ -24,38 +29,39 @@
       >
         <!-- Summary Row -->
         <div class="group-summary" @click="toggleExpand(group.group_id)">
-          <div class="rank">{{ index + 1 }}</div>
-          <div class="group-name">{{ group.group_name }}</div>
-          <div class="group-summary-stats">
-            <span>{{ group.total_households }}户</span>
-            <span>{{ group.total_assets }}万</span>
+          <div class="rank" :class="`rank-${index + 1}`">{{ index + 1 }}</div>
+          <div class="group-info">
+            <div class="group-name">{{ group.group_name }}</div>
+            <div class="group-meta">
+              <span>签约 {{ group.total_households }}户</span>
+              <span class="meta-dot">·</span>
+              <span>资产 ¥{{ formatBigAsset(group.total_assets) }}</span>
+              <span class="meta-dot">·</span>
+              <span>收入 ¥{{ formatNumber(group.total_income) }}万</span>
+            </div>
           </div>
-          <div class="progress-section">
-            <div class="progress-item">
-              <span class="progress-label">收入完成率</span>
-              <div class="progress-bar">
+          <div class="group-rates">
+            <div class="rate-box">
+              <div class="rate-value" :class="getProgressClass(group.income_rate)">{{ group.income_rate }}%</div>
+              <div class="rate-label">收入完成率</div>
+              <div class="rate-bar-mini">
                 <div
-                  class="progress-fill"
+                  class="rate-bar-mini-fill"
                   :class="getProgressClass(group.income_rate)"
                   :style="{ width: Math.min(group.income_rate, 100) + '%' }"
                 />
               </div>
-              <span class="progress-value" :class="getProgressClass(group.income_rate)">
-                {{ group.income_rate }}%
-              </span>
             </div>
-            <div class="progress-item">
-              <span class="progress-label">户数完成率</span>
-              <div class="progress-bar">
+            <div class="rate-box">
+              <div class="rate-value" :class="getProgressClass(group.households_rate)">{{ group.households_rate }}%</div>
+              <div class="rate-label">户数完成率</div>
+              <div class="rate-bar-mini">
                 <div
-                  class="progress-fill"
+                  class="rate-bar-mini-fill"
                   :class="getProgressClass(group.households_rate)"
                   :style="{ width: Math.min(group.households_rate, 100) + '%' }"
                 />
               </div>
-              <span class="progress-value" :class="getProgressClass(group.households_rate)">
-                {{ group.households_rate }}%
-              </span>
             </div>
           </div>
           <div class="expand-icon">
@@ -76,7 +82,7 @@
                 {{ group.product_stats[product]?.households || 0 }}<span class="unit">户</span>
               </div>
               <div class="product-assets">
-                {{ group.product_stats[product]?.assets || 0 }}<span class="unit">万</span>
+                ¥{{ (group.product_stats[product]?.assets || 0).toFixed(1) }}<span class="unit">万</span>
               </div>
             </div>
           </div>
@@ -84,14 +90,31 @@
           <!-- Recent Subscriptions -->
           <div class="recent-section">
             <div class="section-title">最近签约明细</div>
-            <el-table :data="group.recent_subscriptions" size="small" stripe>
-              <el-table-column prop="subscription_date" label="签约日期" width="120" />
-              <el-table-column prop="member_name" label="员工" width="100" />
-              <el-table-column prop="product_type" label="产品" width="100" />
-              <el-table-column prop="asset_amount" label="资产(万)" width="100">
-                <template #default="{ row }">{{ row.asset_amount }}万</template>
-              </el-table-column>
-            </el-table>
+            <div class="subscription-table">
+              <div class="table-header">
+                <div class="th" style="width: 120px">签约日期</div>
+                <div class="th" style="flex: 1">员工</div>
+                <div class="th" style="width: 100px">产品</div>
+                <div class="th" style="width: 120px" align="right">签约资产</div>
+                <div class="th" style="width: 120px" align="right">投顾收入</div>
+              </div>
+              <div
+                v-for="row in group.recent_subscriptions"
+                :key="row.id || row.subscription_date + row.member_name"
+                class="table-row"
+              >
+                <div class="td" style="width: 120px">{{ row.subscription_date }}</div>
+                <div class="td" style="flex: 1">{{ row.member_name }}</div>
+                <div class="td" style="width: 100px">
+                  <span class="product-tag">{{ row.product_type }}</span>
+                </div>
+                <div class="td" style="width: 120px" align="right">¥{{ ((row.asset_amount || 0) / 10000).toFixed(1) }}万</div>
+                <div class="td" style="width: 120px" align="right">¥{{ formatNumber(row.advisory_income || 0) }}</div>
+              </div>
+              <div v-if="group.recent_subscriptions.length === 0" class="table-empty">
+                暂无签约明细
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -122,6 +145,12 @@ const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'
   return num.toLocaleString('zh-CN')
+}
+
+const formatBigAsset = (num) => {
+  if (num === null || num === undefined) return '0万'
+  if (num >= 10000) return (num / 10000).toFixed(1) + '亿'
+  return num.toFixed(1) + '万'
 }
 
 const fetchGroups = async () => {
@@ -160,7 +189,6 @@ const fetchTargets = async () => {
 const groupStats = computed(() => {
   const stats = {}
 
-  // Initialize stats for all groups
   groups.value.forEach(group => {
     stats[group.id] = {
       group_id: group.id,
@@ -176,7 +204,6 @@ const groupStats = computed(() => {
     })
   })
 
-  // Aggregate subscription data
   subscriptions.value.forEach(sub => {
     const groupId = sub.group_id
     if (!stats[groupId]) return
@@ -193,7 +220,6 @@ const groupStats = computed(() => {
     }
   })
 
-  // Add recent subscriptions (top 5 per group)
   Object.keys(stats).forEach(groupId => {
     const groupSubs = subscriptions.value
       .filter(s => s.group_id === parseInt(groupId))
@@ -202,7 +228,6 @@ const groupStats = computed(() => {
     stats[groupId].recent_subscriptions = groupSubs
   })
 
-  // Calculate completion rates
   Object.values(stats).forEach(group => {
     const target = targets.value.find(t => t.group_id === group.group_id)
     if (target) {
@@ -218,7 +243,6 @@ const groupStats = computed(() => {
     }
   })
 
-  // Sort by total households desc
   return Object.values(stats).sort((a, b) => b.total_households - a.total_households)
 })
 
@@ -270,15 +294,28 @@ onMounted(() => {
 }
 
 .summary-stats {
-  display: flex;
-  gap: 24px;
   font-size: 14px;
+}
+
+.summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+}
+
+.summary-label {
+  font-weight: 500;
   color: #6B7280;
 }
 
-.summary-stats span {
-  font-weight: 500;
+.summary-value {
+  font-weight: 600;
   color: #111827;
+}
+
+.summary-dot {
+  color: #9CA3AF;
 }
 
 .groups-list {
@@ -302,125 +339,140 @@ onMounted(() => {
 .group-summary {
   display: flex;
   align-items: center;
-  padding: 16px 20px;
+  padding: 18px 24px;
   cursor: pointer;
-  gap: 16px;
+  gap: 20px;
 }
 
 .rank {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #F3F4F6;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: 600;
-  color: #6B7280;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #374151;
+  flex-shrink: 0;
 }
 
-.group-item:nth-child(1) .rank {
-  background: #FEF3C7;
-  color: #D97706;
+.rank-1 {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  color: #B45309;
 }
 
-.group-item:nth-child(2) .rank {
-  background: #E5E7EB;
-  color: #4B5563;
+.rank-2 {
+  background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+  color: #374151;
 }
 
-.group-item:nth-child(3) .rank {
-  background: #FCE7F3;
+.rank-3 {
+  background: linear-gradient(135deg, #FCE7F3 0%, #FBCFE8 100%);
   color: #BE185D;
 }
 
+.group-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 .group-name {
-  flex: 0 0 150px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #111827;
 }
 
-.group-summary-stats {
-  flex: 0 0 180px;
-  display: flex;
-  gap: 16px;
-  font-size: 14px;
-  color: #6B7280;
-}
-
-.progress-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.progress-item {
+.group-meta {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  flex-wrap: wrap;
 }
 
-.progress-label {
-  font-size: 12px;
+.meta-dot {
   color: #9CA3AF;
-  width: 70px;
 }
 
-.progress-bar {
-  flex: 1;
-  height: 8px;
-  background: #F3F4F6;
-  border-radius: 4px;
-  overflow: hidden;
+.group-rates {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-shrink: 0;
 }
 
-.progress-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
+.rate-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 70px;
 }
 
-.progress-fill.success {
-  background: #10B981;
+.rate-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.progress-fill.warning {
-  background: #F59E0B;
-}
-
-.progress-fill.danger {
-  background: #EF4444;
-}
-
-.progress-value {
-  font-size: 12px;
-  font-weight: 600;
-  width: 45px;
-  text-align: right;
-}
-
-.progress-value.success {
+.rate-value.success {
   color: #10B981;
 }
 
-.progress-value.warning {
+.rate-value.warning {
   color: #F59E0B;
 }
 
-.progress-value.danger {
+.rate-value.danger {
   color: #EF4444;
+}
+
+.rate-label {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.rate-bar-mini {
+  width: 60px;
+  height: 4px;
+  background: #F3F4F6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rate-bar-mini-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.rate-bar-mini-fill.success {
+  background: #10B981;
+}
+
+.rate-bar-mini-fill.warning {
+  background: #F59E0B;
+}
+
+.rate-bar-mini-fill.danger {
+  background: #EF4444;
 }
 
 .expand-icon {
   color: #9CA3AF;
   font-size: 16px;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .group-detail {
-  padding: 20px;
+  padding: 24px;
   background: #FAFAFB;
   border-top: 1px solid #E5E7EB;
 }
@@ -434,8 +486,8 @@ onMounted(() => {
 
 .product-cell {
   background: white;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 18px 12px;
   text-align: center;
   border: 1px solid #E5E7EB;
 }
@@ -443,59 +495,149 @@ onMounted(() => {
 .product-name {
   font-size: 14px;
   font-weight: 600;
-  color: #6B7280;
-  margin-bottom: 8px;
+  color: #374151;
+  margin-bottom: 10px;
 }
 
 .product-households {
-  font-size: 20px;
-  font-weight: 600;
-  color: #0891B2;
-  margin-bottom: 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1456f0;
+  margin-bottom: 6px;
 }
 
 .product-assets {
   font-size: 14px;
-  color: #0891B2;
+  font-weight: 500;
+  color: #1456f0;
 }
 
 .unit {
   font-size: 12px;
   margin-left: 2px;
   opacity: 0.8;
+  font-weight: 500;
 }
 
 .recent-section {
   background: white;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid #E5E7EB;
 }
 
 .section-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #111827;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.subscription-table {
+  width: 100%;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #F3F4F6;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+}
+
+.table-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #F3F4F6;
+  font-size: 14px;
+  color: #111827;
+  transition: background 0.15s ease;
+}
+
+.table-row:hover {
+  background: #FAFAFB;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.th,
+.td {
+  padding: 0 8px;
+}
+
+.th:first-child,
+.td:first-child {
+  padding-left: 0;
+}
+
+.th:last-child,
+.td:last-child {
+  padding-right: 0;
+}
+
+.product-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  background: #EFF6FF;
+  color: #1456f0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.table-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 14px;
 }
 
 @media (max-width: 1200px) {
   .detail-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .group-rates {
+    gap: 16px;
+  }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .group-summary {
     flex-wrap: wrap;
+    gap: 12px 16px;
   }
 
-  .progress-section {
+  .group-info {
     width: 100%;
-    margin-top: 8px;
+  }
+
+  .group-rates {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 56px;
   }
 
   .detail-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-header,
+  .table-row {
+    font-size: 13px;
   }
 }
 </style>
