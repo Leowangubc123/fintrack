@@ -287,6 +287,14 @@ const removePreviewRow = (index) => {
   previewData.value.splice(index, 1)
 }
 
+const getFirstValue = (row, keys) => {
+  for (const key of keys) {
+    const val = row[key]
+    if (val !== undefined && val !== null && val !== '') return val
+  }
+  return undefined
+}
+
 // Parse product subscription data
 const parseProductData = (rawData) => {
   const groupMap = {}
@@ -304,12 +312,82 @@ const parseProductData = (rawData) => {
 
   return rawData.map((row, index) => {
     // Extract fields from various possible column names
-    const groupName = row['营业部'] || row['部门'] || ''
-    const memberName = row['认领员工'] || row['服务人员'] || row['开发人员'] || (selectedProductType.value === '量化T策略' ? row['推荐人'] : '') || ''
-    const orderDateRaw = row['订购日期'] || row['日期'] || row['签约日期'] || ''
-    const orderStatus = row['订单状态'] || row['状态'] || row['交易状态'] || row['处理状态'] || row['支付状态'] || ''
-    const assetAmount = row['昨日净资产'] || row['资产'] || row['签约资产'] || (selectedProductType.value === '量化T策略' ? row['当日授权市值'] : 0) || 0
+    const groupName = getFirstValue(row, ['营业部', '部门']) || ''
+    const memberName = getFirstValue(row, ['认领员工', '服务人员', '开发人员', ...(selectedProductType.value === '量化T策略' ? ['推荐人'] : [])]) || ''
+    const orderDateRaw = getFirstValue(row, ['订购日期', '订阅日期', '日期', '签约日期']) || ''
+    const orderStatus = getFirstValue(row, ['订单状态', '状态', '交易状态', '处理状态', '支付状态']) || ''
+    const assetAmountRaw = selectedProductType.value === '量化T策略'
+      ? getFirstValue(row, ['昨日净资产', '资产', '签约资产', '当日授权市值'])
+      : getFirstValue(row, ['昨日净资产', '资产', '签约资产'])
 
+    // Missing field validation
+    if (!groupName) {
+      return {
+        row_num: index + 1,
+        group_name: '(空白)',
+        member_name: memberName || '(空白)',
+        subscription_date: parseDate(orderDateRaw),
+        order_status: orderStatus || '未知',
+        asset_amount: parseFloat(assetAmountRaw) || 0,
+        valid: false,
+        skipped: false,
+        error: '缺失营业部'
+      }
+    }
+    if (!memberName) {
+      return {
+        row_num: index + 1,
+        group_name: groupName,
+        member_name: '(空白)',
+        subscription_date: parseDate(orderDateRaw),
+        order_status: orderStatus || '未知',
+        asset_amount: parseFloat(assetAmountRaw) || 0,
+        valid: false,
+        skipped: false,
+        error: '缺失认领员工'
+      }
+    }
+    if (!orderDateRaw) {
+      return {
+        row_num: index + 1,
+        group_name: groupName,
+        member_name: memberName,
+        subscription_date: null,
+        order_status: orderStatus || '未知',
+        asset_amount: parseFloat(assetAmountRaw) || 0,
+        valid: false,
+        skipped: false,
+        error: '缺失订购日期'
+      }
+    }
+    if (!orderStatus) {
+      return {
+        row_num: index + 1,
+        group_name: groupName,
+        member_name: memberName,
+        subscription_date: parseDate(orderDateRaw),
+        order_status: '未知',
+        asset_amount: parseFloat(assetAmountRaw) || 0,
+        valid: false,
+        skipped: false,
+        error: '缺失订单状态'
+      }
+    }
+    if (assetAmountRaw === undefined || assetAmountRaw === null || assetAmountRaw === '') {
+      return {
+        row_num: index + 1,
+        group_name: groupName,
+        member_name: memberName,
+        subscription_date: parseDate(orderDateRaw),
+        order_status: orderStatus,
+        asset_amount: 0,
+        valid: false,
+        skipped: false,
+        error: '缺失昨日净资产'
+      }
+    }
+
+    const assetAmount = parseFloat(assetAmountRaw) || 0
     const group = groupMap[groupName]
     const member = memberMap[memberName]
 
@@ -322,8 +400,8 @@ const parseProductData = (rawData) => {
           group_name: groupName,
           member_name: memberName,
           subscription_date: parseDate(orderDateRaw),
-          order_status: orderStatus || '未知',
-          asset_amount: parseFloat(assetAmount) || 0,
+          order_status: orderStatus,
+          asset_amount: assetAmount,
           valid: false,
           skipped: true,
           error: '订单已取消/退订'
@@ -339,8 +417,8 @@ const parseProductData = (rawData) => {
           group_name: groupName,
           member_name: memberName,
           subscription_date: parseDate(orderDateRaw),
-          order_status: orderStatus || '未知',
-          asset_amount: parseFloat(assetAmount) || 0,
+          order_status: orderStatus,
+          asset_amount: assetAmount,
           valid: false,
           skipped: true,
           error: '非支付成功'
@@ -352,29 +430,14 @@ const parseProductData = (rawData) => {
     if (!group) {
       return {
         row_num: index + 1,
-        group_name: groupName || '(空白)',
+        group_name: groupName,
         member_name: memberName,
         subscription_date: parseDate(orderDateRaw),
         order_status: orderStatus,
-        asset_amount: parseFloat(assetAmount) || 0,
+        asset_amount: assetAmount,
         valid: false,
         skipped: true,
-        error: !groupName ? '缺少营业部' : `未找到营业部: ${groupName}`
-      }
-    }
-
-    // Validate required fields
-    if (!memberName) {
-      return {
-        row_num: index + 1,
-        group_name: groupName,
-        member_name: '(空白)',
-        subscription_date: parseDate(orderDateRaw),
-        order_status: orderStatus,
-        asset_amount: parseFloat(assetAmount) || 0,
-        valid: false,
-        skipped: true,
-        error: '无开发关系'
+        error: `未找到营业部: ${groupName}`
       }
     }
 
@@ -385,7 +448,7 @@ const parseProductData = (rawData) => {
         member_name: memberName,
         subscription_date: parseDate(orderDateRaw),
         order_status: orderStatus,
-        asset_amount: parseFloat(assetAmount) || 0,
+        asset_amount: assetAmount,
         valid: false,
         skipped: false,
         error: `未找到员工: ${memberName}`
@@ -400,7 +463,7 @@ const parseProductData = (rawData) => {
       member_name: member.name,
       subscription_date: parseDate(orderDateRaw),
       order_status: orderStatus,
-      asset_amount: parseFloat(assetAmount) || 0,
+      asset_amount: assetAmount,
       valid: true,
       skipped: false,
       error: null
