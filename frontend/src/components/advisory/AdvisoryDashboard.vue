@@ -218,20 +218,20 @@ const updateProductChart = () => {
       trigger: 'axis',
       axisPointer: { type: 'shadow' }
     },
+    legend: {
+      data: ['签约户数', '签约资产(万)'],
+      right: 0,
+      top: 0,
+      textStyle: { color: '#6B7280', fontSize: 12 }
+    },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
-      top: '10%',
+      top: '12%',
       containLabel: true
     },
-    xAxis: {
-      type: 'category',
-      data: productOrder,
-      axisLine: { lineStyle: { color: '#E5E7EB' } },
-      axisLabel: { color: '#6B7280' }
-    },
-    yAxis: [
+    xAxis: [
       {
         type: 'value',
         name: '户数',
@@ -247,26 +247,33 @@ const updateProductChart = () => {
         axisLabel: { color: '#6B7280' }
       }
     ],
+    yAxis: {
+      type: 'category',
+      data: productOrder,
+      axisLine: { lineStyle: { color: '#E5E7EB' } },
+      axisLabel: { color: '#6B7280' },
+      axisTick: { alignWithLabel: true }
+    },
     series: [
       {
         name: '签约户数',
         type: 'bar',
         data: householdsData,
-        itemStyle: { color: '#0891B2', borderRadius: [4, 4, 0, 0] },
-        barWidth: '30%'
+        itemStyle: { color: '#0891B2', borderRadius: [0, 4, 4, 0] },
+        barWidth: '40%'
       },
       {
-        name: '签约资产',
+        name: '签约资产(万)',
         type: 'bar',
-        yAxisIndex: 1,
+        xAxisIndex: 1,
         data: assetsData,
-        itemStyle: { color: '#06B6D4', borderRadius: [4, 4, 0, 0] },
-        barWidth: '30%'
+        itemStyle: { color: '#06B6D4', borderRadius: [0, 4, 4, 0] },
+        barWidth: '40%'
       }
     ]
   }
 
-  productChartInstance.setOption(option)
+  productChartInstance.setOption(option, true)
 }
 
 const updateTrendChart = () => {

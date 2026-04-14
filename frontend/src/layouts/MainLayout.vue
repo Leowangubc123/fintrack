@@ -22,8 +22,34 @@
       </div>
 
       <nav class="nav-menu">
+        <!-- 公募销售 -->
+        <div class="nav-group">
+          <div
+            class="nav-item nav-parent"
+            :class="{ active: isPublicFundActive }"
+            @click="publicFundExpanded = !publicFundExpanded"
+          >
+            <el-icon :size="20"><Shop /></el-icon>
+            <span>公募销售</span>
+            <el-icon class="arrow-icon" :class="{ expanded: publicFundExpanded }"><ArrowDown /></el-icon>
+          </div>
+          <div class="nav-children" :class="{ expanded: publicFundExpanded }">
+            <router-link
+              v-for="item in publicFundChildren"
+              :key="item.path"
+              :to="item.path"
+              class="nav-item nav-child"
+              :class="{ active: $route.path === item.path }"
+            >
+              <el-icon :size="18"><component :is="item.icon" /></el-icon>
+              <span>{{ item.title }}</span>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- 其他菜单 -->
         <router-link
-          v-for="item in menuItems"
+          v-for="item in otherMenuItems"
           :key="item.path"
           :to="item.path"
           class="nav-item"
@@ -63,21 +89,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton, Collection, DocumentChecked } from '@element-plus/icons-vue'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton, Collection, DocumentChecked, Shop, ArrowDown } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 
-const menuItems = ref([
+const publicFundExpanded = ref(true)
+
+const publicFundChildren = [
   { path: '/', title: '数据看板', icon: DataLine },
   { path: '/analysis', title: '数据分析', icon: TrendCharts },
   { path: '/products', title: '产品管理', icon: Box },
-  { path: '/organization', title: '营销人员', icon: UserFilled },
-  { path: '/import', title: '数据导入', icon: Upload },
+  { path: '/import', title: '数据导入', icon: Upload }
+]
+
+const otherMenuItems = [
   { path: '/private-fund', title: '私募销售', icon: Collection },
   { path: '/advisory', title: '投顾签约', icon: DocumentChecked },
-])
+  { path: '/organization', title: '营销人员', icon: UserFilled }
+]
+
+const isPublicFundActive = computed(() => {
+  return publicFundChildren.some(item => route.path === item.path)
+})
 
 function handleLogout() {
   localStorage.removeItem('ft_auth')
@@ -153,6 +189,49 @@ function handleLogout() {
 
 .nav-item .el-icon {
   opacity: 0.9;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-parent {
+  position: relative;
+}
+
+.nav-parent .arrow-icon {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.nav-parent .arrow-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.2s ease;
+}
+
+.nav-children.expanded {
+  max-height: 300px;
+}
+
+.nav-child {
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.nav-child .el-icon {
+  opacity: 0.8;
 }
 
 /* 主内容区 */

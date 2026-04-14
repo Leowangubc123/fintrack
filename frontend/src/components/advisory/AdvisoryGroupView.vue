@@ -183,13 +183,13 @@ const groupStats = computed(() => {
 
     const converted = sub.converted_households || 1
     stats[groupId].total_households += converted
-    stats[groupId].total_assets += parseFloat(sub.asset_amount || 0)
+    stats[groupId].total_assets += parseFloat(sub.asset_amount || 0) / 10000
     stats[groupId].total_income += parseFloat(sub.advisory_income || 0)
 
     const product = sub.product_type
     if (stats[groupId].product_stats[product]) {
       stats[groupId].product_stats[product].households += converted
-      stats[groupId].product_stats[product].assets += parseFloat(sub.asset_amount || 0)
+      stats[groupId].product_stats[product].assets += parseFloat(sub.asset_amount || 0) / 10000
     }
   })
 

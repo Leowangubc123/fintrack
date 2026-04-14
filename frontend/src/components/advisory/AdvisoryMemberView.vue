@@ -30,44 +30,45 @@
         stripe
         @sort-change="handleSortChange"
         v-loading="loading"
+        style="width: 100%"
       >
         <el-table-column type="index" label="序号" width="60" />
 
-        <el-table-column prop="member_name" label="员工" width="100" sortable />
+        <el-table-column prop="member_name" label="员工" min-width="80" sortable />
 
-        <el-table-column prop="group_name" label="营业部" width="140" sortable />
+        <el-table-column prop="group_name" label="营业部" min-width="120" sortable />
 
-        <el-table-column label="千1" align="center">
-          <el-table-column prop="products.千1.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="千1" align="center" min-width="70">
+          <el-table-column prop="products.千1.households" label="户" width="60" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="千3" align="center">
-          <el-table-column prop="products.千3.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="千3" align="center" min-width="70">
+          <el-table-column prop="products.千3.households" label="户" width="60" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="万2" align="center">
-          <el-table-column prop="products.万2.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="万2" align="center" min-width="70">
+          <el-table-column prop="products.万2.households" label="户" width="60" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="ETF投顾" align="center">
-          <el-table-column prop="products.ETF投顾.households" label="户" width="80" align="right" sortable />
+        <el-table-column label="ETF投顾" align="center" min-width="80">
+          <el-table-column prop="products.ETF投顾.households" label="户" width="65" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="量化T策略" align="center">
-          <el-table-column prop="products.量化T策略.households" label="户" width="80" align="right" sortable />
+        <el-table-column label="量化T策略" align="center" min-width="90">
+          <el-table-column prop="products.量化T策略.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="GWT" align="center">
-          <el-table-column prop="products.GWT.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="GWT" align="center" min-width="70">
+          <el-table-column prop="products.GWT.households" label="户" width="60" align="right" sortable />
         </el-table-column>
 
-        <el-table-column prop="total_households" label="合计户数" width="100" align="right" sortable>
+        <el-table-column prop="total_households" label="合计户数" min-width="90" align="right" sortable>
           <template #default="{ row }">
             <strong>{{ row.total_households }}</strong>
           </template>
         </el-table-column>
 
-        <el-table-column prop="total_assets" label="签约资产" width="150" align="right" sortable>
+        <el-table-column prop="total_assets" label="签约资产" min-width="120" align="right" sortable>
           <template #default="{ row }">
             {{ row.total_assets.toFixed(2) }}万
           </template>
@@ -189,13 +190,13 @@ const memberStats = computed(() => {
     const income = parseFloat(sub.advisory_income || 0)
 
     stats[memberId].total_households += converted
-    stats[memberId].total_assets += assets
+    stats[memberId].total_assets += assets / 10000
     stats[memberId].total_income += income
 
     const product = sub.product_type
     if (stats[memberId].products[product]) {
       stats[memberId].products[product].households += converted
-      stats[memberId].products[product].assets += assets
+      stats[memberId].products[product].assets += assets / 10000
     }
   })
 

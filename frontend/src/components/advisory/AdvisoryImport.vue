@@ -108,7 +108,9 @@
         <el-table-column prop="member_name" label="认领员工" width="100" />
         <el-table-column prop="subscription_date" label="订购日期" width="110" />
         <el-table-column prop="order_status" label="订单状态" width="90" />
-        <el-table-column prop="asset_amount" label="昨日净资产" width="110" align="right" />
+        <el-table-column prop="asset_amount" label="昨日净资产(万)" width="120" align="right">
+          <template #default="{ row }">{{ (row.asset_amount / 10000).toFixed(2) }}</template>
+        </el-table-column>
         <el-table-column label="状态" min-width="180">
           <template #default="{ row }">
             <el-tag v-if="row.valid && !row.skipped" type="success" size="small">有效</el-tag>
@@ -157,6 +159,21 @@
         </el-table-column>
       </el-table>
     </div>
+
+    <!-- Latest Update Times -->
+    <div class="history-card latest-update-card">
+      <div class="history-title">各数据类型最新更新时间</div>
+      <el-table :data="latestUpdates" size="small" stripe>
+        <el-table-column prop="product_type" label="数据类型" width="120" />
+        <el-table-column prop="import_date" label="数据日期" width="120" />
+        <el-table-column prop="created_at" label="最新导入时间" min-width="150">
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="operator" label="操作人" width="100" />
+      </el-table>
+    </div>
   </div>
 </template>
 
@@ -181,6 +198,16 @@ const validCount = computed(() => previewData.value.filter(d => d.valid).length)
 const skippedCount = computed(() => previewData.value.filter(d => d.skipped).length)
 const errorCount = computed(() => previewData.value.filter(d => !d.valid && !d.skipped).length)
 const canImport = computed(() => selectedProductType.value && recordDate.value && validCount.value > 0)
+
+const latestUpdates = computed(() => {
+  const map = new Map()
+  importHistory.value.forEach(log => {
+    if (!map.has(log.product_type)) {
+      map.set(log.product_type, log)
+    }
+  })
+  return Array.from(map.values())
+})
 
 const fetchGroups = async () => {
   try {
@@ -670,6 +697,10 @@ onMounted(() => {
   border-radius: 12px;
   padding: 20px;
   border: 1px solid #E5E7EB;
+}
+
+.history-card.latest-update-card {
+  margin-top: 20px;
 }
 
 .history-title {

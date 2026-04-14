@@ -83,6 +83,9 @@ class StatsResponse(BaseModel):
     total_households: int
     total_assets: float
     total_income: float
+    households_change: int
+    assets_change: float
+    income_change: float
     product_distribution: List[dict]
     trend_data: List[dict]
     last_update_date: Optional[date] = None
@@ -125,49 +128,50 @@ def get_stats(
     if not year:
         year = date.today().year
 
-    # 基础查询 - 获取最新record_date的数据
-    query = db.query(InvestmentAdvisorySubscription)
-
-    # 按年份过滤（通过record_date）
-    query = query.filter(extract('year', InvestmentAdvisorySubscription.record_date) == year)
+    # 基础查询 - 按年份过滤（通过record_date）
+    base_query = db.query(InvestmentAdvisorySubscription).filter(
+        extract('year', InvestmentAdvisorySubscription.record_date) == year
+    )
 
     if group_id:
-        query = query.filter(InvestmentAdvisorySubscription.group_id == group_id)
-
+        base_query = base_query.filter(InvestmentAdvisorySubscription.group_id == group_id)
     if member_id:
-        query = query.filter(InvestmentAdvisorySubscription.member_id == member_id)
+        base_query = base_query.filter(InvestmentAdvisorySubscription.member_id == member_id)
 
-    subscriptions = query.all()
+    subscriptions = base_query.all()
 
-    # 计算总户数、总资产、总收入
+    # 计算总户数、总资产、总收入（资产转换为万元）
     total_households = sum(s.converted_households for s in subscriptions)
-    total_assets = sum(float(s.asset_amount) for s in subscriptions)
+    total_assets = sum(float(s.asset_amount) for s in subscriptions) / 10000
     total_income = sum(float(s.advisory_income) for s in subscriptions)
 
     # 产品分布统计
     product_stats = defaultdict(lambda: {"count": 0, "assets": 0.0, "income": 0.0})
     for s in subscriptions:
-        product_stats[s.product_type]["count"] += 1
-        product_stats[s.product_type]["assets"] += float(s.asset_amount)
+        product_stats[s.product_type]["count"] += s.converted_households
+        product_stats[s.product_type]["assets"] += float(s.asset_amount) / 10000
         product_stats[s.product_type]["income"] += float(s.advisory_income)
 
     product_distribution = [
         {
             "product_type": pt,
-            "count": stats["count"],
+            "households": stats["count"],
             "assets": round(stats["assets"], 2),
             "income": round(stats["income"], 2)
         }
         for pt, stats in sorted(product_stats.items(), key=lambda x: x[1]["assets"], reverse=True)
     ]
 
-    # 趋势数据（按月统计）
+    # 趋势数据（按月统计，基于subscription_date）
     trend_query = db.query(
-        extract('month', InvestmentAdvisorySubscription.record_date).label('month'),
+        extract('month', InvestmentAdvisorySubscription.subscription_date).label('month'),
         func.sum(InvestmentAdvisorySubscription.asset_amount).label('total_assets'),
         func.sum(InvestmentAdvisorySubscription.advisory_income).label('total_income'),
         func.sum(InvestmentAdvisorySubscription.converted_households).label('total_households')
-    ).filter(extract('year', InvestmentAdvisorySubscription.record_date) == year)
+    ).filter(
+        extract('year', InvestmentAdvisorySubscription.record_date) == year,
+        InvestmentAdvisorySubscription.subscription_date != None
+    )
 
     if group_id:
         trend_query = trend_query.filter(InvestmentAdvisorySubscription.group_id == group_id)
@@ -179,7 +183,7 @@ def get_stats(
     trend_data = [
         {
             "month": int(r.month),
-            "assets": round(float(r.total_assets), 2) if r.total_assets else 0,
+            "assets": round(float(r.total_assets) / 10000, 2) if r.total_assets else 0,
             "income": round(float(r.total_income), 2) if r.total_income else 0,
             "households": int(r.total_households) if r.total_households else 0
         }
@@ -191,10 +195,56 @@ def get_stats(
         func.max(InvestmentAdvisorySubscription.record_date)
     ).filter(extract('year', InvestmentAdvisorySubscription.record_date) == year).scalar()
 
+    # 计算较上次更新变化
+    record_dates = db.query(
+        InvestmentAdvisorySubscription.record_date
+    ).filter(
+        extract('year', InvestmentAdvisorySubscription.record_date) == year
+    )
+    if group_id:
+        record_dates = record_dates.filter(InvestmentAdvisorySubscription.group_id == group_id)
+    if member_id:
+        record_dates = record_dates.filter(InvestmentAdvisorySubscription.member_id == member_id)
+
+    distinct_dates = [r[0] for r in record_dates.distinct().order_by(InvestmentAdvisorySubscription.record_date.desc()).all()]
+
+    households_change = 0
+    assets_change = 0.0
+    income_change = 0.0
+
+    if len(distinct_dates) >= 2:
+        current_date = distinct_dates[0]
+        previous_date = distinct_dates[1]
+
+        def calc_date_stats(target_date):
+            q = db.query(InvestmentAdvisorySubscription).filter(
+                InvestmentAdvisorySubscription.record_date == target_date,
+                extract('year', InvestmentAdvisorySubscription.record_date) == year
+            )
+            if group_id:
+                q = q.filter(InvestmentAdvisorySubscription.group_id == group_id)
+            if member_id:
+                q = q.filter(InvestmentAdvisorySubscription.member_id == member_id)
+            subs = q.all()
+            h = sum(s.converted_households for s in subs)
+            a = sum(float(s.asset_amount) for s in subs) / 10000
+            i = sum(float(s.advisory_income) for s in subs)
+            return h, a, i
+
+        curr_h, curr_a, curr_i = calc_date_stats(current_date)
+        prev_h, prev_a, prev_i = calc_date_stats(previous_date)
+
+        households_change = curr_h - prev_h
+        assets_change = round(curr_a - prev_a, 2)
+        income_change = round(curr_i - prev_i, 2)
+
     return StatsResponse(
         total_households=total_households,
         total_assets=round(total_assets, 2),
         total_income=round(total_income, 2),
+        households_change=households_change,
+        assets_change=assets_change,
+        income_change=income_change,
         product_distribution=product_distribution,
         trend_data=trend_data,
         last_update_date=last_update_date
