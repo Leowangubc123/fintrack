@@ -541,7 +541,7 @@ onMounted(() => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #1456f0;
+  color: #1EAEDB;
   margin-bottom: 12px;
 }
 
@@ -605,7 +605,7 @@ onMounted(() => {
 }
 
 .upload-area :deep(.el-upload-dragger:hover) {
-  border-color: #1456f0;
+  border-color: #1EAEDB;
   background: #EFF6FF;
 }
 
@@ -627,7 +627,7 @@ onMounted(() => {
 }
 
 .upload-text em {
-  color: #1456f0;
+  color: #1EAEDB;
   font-style: normal;
   font-weight: 500;
   margin-left: 4px;
@@ -648,8 +648,8 @@ onMounted(() => {
 }
 
 .import-actions :deep(.el-button--primary) {
-  background: #1456f0;
-  border-color: #1456f0;
+  background: #1EAEDB;
+  border-color: #1EAEDB;
 }
 
 .preview-card {

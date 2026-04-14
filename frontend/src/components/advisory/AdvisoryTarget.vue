@@ -474,8 +474,8 @@ onMounted(() => {
 }
 
 .view-header :deep(.el-button--primary) {
-  background: #1456f0;
-  border-color: #1456f0;
+  background: #1EAEDB;
+  border-color: #1EAEDB;
 }
 
 .targets-card {
@@ -705,7 +705,7 @@ onMounted(() => {
   justify-content: center;
   padding: 4px 12px;
   background: #EFF6FF;
-  color: #1456f0;
+  color: #1EAEDB;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -738,7 +738,7 @@ onMounted(() => {
 }
 
 .sub-stat-value.modified {
-  color: #1456f0;
+  color: #1EAEDB;
 }
 
 .sub-note {

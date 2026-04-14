@@ -33,11 +33,11 @@
           <div class="group-info">
             <div class="group-name">{{ group.group_name }}</div>
             <div class="group-meta">
-              <span>签约 {{ group.total_households }}户</span>
+              <span>本年签约 {{ group.total_households }}户</span>
               <span class="meta-dot">·</span>
-              <span>资产 ¥{{ formatBigAsset(group.total_assets) }}</span>
+              <span>签约资产 ¥{{ formatBigAsset(group.total_assets) }}</span>
               <span class="meta-dot">·</span>
-              <span>收入 ¥{{ formatNumber(group.total_income) }}万</span>
+              <span>投顾收入 ¥{{ formatNumber(group.total_income) }}万</span>
             </div>
           </div>
           <div class="group-rates">
@@ -95,8 +95,7 @@
                 <div class="th" style="width: 120px">签约日期</div>
                 <div class="th" style="flex: 1">员工</div>
                 <div class="th" style="width: 100px">产品</div>
-                <div class="th" style="width: 120px" align="right">签约资产</div>
-                <div class="th" style="width: 120px" align="right">投顾收入</div>
+                <div class="th" style="width: 140px" align="right">签约资产</div>
               </div>
               <div
                 v-for="row in group.recent_subscriptions"
@@ -108,8 +107,7 @@
                 <div class="td" style="width: 100px">
                   <span class="product-tag">{{ row.product_type }}</span>
                 </div>
-                <div class="td" style="width: 120px" align="right">¥{{ ((row.asset_amount || 0) / 10000).toFixed(1) }}万</div>
-                <div class="td" style="width: 120px" align="right">¥{{ formatNumber(row.advisory_income || 0) }}</div>
+                <div class="td" style="width: 140px" align="right">¥{{ ((row.asset_amount || 0) / 10000).toFixed(1) }}万</div>
               </div>
               <div v-if="group.recent_subscriptions.length === 0" class="table-empty">
                 暂无签约明细
@@ -140,7 +138,7 @@ const subscriptions = ref([])
 const targets = ref([])
 const expandedGroup = ref(null)
 
-const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
+const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T', 'GWT']
 
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'
@@ -502,14 +500,14 @@ onMounted(() => {
 .product-households {
   font-size: 22px;
   font-weight: 700;
-  color: #1456f0;
+  color: #1EAEDB;
   margin-bottom: 6px;
 }
 
 .product-assets {
   font-size: 14px;
   font-weight: 500;
-  color: #1456f0;
+  color: #1EAEDB;
 }
 
 .unit {
@@ -586,7 +584,7 @@ onMounted(() => {
   justify-content: center;
   padding: 4px 10px;
   background: #EFF6FF;
-  color: #1456f0;
+  color: #1EAEDB;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;

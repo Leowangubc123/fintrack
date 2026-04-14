@@ -34,32 +34,32 @@
       >
         <el-table-column type="index" label="序号" width="60" />
 
-        <el-table-column prop="member_name" label="员工" min-width="80" sortable />
+        <el-table-column prop="member_name" label="员工" width="70" sortable />
 
-        <el-table-column prop="group_name" label="营业部" min-width="120" sortable />
+        <el-table-column prop="group_name" label="营业部" width="100" sortable />
 
-        <el-table-column label="千1" align="center" min-width="70">
-          <el-table-column prop="products.千1.households" label="户" width="60" align="right" sortable />
+        <el-table-column label="千1" align="center" min-width="80">
+          <el-table-column prop="products.千1.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="千3" align="center" min-width="70">
-          <el-table-column prop="products.千3.households" label="户" width="60" align="right" sortable />
+        <el-table-column label="千3" align="center" min-width="80">
+          <el-table-column prop="products.千3.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="万2" align="center" min-width="70">
-          <el-table-column prop="products.万2.households" label="户" width="60" align="right" sortable />
+        <el-table-column label="万2" align="center" min-width="80">
+          <el-table-column prop="products.万2.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="ETF投顾" align="center" min-width="80">
-          <el-table-column prop="products.ETF投顾.households" label="户" width="65" align="right" sortable />
+        <el-table-column label="ETF投顾" align="center" min-width="90">
+          <el-table-column prop="products.ETF投顾.households" label="户" width="75" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="量化T策略" align="center" min-width="90">
-          <el-table-column prop="products.量化T策略.households" label="户" width="70" align="right" sortable />
+        <el-table-column label="量化T" align="center" min-width="80">
+          <el-table-column prop="products.量化T.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
-        <el-table-column label="GWT" align="center" min-width="70">
-          <el-table-column prop="products.GWT.households" label="户" width="60" align="right" sortable />
+        <el-table-column label="GWT" align="center" min-width="80">
+          <el-table-column prop="products.GWT.households" label="户" width="70" align="right" sortable />
         </el-table-column>
 
         <el-table-column prop="total_households" label="合计户数" min-width="90" align="right" sortable>
@@ -119,7 +119,7 @@ const pageSize = ref(20)
 const sortProp = ref('')
 const sortOrder = ref('')
 
-const productOptions = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
+const productOptions = ['万2', '千1', '千3', 'ETF投顾', '量化T', 'GWT']
 
 const fetchGroups = async () => {
   try {
@@ -268,7 +268,7 @@ const exportToExcel = () => {
     '千1(户)': m.products.千1.households,
     '千3(户)': m.products.千3.households,
     'ETF投顾(户)': m.products.ETF投顾.households,
-    '量化T策略(户)': m.products.量化T策略.households,
+    '量化T(户)': m.products.量化T.households,
     'GWT(户)': m.products.GWT.households,
     '合计户数': m.total_households,
     '签约资产(万)': m.total_assets.toFixed(2)
@@ -328,8 +328,8 @@ onMounted(() => {
 }
 
 :deep(.el-button--primary) {
-  background: #1456f0;
-  border-color: #1456f0;
+  background: #1EAEDB;
+  border-color: #1EAEDB;
 }
 
 .pagination-bar {

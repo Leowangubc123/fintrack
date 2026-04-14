@@ -1,40 +1,5 @@
 <template>
   <div class="advisory-dashboard">
-    <!-- 维度切换 -->
-    <div class="dimension-bar">
-      <div class="dimension-tabs">
-        <span
-          v-for="d in dimensions"
-          :key="d.key"
-          class="dimension-tab"
-          :class="{ active: dimension === d.key }"
-          @click="dimension = d.key"
-        >
-          {{ d.label }}
-        </span>
-      </div>
-      <div class="dimension-filter" v-if="dimension === 'group'">
-        <el-select v-model="selectedGroup" placeholder="选择营业部" clearable style="width: 180px">
-          <el-option
-            v-for="g in groups"
-            :key="g.id"
-            :label="g.name"
-            :value="g.id"
-          />
-        </el-select>
-      </div>
-      <div class="dimension-filter" v-if="dimension === 'member'">
-        <el-select v-model="selectedMember" placeholder="选择员工" clearable style="width: 180px">
-          <el-option
-            v-for="m in members"
-            :key="m.id"
-            :label="m.name"
-            :value="m.id"
-          />
-        </el-select>
-      </div>
-    </div>
-
     <!-- KPI Cards -->
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -110,19 +75,6 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { advisoryApi } from '../../api/advisory.js'
-import { groupsApi, membersApi } from '../../api/index.js'
-
-const dimensions = [
-  { key: 'all', label: '全辖区' },
-  { key: 'group', label: '营业部' },
-  { key: 'member', label: '个人' }
-]
-
-const dimension = ref('all')
-const selectedGroup = ref(null)
-const selectedMember = ref(null)
-const groups = ref([])
-const members = ref([])
 
 const stats = ref({
   total_households: 0,
@@ -139,14 +91,14 @@ const stats = ref({
 const trendChart = ref(null)
 let trendChartInstance = null
 
-const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
+const productOrder = ['万2', '千1', '千3', 'ETF投顾', '量化T', 'GWT']
 
 const productColors = {
   '万2': '#0EA5E9',
   '千1': '#10B981',
   '千3': '#F59E0B',
   'ETF投顾': '#3B82F6',
-  '量化T策略': '#8B5CF6',
+  '量化T': '#8B5CF6',
   'GWT': '#F43F5E'
 }
 
@@ -175,7 +127,7 @@ const getBarWidth = (product) => {
   return Math.max((val / maxHouseholds.value) * 100, 3) + '%'
 }
 
-const getProductColor = (product) => productColors[product] || '#1456f0'
+const getProductColor = (product) => productColors[product] || '#1EAEDB'
 
 const formatAsset = (num) => {
   if (num === null || num === undefined) return '0'
@@ -188,36 +140,11 @@ const formatNumber = (num) => {
   return num.toLocaleString('zh-CN')
 }
 
-const fetchGroups = async () => {
-  try {
-    const res = await groupsApi.list()
-    groups.value = res
-  } catch (error) {
-    console.error('Failed to fetch groups:', error)
-  }
-}
-
-const fetchMembers = async () => {
-  try {
-    const res = await membersApi.getAll()
-    members.value = res
-  } catch (error) {
-    console.error('Failed to fetch members:', error)
-  }
-}
-
 const fetchStats = async () => {
   try {
-    const params = {
+    const res = await advisoryApi.getStats({
       year: new Date().getFullYear()
-    }
-    if (dimension.value === 'group' && selectedGroup.value) {
-      params.group_id = selectedGroup.value
-    }
-    if (dimension.value === 'member' && selectedMember.value) {
-      params.member_id = selectedMember.value
-    }
-    const res = await advisoryApi.getStats(params)
+    })
     stats.value = {
       ...stats.value,
       ...res
@@ -296,7 +223,7 @@ const updateTrendChart = () => {
         name: '投顾收入',
         type: 'bar',
         data: incomeData,
-        itemStyle: { color: '#1456f0', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: '#1EAEDB', borderRadius: [4, 4, 0, 0] },
         barWidth: '40%'
       },
       {
@@ -316,13 +243,7 @@ const updateTrendChart = () => {
   trendChartInstance.setOption(option)
 }
 
-watch([dimension, selectedGroup, selectedMember], () => {
-  fetchStats()
-})
-
 onMounted(() => {
-  fetchGroups()
-  fetchMembers()
   fetchStats()
   initCharts()
 })
@@ -331,40 +252,6 @@ onMounted(() => {
 <style scoped>
 .advisory-dashboard {
   padding: 0;
-}
-
-.dimension-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.dimension-tabs {
-  display: flex;
-  background: #F3F4F6;
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.dimension-tab {
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #6B7280;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.dimension-tab:hover {
-  color: #374151;
-}
-
-.dimension-tab.active {
-  background: white;
-  color: #1456f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .kpi-grid {
@@ -404,7 +291,7 @@ onMounted(() => {
 
 .kpi-value.date {
   font-size: 20px;
-  color: #1456f0;
+  color: #1EAEDB;
 }
 
 .kpi-change {
@@ -426,8 +313,8 @@ onMounted(() => {
 }
 
 .kpi-card.kpi-date {
-  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-  border-color: #BFDBFE;
+  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
+  border-color: #80DEEA;
 }
 
 .charts-grid {
@@ -483,15 +370,15 @@ onMounted(() => {
 }
 
 .dot.households {
-  background: #1456f0;
+  background: #1EAEDB;
 }
 
 .dot.assets {
-  background: #1456f0;
+  background: #1EAEDB;
 }
 
 .dot.income {
-  background: #1456f0;
+  background: #1EAEDB;
 }
 
 .dot.line {
