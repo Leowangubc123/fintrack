@@ -297,24 +297,44 @@ const parseProductData = (rawData) => {
     const groupName = row['营业部'] || row['部门'] || ''
     const memberName = row['认领员工'] || row['员工'] || row['员工姓名'] || (selectedProductType.value === '量化T策略' ? row['推荐人'] : '') || ''
     const orderDateRaw = row['订购日期'] || row['日期'] || row['签约日期'] || ''
-    const orderStatus = row['订单状态'] || row['状态'] || ''
+    const orderStatus = row['订单状态'] || row['状态'] || row['交易状态'] || row['处理状态'] || row['支付状态'] || ''
     const assetAmount = row['昨日净资产'] || row['资产'] || row['签约资产'] || 0
 
     const group = groupMap[groupName]
     const member = memberMap[memberName]
 
     // Check if order status is valid
-    if (orderStatus !== '支付成功') {
-      return {
-        row_num: index + 1,
-        group_name: groupName,
-        member_name: memberName,
-        subscription_date: parseDate(orderDateRaw),
-        order_status: orderStatus || '未知',
-        asset_amount: parseFloat(assetAmount) || 0,
-        valid: false,
-        skipped: true,
-        error: '非支付成功'
+    if (selectedProductType.value === '量化T策略') {
+      // 量化T策略：只跳过"取消"状态，其他都导入
+      if (String(orderStatus).includes('取消') || String(orderStatus).includes('退订')) {
+        return {
+          row_num: index + 1,
+          group_name: groupName,
+          member_name: memberName,
+          subscription_date: parseDate(orderDateRaw),
+          order_status: orderStatus || '未知',
+          asset_amount: parseFloat(assetAmount) || 0,
+          valid: false,
+          skipped: true,
+          error: '订单已取消/退订'
+        }
+      }
+    } else {
+      // 其他产品：保持原有支付成功校验
+      const validStatuses = ['支付成功', '已支付', '成功', '正常', '有效', '已成交', '确认', '完成']
+      const isValidStatus = validStatuses.some(s => String(orderStatus).includes(s))
+      if (!isValidStatus) {
+        return {
+          row_num: index + 1,
+          group_name: groupName,
+          member_name: memberName,
+          subscription_date: parseDate(orderDateRaw),
+          order_status: orderStatus || '未知',
+          asset_amount: parseFloat(assetAmount) || 0,
+          valid: false,
+          skipped: true,
+          error: '非支付成功'
+        }
       }
     }
 
