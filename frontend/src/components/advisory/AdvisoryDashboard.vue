@@ -53,7 +53,10 @@
                 class="product-bar-fill"
                 :style="{ width: getBarWidth(product), backgroundColor: getProductColor(product) }"
               />
-              <span class="bar-value">{{ dataMap[product]?.households || 0 }}户</span>
+              <span
+                class="bar-value"
+                :class="{ 'inside-left': isBarWide(product) }"
+              >{{ dataMap[product]?.households || 0 }}户</span>
             </div>
             <div class="product-asset-text">¥{{ formatAsset(dataMap[product]?.assets || 0) }}万</div>
           </div>
@@ -130,6 +133,12 @@ const getBarWidth = (product) => {
   const val = dataMap.value[product]?.households || 0
   if (maxHouseholds.value === 0) return '0%'
   return (val / maxHouseholds.value) * 100 + '%'
+}
+
+const isBarWide = (product) => {
+  const val = dataMap.value[product]?.households || 0
+  if (maxHouseholds.value === 0) return false
+  return (val / maxHouseholds.value) > 0.5
 }
 
 const getProductColor = (product) => productColors[product] || '#1EAEDB'
@@ -425,10 +434,7 @@ onMounted(() => {
   height: 28px;
   background: #F3F4F6;
   border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 10px;
+  position: relative;
   overflow: hidden;
 }
 
@@ -436,15 +442,22 @@ onMounted(() => {
   height: 100%;
   border-radius: 6px;
   transition: width 0.5s ease;
-  flex-shrink: 0;
 }
 
 .bar-value {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: calc(v-bind('getBarWidth(product)') + 8px);
   font-size: 13px;
   font-weight: 600;
   color: #111827;
   white-space: nowrap;
-  flex-shrink: 0;
+}
+
+.bar-value.inside-left {
+  left: 8px;
+  color: white;
 }
 
 .product-asset-text {
