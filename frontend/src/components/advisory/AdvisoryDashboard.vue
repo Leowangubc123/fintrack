@@ -52,9 +52,8 @@
               <div
                 class="product-bar-fill"
                 :style="{ width: getBarWidth(product), backgroundColor: getProductColor(product) }"
-              >
-                <span class="bar-value">{{ dataMap[product]?.households || 0 }}户</span>
-              </div>
+              />
+              <span class="bar-value">{{ dataMap[product]?.households || 0 }}户</span>
             </div>
             <div class="product-asset-text">¥{{ formatAsset(dataMap[product]?.assets || 0) }}万</div>
           </div>
@@ -130,7 +129,7 @@ const maxHouseholds = computed(() => {
 const getBarWidth = (product) => {
   const val = dataMap.value[product]?.households || 0
   if (maxHouseholds.value === 0) return '0%'
-  return Math.max((val / maxHouseholds.value) * 100, 3) + '%'
+  return (val / maxHouseholds.value) * 100 + '%'
 }
 
 const getProductColor = (product) => productColors[product] || '#1EAEDB'
@@ -426,26 +425,26 @@ onMounted(() => {
   height: 28px;
   background: #F3F4F6;
   border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 10px;
   overflow: hidden;
-  position: relative;
 }
 
 .product-bar-fill {
   height: 100%;
   border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 10px;
   transition: width 0.5s ease;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .bar-value {
   font-size: 13px;
   font-weight: 600;
-  color: white;
+  color: #111827;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .product-asset-text {
