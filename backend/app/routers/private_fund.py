@@ -5,8 +5,9 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
+import calendar
 from app.database import get_db
-from app.models import Member, Group, PrivateFundProduct, PrivateFundTransaction
+from app.models import Member, Group, PrivateFundProduct, PrivateFundTransaction, PrivateFundTarget
 
 router = APIRouter(prefix="/api/private-fund", tags=["private_fund"])
 
@@ -1145,3 +1146,93 @@ def get_holding_dates(db: Session = Depends(get_db)):
     ).all()
 
     return [d.record_date.isoformat() for d in dates]
+
+
+class PrivateFundTargetResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    group_id: int
+    group_name: str
+    year: int
+    sales_target: float
+    current_sales: float
+    completion_rate: float
+    time_progress: float
+    status: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class PrivateFundTargetCreate(BaseModel):
+    group_id: int
+    year: int
+    sales_target: float
+
+
+@router.get("/targets", response_model=List[PrivateFundTargetResponse])
+def get_private_fund_targets(
+    year: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """获取私募销售考核指标及完成情况"""
+    if not year:
+        year = date.today().year
+
+    # 获取所有营业部
+    groups = db.query(Group).all()
+
+    # 获取目标数据
+    targets = db.query(PrivateFundTarget).filter(PrivateFundTarget.year == year).all()
+    target_map = {t.group_id: t for t in targets}
+
+    # 统计本年各营业部考核销量（assessed_amount）
+    actual_stats = db.query(
+        Member.group_id,
+        func.sum(PrivateFundTransaction.assessed_amount).label("total_sales")
+    ).join(
+        PrivateFundTransaction, Member.id == PrivateFundTransaction.member_id
+    ).filter(
+        extract('year', PrivateFundTransaction.transaction_date) == year,
+        PrivateFundTransaction.transaction_type == 'sale'
+    ).group_by(Member.group_id).all()
+
+    actual_map = {s.group_id: float(s.total_sales) if s.total_sales else 0 for s in actual_stats}
+
+    # 计算时间进度
+    today = date.today()
+    day_of_year = today.timetuple().tm_yday
+    total_days = 366 if calendar.isleap(today.year) else 365
+    time_progress = round(day_of_year / total_days * 100, 2)
+
+    result = []
+    for group in groups:
+        target = target_map.get(group.id)
+        current_sales = actual_map.get(group.id, 0)
+        sales_target = float(target.sales_target) if target else 0
+
+        completion_rate = (current_sales / sales_target * 100) if sales_target > 0 else 0
+
+        diff = completion_rate - time_progress
+        if diff >= 5:
+            status = "ahead"
+        elif diff <= -5:
+            status = "behind"
+        else:
+            status = "normal"
+
+        result.append(PrivateFundTargetResponse(
+            id=target.id if target else 0,
+            group_id=group.id,
+            group_name=group.name,
+            year=year,
+            sales_target=round(sales_target, 2),
+            current_sales=round(current_sales, 2),
+            completion_rate=round(completion_rate, 2),
+            time_progress=time_progress,
+            status=status,
+            created_at=target.created_at if target else None,
+            updated_at=target.updated_at if target else None
+        ))
+
+    return result
