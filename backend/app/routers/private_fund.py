@@ -1236,3 +1236,73 @@ def get_private_fund_targets(
         ))
 
     return result
+
+
+@router.post("/targets", response_model=PrivateFundTargetResponse)
+def create_or_update_private_fund_target(
+    request: PrivateFundTargetCreate,
+    db: Session = Depends(get_db)
+):
+    """设置私募销售考核指标（创建或更新）"""
+    group = db.query(Group).filter(Group.id == request.group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="营业部不存在")
+
+    target = db.query(PrivateFundTarget).filter(
+        PrivateFundTarget.group_id == request.group_id,
+        PrivateFundTarget.year == request.year
+    ).first()
+
+    if target:
+        target.sales_target = Decimal(str(request.sales_target))
+    else:
+        target = PrivateFundTarget(
+            group_id=request.group_id,
+            year=request.year,
+            sales_target=Decimal(str(request.sales_target))
+        )
+        db.add(target)
+
+    db.commit()
+    db.refresh(target)
+
+    # 重新计算当前完成情况
+    actual_stats = db.query(
+        func.sum(PrivateFundTransaction.assessed_amount).label("total_sales")
+    ).join(
+        Member, Member.id == PrivateFundTransaction.member_id
+    ).filter(
+        Member.group_id == request.group_id,
+        extract('year', PrivateFundTransaction.transaction_date) == request.year,
+        PrivateFundTransaction.transaction_type == 'sale'
+    ).first()
+
+    current_sales = float(actual_stats.total_sales) if actual_stats.total_sales else 0
+    completion_rate = (current_sales / request.sales_target * 100) if request.sales_target > 0 else 0
+
+    today = date.today()
+    day_of_year = today.timetuple().tm_yday
+    total_days = 366 if calendar.isleap(today.year) else 365
+    time_progress = round(day_of_year / total_days * 100, 2)
+
+    diff = completion_rate - time_progress
+    if diff >= 5:
+        status = "ahead"
+    elif diff <= -5:
+        status = "behind"
+    else:
+        status = "normal"
+
+    return PrivateFundTargetResponse(
+        id=target.id,
+        group_id=target.group_id,
+        group_name=group.name,
+        year=target.year,
+        sales_target=request.sales_target,
+        current_sales=round(current_sales, 2),
+        completion_rate=round(completion_rate, 2),
+        time_progress=time_progress,
+        status=status,
+        created_at=target.created_at,
+        updated_at=target.updated_at
+    )
