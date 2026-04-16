@@ -58,7 +58,7 @@
                 :class="{ 'inside-left': isBarWide(product) }"
               >{{ dataMap[product]?.households || 0 }}户</span>
             </div>
-            <div class="product-asset-text">¥{{ formatAsset(dataMap[product]?.assets || 0) }}万</div>
+            <div class="product-asset-text">{{ formatAsset(dataMap[product]?.assets || 0) }}万</div>
           </div>
         </div>
       </div>
@@ -145,8 +145,8 @@ const getProductColor = (product) => productColors[product] || '#1EAEDB'
 
 const formatAsset = (num) => {
   if (num === null || num === undefined) return '0'
-  if (num >= 10000) return (num / 10000).toFixed(1) + '亿'
-  return num.toLocaleString('zh-CN')
+  if (num >= 10000) return (num / 10000).toFixed(0) + '亿'
+  return Math.round(num).toLocaleString('zh-CN')
 }
 
 const formatNumber = (num) => {
