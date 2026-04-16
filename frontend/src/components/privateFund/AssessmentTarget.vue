@@ -2,24 +2,26 @@
   <div class="assessment-target">
     <!-- Header -->
     <div class="view-header">
-      <el-select v-model="selectedYear" style="width: 120px">
-        <el-option v-for="year in years" :key="year" :label="year + '年'" :value="year" />
-      </el-select>
-      <el-button type="primary" @click="showBatchDialog = true">
-        <el-icon><Plus /></el-icon>批量设置指标
-      </el-button>
+      <div class="header-title">营业部考核指标</div>
+      <div class="header-actions">
+        <el-select v-model="selectedYear" class="year-select">
+          <el-option v-for="year in years" :key="year" :label="year + '年'" :value="year" />
+        </el-select>
+        <el-button type="primary" class="batch-btn" @click="showBatchDialog = true">
+          <el-icon><Plus /></el-icon>批量设置指标
+        </el-button>
+      </div>
     </div>
 
     <!-- Targets Table -->
     <div class="targets-card">
-      <div class="card-title">营业部考核指标</div>
       <div class="custom-table">
         <div class="table-head">
           <div class="th" style="width: 50px">序号</div>
-          <div class="th" style="flex: 1">营业部</div>
+          <div class="th" style="width: 140px">营业部</div>
           <div class="th" style="width: 120px" align="right">销量目标</div>
           <div class="th" style="width: 120px" align="right">当前考核销量</div>
-          <div class="th" style="width: 100px" align="right">完成率</div>
+          <div class="th" style="width: 140px" align="right">完成率</div>
           <div class="th" style="width: 100px" align="right">时间进度</div>
           <div class="th" style="width: 80px" align="center">状态</div>
           <div class="th" style="width: 100px" align="center">操作</div>
@@ -31,7 +33,7 @@
           :class="{ editing: editingRow === row.group_id }"
         >
           <div class="td" style="width: 50px" data-label="序号">{{ index + 1 }}</div>
-          <div class="td" style="flex: 1" data-label="营业部">
+          <div class="td" style="width: 140px" data-label="营业部">
             <span class="group-name">{{ row.group_name }}</span>
           </div>
           <div class="td" style="width: 120px" align="right" data-label="销量目标">
@@ -41,7 +43,7 @@
             <span v-else>{{ row.sales_target?.toFixed(2) || '0.00' }}万</span>
           </div>
           <div class="td" style="width: 120px" align="right" data-label="当前考核销量">{{ row.current_sales?.toFixed(2) || '0.00' }}万</div>
-          <div class="td" style="width: 100px" align="right" data-label="完成率">
+          <div class="td" style="width: 140px" align="right" data-label="完成率">
             <div class="rate-cell">
               <div class="rate-bar-bg">
                 <div
@@ -234,20 +236,37 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.year-select {
+  width: 110px;
+}
+
+.batch-btn {
+  font-weight: 500;
 }
 
 .targets-card {
   background: white;
   border-radius: 12px;
   border: 1px solid #E5E7EB;
-  padding: 24px;
-}
-
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 16px;
+  padding: 20px 24px;
 }
 
 .custom-table {
@@ -324,7 +343,7 @@ onMounted(() => {
   background: #F3F4F6;
   border-radius: 3px;
   overflow: hidden;
-  min-width: 40px;
+  min-width: 60px;
 }
 
 .rate-bar-fill {
@@ -375,6 +394,17 @@ onMounted(() => {
 }
 
 @media (max-width: 900px) {
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .table-head {
     display: none;
   }
