@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, Text, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, Text, Float, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -79,3 +79,7 @@ class PrivateFundTarget(Base):
     sales_target = Column(Numeric(15, 2), nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("group_id", "year", name="uix_private_fund_target_group_year"),
+    )
