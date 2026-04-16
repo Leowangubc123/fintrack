@@ -67,3 +67,15 @@ class PrivateFundHolding(Base):
     # Relationships
     product = relationship("PrivateFundProduct")
     group = relationship("Group")
+
+
+class PrivateFundTarget(Base):
+    """私募销售考核目标模型"""
+    __tablename__ = "private_fund_targets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
+    year = Column(Integer, nullable=False)
+    sales_target = Column(Numeric(15, 2), nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
