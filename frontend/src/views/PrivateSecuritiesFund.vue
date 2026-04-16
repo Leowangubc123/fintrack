@@ -24,6 +24,9 @@
 
     <!-- 保有统计 -->
     <HoldingStats v-if="activeTab === 'holding'" />
+
+    <!-- 考核管理 -->
+    <AssessmentTarget v-if="activeTab === 'assessment'" />
   </div>
 </template>
 
@@ -33,10 +36,12 @@ import ProductLibrary from '../components/privateFund/ProductLibrary.vue'
 import SalesEntry from '../components/privateFund/SalesEntry.vue'
 import AnnualDashboard from '../components/privateFund/AnnualDashboard.vue'
 import HoldingStats from '../components/privateFund/HoldingStats.vue'
+import AssessmentTarget from '../components/privateFund/AssessmentTarget.vue'
 
 const tabs = [
   { key: 'stats', label: '年度看板' },
   { key: 'holding', label: '保有统计' },
+  { key: 'assessment', label: '考核管理' },
   { key: 'entry', label: '销售录入' },
   { key: 'products', label: '产品库' }
 ]
