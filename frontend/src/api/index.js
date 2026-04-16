@@ -140,6 +140,10 @@ export const privateFundApi = {
   uploadHoldings: (data, recordDate) => api.post(`/private-fund/holdings/upload?record_date=${recordDate}`, data),
   getHoldingDates: () => api.get('/private-fund/holdings/dates'),
 
+  // 考核指标
+  getTargets: (year) => api.get('/private-fund/targets', { params: { year } }),
+  saveTarget: (data) => api.post('/private-fund/targets', data),
+
   // 保有统计 - 旧版API（兼容）
   getProductHoldings: () => api.get('/private-fund/holdings/products'),
   getGroupHoldings: () => api.get('/private-fund/holdings/groups'),
