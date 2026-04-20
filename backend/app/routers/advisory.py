@@ -145,13 +145,16 @@ def get_stats(
     subscriptions = base_query.all()
 
     # 计算总户数、总资产、总收入（资产转换为万元）
-    total_households = sum(s.converted_households for s in subscriptions)
-    total_assets = sum(float(s.asset_amount) for s in subscriptions) / 10000
+    # 收入记录(product_type='投顾收入')只计入收入，不计入户数和资产
+    total_households = sum(s.converted_households for s in subscriptions if s.product_type != '投顾收入')
+    total_assets = sum(float(s.asset_amount) for s in subscriptions if s.product_type != '投顾收入') / 10000
     total_income = sum(float(s.advisory_income) for s in subscriptions)
 
-    # 产品分布统计
+    # 产品分布统计（排除收入记录）
     product_stats = defaultdict(lambda: {"count": 0, "assets": 0.0, "income": 0.0})
     for s in subscriptions:
+        if s.product_type == '投顾收入':
+            continue
         pt = s.product_type
         if pt == '万2':
             pt = '万2及其他'
@@ -170,11 +173,22 @@ def get_stats(
     ]
 
     # 趋势数据（按月统计，基于subscription_date）
+    # 资产和户数排除收入记录，收入包含所有
     trend_query = db.query(
         extract('month', InvestmentAdvisorySubscription.subscription_date).label('month'),
-        func.sum(InvestmentAdvisorySubscription.asset_amount).label('total_assets'),
+        func.sum(
+            func.case(
+                (InvestmentAdvisorySubscription.product_type != '投顾收入', InvestmentAdvisorySubscription.asset_amount),
+                else_=0
+            )
+        ).label('total_assets'),
         func.sum(InvestmentAdvisorySubscription.advisory_income).label('total_income'),
-        func.sum(InvestmentAdvisorySubscription.converted_households).label('total_households')
+        func.sum(
+            func.case(
+                (InvestmentAdvisorySubscription.product_type != '投顾收入', InvestmentAdvisorySubscription.converted_households),
+                else_=0
+            )
+        ).label('total_households')
     ).filter(
         extract('year', InvestmentAdvisorySubscription.record_date) == year,
         InvestmentAdvisorySubscription.subscription_date != None
@@ -248,8 +262,9 @@ def get_stats(
             if member_id:
                 q = q.filter(InvestmentAdvisorySubscription.member_id == member_id)
             subs = q.all()
-            h = sum(s.converted_households for s in subs)
-            a = sum(float(s.asset_amount) for s in subs) / 10000
+            # 收入记录只计入收入，不计入户数和资产
+            h = sum(s.converted_households for s in subs if s.product_type != '投顾收入')
+            a = sum(float(s.asset_amount) for s in subs if s.product_type != '投顾收入') / 10000
             i = sum(float(s.advisory_income) for s in subs)
             return h, a, i
 
@@ -375,7 +390,7 @@ def import_subscriptions(
 
         # 如果是投顾收入类型，处理方式不同
         if product_type == '投顾收入':
-            # 更新各营业部的投顾收入
+            # 导入各营业部的投顾收入（创建独立的收入记录）
             for item in request.data:
                 group_name = item.get('group_name') or item.get('营业部', '')
                 income_value = item.get('advisory_income') or item.get('投顾收入', 0)
@@ -389,21 +404,41 @@ def import_subscriptions(
                     errors.append(f"未找到营业部: {group_name}")
                     continue
 
-                # 将元转换为万元
                 try:
                     income_yuan = float(income_value)
-                    income_wan = income_yuan / 10000
                 except (ValueError, TypeError):
                     errors.append(f"无效的收入金额: {income_value} (营业部: {group_name})")
                     continue
 
-                # 更新该营业部该日期的所有记录的收入
-                db.query(InvestmentAdvisorySubscription).filter(
+                # 查找该营业部的一个成员作为记录关联
+                group_member = next((m for m in members if m.group_id == group.id), None)
+                member_id = group_member.id if group_member else (members[0].id if members else None)
+                if not member_id:
+                    errors.append(f"没有可用成员: {group_name}")
+                    continue
+
+                # 查找或创建该营业部该日期的收入记录
+                existing = db.query(InvestmentAdvisorySubscription).filter(
                     InvestmentAdvisorySubscription.group_id == group.id,
-                    InvestmentAdvisorySubscription.record_date == record_date
-                ).update({
-                    'advisory_income': Decimal(str(income_yuan))
-                })
+                    InvestmentAdvisorySubscription.record_date == record_date,
+                    InvestmentAdvisorySubscription.product_type == '投顾收入'
+                ).first()
+
+                if existing:
+                    existing.advisory_income = Decimal(str(income_yuan))
+                else:
+                    subscription = InvestmentAdvisorySubscription(
+                        member_id=member_id,
+                        group_id=group.id,
+                        product_type='投顾收入',
+                        subscription_date=record_date,
+                        asset_amount=Decimal('0'),
+                        advisory_income=Decimal(str(income_yuan)),
+                        original_households=0,
+                        converted_households=0,
+                        record_date=record_date
+                    )
+                    db.add(subscription)
 
                 success_count += 1
 
