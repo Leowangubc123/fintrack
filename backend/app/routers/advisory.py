@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract, and_
+from sqlalchemy import func, extract, and_, case
 from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
@@ -177,14 +177,14 @@ def get_stats(
     trend_query = db.query(
         extract('month', InvestmentAdvisorySubscription.subscription_date).label('month'),
         func.sum(
-            func.case(
+            case(
                 (InvestmentAdvisorySubscription.product_type != '投顾收入', InvestmentAdvisorySubscription.asset_amount),
                 else_=0
             )
         ).label('total_assets'),
         func.sum(InvestmentAdvisorySubscription.advisory_income).label('total_income'),
         func.sum(
-            func.case(
+            case(
                 (InvestmentAdvisorySubscription.product_type != '投顾收入', InvestmentAdvisorySubscription.converted_households),
                 else_=0
             )
