@@ -27,9 +27,9 @@
           本年投顾收入
           <span class="kpi-date-sub">（最近更新：{{ stats.last_income_update_date || '-' }}）</span>
         </div>
-        <div class="kpi-value">{{ formatNumber(stats.total_income) }}<span class="unit">元</span></div>
+        <div class="kpi-value">{{ formatNumber((stats.total_income / 10000).toFixed(2)) }}<span class="unit">万</span></div>
         <div class="kpi-change" :class="{ 'is-positive': stats.income_change >= 0, 'is-negative': stats.income_change < 0 }">
-          较上次更新 {{ stats.income_change >= 0 ? '新增' : '减少' }} {{ Math.abs(stats.income_change || 0) }}元
+          较上次更新 {{ stats.income_change >= 0 ? '新增' : '减少' }} {{ Math.abs((stats.income_change / 10000) || 0).toFixed(2) }}万
         </div>
       </div>
     </div>
@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { advisoryApi } from '../../api/advisory.js'
@@ -260,6 +260,11 @@ const updateTrendChart = () => {
 onMounted(() => {
   fetchStats()
   initCharts()
+  window.addEventListener('advisory-data-imported', fetchStats)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('advisory-data-imported', fetchStats)
 })
 </script>
 

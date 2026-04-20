@@ -237,7 +237,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { advisoryApi } from '../../api/advisory.js'
@@ -472,10 +472,20 @@ watch(selectedYear, () => {
   selectedGroupId.value = null
 })
 
+const refreshAll = () => {
+  fetchTargets()
+  fetchSubscriptions()
+}
+
 onMounted(() => {
   fetchGroups()
   fetchTargets()
   fetchSubscriptions()
+  window.addEventListener('advisory-data-imported', refreshAll)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('advisory-data-imported', refreshAll)
 })
 </script>
 

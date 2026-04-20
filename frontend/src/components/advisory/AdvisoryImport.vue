@@ -559,6 +559,8 @@ const handleImport = async () => {
     ElMessage.success(`导入成功：${res.success_count} 条${res.error_count > 0 ? `，失败 ${res.error_count} 条` : ''}`)
     previewData.value = []
     fetchImportHistory()
+    // 通知其他组件刷新数据
+    window.dispatchEvent(new CustomEvent('advisory-data-imported'))
   } catch (error) {
     console.error('Import error:', error)
     ElMessage.error(error.response?.data?.detail || '导入失败')

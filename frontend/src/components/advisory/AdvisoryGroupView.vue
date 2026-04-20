@@ -14,7 +14,7 @@
           <span class="summary-dot">·</span>
           <span class="summary-value">签约资产 {{ formatNumber(totalStats.assets) }}万</span>
           <span class="summary-dot">·</span>
-          <span class="summary-value">投顾收入 {{ formatNumber(totalStats.income) }}元</span>
+          <span class="summary-value">投顾收入 {{ formatNumber((totalStats.income / 10000).toFixed(2)) }}万</span>
         </span>
       </div>
     </div>
@@ -137,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { advisoryApi } from '../../api/advisory.js'
@@ -315,6 +315,11 @@ watch(selectedProduct, () => {
 onMounted(() => {
   fetchGroups()
   loadData()
+  window.addEventListener('advisory-data-imported', loadData)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('advisory-data-imported', loadData)
 })
 </script>
 
