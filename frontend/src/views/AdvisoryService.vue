@@ -1,42 +1,65 @@
 <template>
   <div class="advisory-service">
-    <!-- 标签页头部 -->
-    <div class="tabs-header">
+    <!-- Top-level tabs -->
+    <div class="tabs-header top-tabs">
       <div
-        v-for="tab in tabs"
+        v-for="tab in topTabs"
         :key="tab.key"
-        class="tab-item"
-        :class="{ active: activeTab === tab.key }"
-        @click="activeTab = tab.key"
+        class="tab-item top-tab"
+        :class="{ active: activeTopTab === tab.key, [tab.theme]: true }"
+        @click="activeTopTab = tab.key"
       >
         {{ tab.label }}
       </div>
     </div>
 
-    <!-- 年度看板 -->
-    <div v-if="activeTab === 'annual-dashboard'" class="tab-content">
-      <AdvisoryDashboard />
-    </div>
+    <!-- 本年新增 -->
+    <template v-if="activeTopTab === 'new'">
+      <div class="sub-tabs-header">
+        <div
+          v-for="tab in newSubTabs"
+          :key="tab.key"
+          class="tab-item sub-tab"
+          :class="{ active: activeNewSubTab === tab.key }"
+          @click="activeNewSubTab = tab.key"
+        >
+          {{ tab.label }}
+        </div>
+      </div>
+      <div class="tab-content">
+        <AdvisoryDashboard v-if="activeNewSubTab === 'dashboard'" scope="new" />
+        <AdvisoryGroupView v-if="activeNewSubTab === 'group'" scope="new" />
+        <AdvisoryMemberView v-if="activeNewSubTab === 'member'" scope="new" />
+        <AdvisoryTarget v-if="activeNewSubTab === 'target'" />
+      </div>
+    </template>
 
-    <!-- 营业部视图 -->
-    <div v-if="activeTab === 'group-view'" class="tab-content">
-      <AdvisoryGroupView />
-    </div>
-
-    <!-- 个人视图 -->
-    <div v-if="activeTab === 'member-view'" class="tab-content">
-      <AdvisoryMemberView />
-    </div>
+    <!-- 存量统计 -->
+    <template v-if="activeTopTab === 'stock'">
+      <div class="sub-tabs-header">
+        <div
+          v-for="tab in stockSubTabs"
+          :key="tab.key"
+          class="tab-item sub-tab"
+          :class="{ active: activeStockSubTab === tab.key }"
+          @click="activeStockSubTab = tab.key"
+        >
+          {{ tab.label }}
+        </div>
+      </div>
+      <div class="tab-content">
+        <AdvisoryDashboard v-if="activeStockSubTab === 'dashboard'" scope="stock" />
+        <AdvisoryGroupView v-if="activeStockSubTab === 'group'" scope="stock" />
+        <AdvisoryMemberView v-if="activeStockSubTab === 'member'" scope="stock" />
+      </div>
+    </template>
 
     <!-- 数据导入 -->
-    <div v-if="activeTab === 'import'" class="tab-content">
-      <AdvisoryImport />
-    </div>
-
-    <!-- 考核管理 -->
-    <div v-if="activeTab === 'target'" class="tab-content">
-      <AdvisoryTarget />
-    </div>
+    <template v-if="activeTopTab === 'import'">
+      <div class="tab-content">
+        <AdvisoryImport />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -48,15 +71,28 @@ import AdvisoryMemberView from '../components/advisory/AdvisoryMemberView.vue'
 import AdvisoryImport from '../components/advisory/AdvisoryImport.vue'
 import AdvisoryTarget from '../components/advisory/AdvisoryTarget.vue'
 
-const tabs = [
-  { key: 'annual-dashboard', label: '年度看板' },
-  { key: 'group-view', label: '营业部视图' },
-  { key: 'member-view', label: '个人视图' },
-  { key: 'import', label: '数据导入' },
+const topTabs = [
+  { key: 'new', label: '本年新增', theme: 'blue' },
+  { key: 'stock', label: '存量统计', theme: 'green' },
+  { key: 'import', label: '数据导入', theme: 'default' }
+]
+
+const newSubTabs = [
+  { key: 'dashboard', label: '全公司视图' },
+  { key: 'group', label: '营业部视图' },
+  { key: 'member', label: '个人视图' },
   { key: 'target', label: '考核管理' }
 ]
 
-const activeTab = ref('annual-dashboard')
+const stockSubTabs = [
+  { key: 'dashboard', label: '全公司视图' },
+  { key: 'group', label: '营业部视图' },
+  { key: 'member', label: '个人视图' }
+]
+
+const activeTopTab = ref('new')
+const activeNewSubTab = ref('dashboard')
+const activeStockSubTab = ref('dashboard')
 </script>
 
 <style scoped>
@@ -67,32 +103,73 @@ const activeTab = ref('annual-dashboard')
   overflow: hidden;
 }
 
-.tabs-header {
+/* Top-level tabs */
+.top-tabs {
   display: flex;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: #FAFAFB;
   padding: 0 8px;
 }
 
-.tab-item {
-  padding: 16px 24px;
+.top-tab {
+  padding: 16px 28px;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   color: #6E6E73;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   transition: all 0.2s ease;
   position: relative;
 }
 
-.tab-item:hover {
+.top-tab:hover {
   color: #1D1D1F;
 }
 
-.tab-item.active {
+.top-tab.blue.active {
   color: #1EAEDB;
   border-bottom-color: #1EAEDB;
-  background: rgba(20, 86, 240, 0.05);
+  background: rgba(30, 174, 219, 0.06);
+}
+
+.top-tab.green.active {
+  color: #10B981;
+  border-bottom-color: #10B981;
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.top-tab.default.active {
+  color: #1D1D1F;
+  border-bottom-color: #1D1D1F;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Sub-tabs */
+.sub-tabs-header {
+  display: flex;
+  border-bottom: 1px solid #E5E7EB;
+  background: white;
+  padding: 0 24px;
+}
+
+.sub-tab {
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6B7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  margin-right: 4px;
+}
+
+.sub-tab:hover {
+  color: #374151;
+}
+
+.sub-tab.active {
+  color: #1EAEDB;
+  border-bottom-color: #1EAEDB;
 }
 
 .tab-content {

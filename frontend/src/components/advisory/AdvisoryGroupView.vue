@@ -9,12 +9,12 @@
       </div>
       <div class="summary-stats" v-if="totalStats">
         <span class="summary-item">
-          <span class="summary-label">全辖区合计</span>
+          <span class="summary-label">{{ isNew ? '全辖区本年合计' : '全辖区存量合计' }}</span>
           <span class="summary-value">签约户数 {{ formatNumber(totalStats.households) }}户</span>
           <span class="summary-dot">·</span>
           <span class="summary-value">签约资产 {{ formatNumber(totalStats.assets) }}万</span>
-          <span class="summary-dot">·</span>
-          <span class="summary-value">投顾收入 {{ formatNumber((totalStats.income / 10000).toFixed(2)) }}万</span>
+          <span v-if="isNew" class="summary-dot">·</span>
+          <span v-if="isNew" class="summary-value">投顾收入 {{ formatNumber((totalStats.income / 10000).toFixed(2)) }}万</span>
         </span>
       </div>
     </div>
@@ -33,14 +33,14 @@
           <div class="group-info">
             <div class="group-name">{{ group.group_name }}</div>
             <div class="group-meta">
-              <span>本年签约 {{ group.total_households }}户</span>
+              <span>{{ isNew ? '本年签约' : '存量累计' }} {{ group.total_households }}户</span>
               <span class="meta-dot">·</span>
               <span>签约资产 ¥{{ formatBigAsset(group.total_assets) }}</span>
               <span class="meta-dot">·</span>
               <span>投顾收入 ¥{{ formatNumber(group.total_income) }}万</span>
             </div>
           </div>
-          <div class="group-rates">
+          <div v-if="isNew" class="group-rates">
             <div class="rate-box">
               <div class="rate-value" :class="getProgressClass(group.income_rate)">{{ group.income_rate }}%</div>
               <div class="rate-label">收入完成率</div>
@@ -143,6 +143,16 @@ import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { advisoryApi } from '../../api/advisory.js'
 import { groupsApi } from '../../api/index.js'
 
+const props = defineProps({
+  scope: {
+    type: String,
+    default: 'new',
+    validator: (v) => ['new', 'stock'].includes(v)
+  }
+})
+
+const isNew = computed(() => props.scope === 'new')
+
 const selectedYear = ref(new Date().getFullYear())
 const years = computed(() => {
   const current = new Date().getFullYear()
@@ -181,6 +191,7 @@ const fetchSubscriptions = async () => {
   try {
     const res = await advisoryApi.getSubscriptions({
       year: selectedYear.value,
+      scope: props.scope,
       page_size: 1000
     })
     subscriptions.value = res.items || []
@@ -191,6 +202,10 @@ const fetchSubscriptions = async () => {
 }
 
 const fetchTargets = async () => {
+  if (!isNew.value) {
+    targets.value = []
+    return
+  }
   try {
     const res = await advisoryApi.getTargets({
       year: selectedYear.value
@@ -238,17 +253,19 @@ const groupStats = computed(() => {
   })
 
   Object.values(stats).forEach(group => {
-    const target = targets.value.find(t => t.group_id === group.group_id)
-    if (target) {
-      group.income_rate = target.income_target > 0
-        ? Math.round((group.total_income / (target.income_target * 10000)) * 100)
-        : 0
-      group.households_rate = target.households_target > 0
-        ? Math.round((group.total_households / target.households_target) * 100)
-        : 0
-    } else {
-      group.income_rate = 0
-      group.households_rate = 0
+    if (isNew.value) {
+      const target = targets.value.find(t => t.group_id === group.group_id)
+      if (target) {
+        group.income_rate = target.income_target > 0
+          ? Math.round((group.total_income / (target.income_target * 10000)) * 100)
+          : 0
+        group.households_rate = target.households_target > 0
+          ? Math.round((group.total_households / target.households_target) * 100)
+          : 0
+      } else {
+        group.income_rate = 0
+        group.households_rate = 0
+      }
     }
   })
 
@@ -296,13 +313,23 @@ const getProgressClass = (rate) => {
 }
 
 const loadData = async () => {
-  await Promise.all([
-    fetchSubscriptions(),
-    fetchTargets()
-  ])
+  if (isNew.value) {
+    await Promise.all([
+      fetchSubscriptions(),
+      fetchTargets()
+    ])
+  } else {
+    await fetchSubscriptions()
+  }
 }
 
 watch(selectedYear, () => {
+  expandedGroup.value = null
+  selectedProduct.value = ''
+  loadData()
+})
+
+watch(() => props.scope, () => {
   expandedGroup.value = null
   selectedProduct.value = ''
   loadData()

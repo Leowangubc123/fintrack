@@ -2,7 +2,7 @@
   <div class="advisory-member-view">
     <!-- Filters -->
     <div class="filter-bar">
-      <el-select v-model="selectedYear" style="width: 120px">
+      <el-select v-if="isNew" v-model="selectedYear" style="width: 120px">
         <el-option v-for="year in years" :key="year" :label="year + '年'" :value="year" />
       </el-select>
 
@@ -92,12 +92,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { advisoryApi } from '../../api/advisory.js'
 import { groupsApi, membersApi } from '../../api/index.js'
+
+const props = defineProps({
+  scope: {
+    type: String,
+    default: 'new',
+    validator: (v) => ['new', 'stock'].includes(v)
+  }
+})
+
+const isNew = computed(() => props.scope === 'new')
 
 const selectedYear = ref(new Date().getFullYear())
 const years = computed(() => {
@@ -142,10 +152,14 @@ const fetchMembers = async () => {
 const fetchSubscriptions = async () => {
   loading.value = true
   try {
-    const res = await advisoryApi.getSubscriptions({
-      year: selectedYear.value,
+    const params = {
+      scope: props.scope,
       page_size: 10000
-    })
+    }
+    if (isNew.value) {
+      params.year = selectedYear.value
+    }
+    const res = await advisoryApi.getSubscriptions(params)
     subscriptions.value = res.items || []
   } catch (error) {
     console.error('Failed to fetch subscriptions:', error)
@@ -289,10 +303,19 @@ watch([selectedYear, filterGroup], () => {
   fetchSubscriptions()
 })
 
+watch(() => props.scope, () => {
+  fetchSubscriptions()
+})
+
 onMounted(() => {
   fetchGroups()
   fetchMembers()
   fetchSubscriptions()
+  window.addEventListener('advisory-data-imported', fetchSubscriptions)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('advisory-data-imported', fetchSubscriptions)
 })
 </script>
 

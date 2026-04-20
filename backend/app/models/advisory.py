@@ -36,6 +36,8 @@ class InvestmentAdvisoryTarget(Base):
     year = Column(Integer, nullable=False)  # 年度
     income_target = Column(Numeric(15, 2), default=0)  # 收入目标(万元)
     households_target = Column(Integer, default=0)  # 户数目标
+    current_income = Column(Numeric(15, 2), default=0)  # 实际收入(万元)
+    current_households = Column(Integer, default=0)  # 实际户数
     assessed_households = Column(Integer, default=0)  # 考核户数(折算系数后)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -8,13 +8,8 @@
       </div>
       <div class="info-content">
         <p><strong>产品数据导入：</strong>选择产品类型（万2及其他、千1、千3、ETF投顾、量化T策略、GWT），上传该产品对应的Excel表格。</p>
-        <p><strong>收入数据导入：</strong>选择"投顾收入"类型，上传各营业部收入汇总表。</p>
-        <p><strong>更新机制：</strong>每次导入只会更新选定产品/收入类型的数据，其他数据不受影响。</p>
-        <p><strong>必填字段：</strong></p>
-        <ul>
-          <li>产品数据：营业部、认领员工、订购日期(YYYYMMDD)、订单状态、昨日净资产/当日授权市值</li>
-          <li>收入数据：营业部、投顾收入(元)</li>
-        </ul>
+        <p><strong>更新机制：</strong>每次导入会全量覆盖选定产品类型的历史数据，其他产品不受影响。</p>
+        <p><strong>必填字段：</strong>营业部、认领员工、订购日期(YYYYMMDD)、订单状态、昨日净资产/当日授权市值</p>
       </div>
     </div>
 
@@ -23,13 +18,8 @@
       <!-- Step 1: Select Product Type -->
       <div class="step-section">
         <div class="step-label">步骤 1：选择数据类型</div>
-        <el-select v-model="selectedProductType" placeholder="请选择数据类型" style="width: 240px">
-          <el-option-group label="产品签约数据">
-            <el-option v-for="type in productTypes" :key="type" :label="type" :value="type" />
-          </el-option-group>
-          <el-option-group label="收入数据">
-            <el-option label="投顾收入" value="投顾收入" />
-          </el-option-group>
+        <el-select v-model="selectedProductType" placeholder="请选择产品类型" style="width: 240px">
+          <el-option v-for="type in productTypes" :key="type" :label="type" :value="type" />
         </el-select>
       </div>
 
@@ -66,8 +56,7 @@
           <template #tip>
             <div class="upload-tip">
               支持 .xlsx, .xls 格式
-              <span v-if="selectedProductType === '投顾收入'"> - 需包含"营业部"和"投顾收入"列</span>
-              <span v-else-if="selectedProductType"> - 需包含"营业部"、"认领员工"、"订购日期"、"订单状态"、"昨日净资产/当日授权市值"列</span>
+              <span v-if="selectedProductType"> - 需包含"营业部"、"认领员工"、"订购日期"、"订单状态"、"昨日净资产/当日授权市值"列</span>
             </div>
           </template>
         </el-upload>
@@ -103,7 +92,7 @@
       </div>
 
       <!-- Product Data Preview -->
-      <el-table v-if="selectedProductType !== '投顾收入'" :data="previewData" size="small" stripe max-height="600">
+      <el-table :data="previewData" size="small" stripe max-height="600">
         <el-table-column type="index" label="序号" width="50" />
         <el-table-column prop="group_name" label="营业部" width="120" />
         <el-table-column prop="member_name" label="认领员工" width="100" />
@@ -116,24 +105,6 @@
           <template #default="{ row, $index }">
             <el-tag v-if="row.valid && !row.skipped" type="success" size="small">有效</el-tag>
             <el-tag v-else-if="row.skipped" type="info" size="small">跳过</el-tag>
-            <template v-else>
-              <el-tooltip :content="row.error" placement="top" :show-after="200">
-                <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
-              </el-tooltip>
-              <el-button link type="danger" size="small" style="margin-left: 8px" @click="removePreviewRow($index)">删除</el-button>
-            </template>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- Income Data Preview -->
-      <el-table v-else :data="previewData" size="small" stripe max-height="600">
-        <el-table-column type="index" label="序号" width="50" />
-        <el-table-column prop="group_name" label="营业部" width="200" />
-        <el-table-column prop="advisory_income" label="投顾收入(元)" width="150" align="right" />
-        <el-table-column label="状态" min-width="200">
-          <template #default="{ row, $index }">
-            <el-tag v-if="row.valid" type="success" size="small">有效</el-tag>
             <template v-else>
               <el-tooltip :content="row.error" placement="top" :show-after="200">
                 <el-tag type="danger" size="small" style="max-width: 100%">{{ row.error }}</el-tag>
@@ -242,11 +213,7 @@ const handleFileChange = (file) => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json(firstSheet)
 
-      if (selectedProductType.value === '投顾收入') {
-        previewData.value = parseIncomeData(jsonData)
-      } else {
-        previewData.value = parseProductData(jsonData)
-      }
+      previewData.value = parseProductData(jsonData)
 
       const valid = previewData.value.filter(d => d.valid).length
       const skipped = previewData.value.filter(d => d.skipped).length
@@ -455,42 +422,6 @@ const parseProductData = (rawData) => {
   })
 }
 
-// Parse income data
-const parseIncomeData = (rawData) => {
-  const groupMap = {}
-
-  groups.value.forEach(g => {
-    groupMap[g.name] = g
-    groupMap[g.name.replace(/\s/g, '')] = g
-  })
-
-  return rawData.map((row, index) => {
-    const groupName = row['营业部'] || row['部门'] || ''
-    const incomeValue = row['投顾收入'] || row['收入'] || 0
-
-    const group = groupMap[groupName]
-
-    if (!group) {
-      return {
-        row_num: index + 1,
-        group_name: groupName || '(空白)',
-        advisory_income: parseFloat(incomeValue) || 0,
-        valid: false,
-        error: !groupName ? '缺少营业部' : `未找到营业部: ${groupName}`
-      }
-    }
-
-    return {
-      row_num: index + 1,
-      group_id: group.id,
-      group_name: group.name,
-      advisory_income: parseFloat(incomeValue) || 0,
-      valid: true,
-      error: null
-    }
-  })
-}
-
 // Parse date from YYYYMMDD format
 const parseDate = (dateValue) => {
   if (!dateValue) return null
@@ -571,36 +502,24 @@ const handleImport = async () => {
 
 const downloadTemplate = () => {
   if (!selectedProductType.value) {
-    ElMessage.warning('请先选择数据类型以下载对应模板')
+    ElMessage.warning('请先选择产品类型以下载对应模板')
     return
   }
 
-  let template, filename, ws
+  const template = [{
+    '营业部': '示例营业部',
+    '认领员工': '张三',
+    '订购日期': '20260101',
+    '订单状态': '支付成功',
+    '昨日净资产': 1000000
+  }]
+  const filename = `${selectedProductType.value}导入模板.xlsx`
+  const ws = XLSX.utils.json_to_sheet(template)
+  ws['!cols'] = [
+    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }
+  ]
+
   const wb = XLSX.utils.book_new()
-
-  if (selectedProductType.value === '投顾收入') {
-    template = [{
-      '营业部': '示例营业部',
-      '投顾收入': 50000
-    }]
-    filename = '投顾收入导入模板.xlsx'
-    ws = XLSX.utils.json_to_sheet(template)
-    ws['!cols'] = [{ wch: 20 }, { wch: 15 }]
-  } else {
-    template = [{
-      '营业部': '示例营业部',
-      '认领员工': '张三',
-      '订购日期': '20260101',
-      '订单状态': '支付成功',
-      '昨日净资产': 1000000
-    }]
-    filename = `${selectedProductType.value}导入模板.xlsx`
-    ws = XLSX.utils.json_to_sheet(template)
-    ws['!cols'] = [
-      { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }
-    ]
-  }
-
   XLSX.utils.book_append_sheet(wb, ws, '导入模板')
   XLSX.writeFile(wb, filename)
 }
