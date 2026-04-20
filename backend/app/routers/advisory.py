@@ -390,7 +390,12 @@ def import_subscriptions(
 
         # 如果是投顾收入类型，处理方式不同
         if product_type == '投顾收入':
-            # 导入各营业部的投顾收入（创建独立的收入记录）
+            # 1. 删除所有历史投顾收入记录（全量覆盖）
+            db.query(InvestmentAdvisorySubscription).filter(
+                InvestmentAdvisorySubscription.product_type == '投顾收入'
+            ).delete()
+
+            # 2. 导入各营业部的投顾收入（创建独立的收入记录）
             for item in request.data:
                 group_name = item.get('group_name') or item.get('营业部', '')
                 income_value = item.get('advisory_income') or item.get('投顾收入', 0)
@@ -417,35 +422,23 @@ def import_subscriptions(
                     errors.append(f"没有可用成员: {group_name}")
                     continue
 
-                # 查找或创建该营业部该日期的收入记录
-                existing = db.query(InvestmentAdvisorySubscription).filter(
-                    InvestmentAdvisorySubscription.group_id == group.id,
-                    InvestmentAdvisorySubscription.record_date == record_date,
-                    InvestmentAdvisorySubscription.product_type == '投顾收入'
-                ).first()
-
-                if existing:
-                    existing.advisory_income = Decimal(str(income_yuan))
-                else:
-                    subscription = InvestmentAdvisorySubscription(
-                        member_id=member_id,
-                        group_id=group.id,
-                        product_type='投顾收入',
-                        subscription_date=record_date,
-                        asset_amount=Decimal('0'),
-                        advisory_income=Decimal(str(income_yuan)),
-                        original_households=0,
-                        converted_households=0,
-                        record_date=record_date
-                    )
-                    db.add(subscription)
-
+                subscription = InvestmentAdvisorySubscription(
+                    member_id=member_id,
+                    group_id=group.id,
+                    product_type='投顾收入',
+                    subscription_date=record_date,
+                    asset_amount=Decimal('0'),
+                    advisory_income=Decimal(str(income_yuan)),
+                    original_households=0,
+                    converted_households=0,
+                    record_date=record_date
+                )
+                db.add(subscription)
                 success_count += 1
 
         else:
-            # 1. 只删除该日期该产品类型的记录（而不是全部）
-            deleted = db.query(InvestmentAdvisorySubscription).filter(
-                InvestmentAdvisorySubscription.record_date == record_date,
+            # 1. 删除该产品类型的所有历史记录（全量覆盖，不限日期）
+            db.query(InvestmentAdvisorySubscription).filter(
                 InvestmentAdvisorySubscription.product_type == product_type
             ).delete()
 
