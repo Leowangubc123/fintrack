@@ -142,7 +142,15 @@ const fetchTargets = async () => {
 }
 
 const tableData = computed(() => {
-  return targets.value.sort((a, b) => b.current_sales - a.current_sales)
+  const groupOrder = ['上一', '上二', '上三', '上四', '上五', '上六', '上海分公司']
+  return [...targets.value].sort((a, b) => {
+    const idxA = groupOrder.indexOf(a.group_name)
+    const idxB = groupOrder.indexOf(b.group_name)
+    if (idxA === -1 && idxB === -1) return 0
+    if (idxA === -1) return 1
+    if (idxB === -1) return -1
+    return idxA - idxB
+  })
 })
 
 const startEdit = (row) => {

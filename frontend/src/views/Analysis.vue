@@ -556,10 +556,18 @@ async function loadData() {
 
     // 初始化产品矩阵数据
     matrixProducts.value = matrixRes.products.slice(0, 5)
+    const groupOrder = ['上一', '上二', '上三', '上四', '上五', '上六', '上海分公司']
     matrixGroups.value = matrixRes.groups.map(g => ({
       ...g,
       members: membersRes.filter(m => m.group_id === g.id)
-    }))
+    })).sort((a, b) => {
+      const idxA = groupOrder.indexOf(a.name)
+      const idxB = groupOrder.indexOf(b.name)
+      if (idxA === -1 && idxB === -1) return 0
+      if (idxA === -1) return 1
+      if (idxB === -1) return -1
+      return idxA - idxB
+    })
     matrixSalesData.value = matrixRes.sales_data
     matrixTargetData.value = matrixRes.target_data || []
     matrixGroupSalesData.value = matrixRes.group_sales_data || []
