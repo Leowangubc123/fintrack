@@ -262,9 +262,81 @@ const parseProductData = (rawData) => {
   })
 
   return rawData.map((row, index) => {
+    // 提取产品名称（万2和千1混合表需要）
+    const productName = getFirstValue(row, ['产品名称']) || ''
+
+    // 根据产品名称区分万2和千1
+    if (selectedProductType.value === '千1') {
+      if (!String(productName).toLowerCase().includes('pro')) {
+        return {
+          row_num: index + 1,
+          group_name: getFirstValue(row, ['营业部简称', '营业部', '部门']) || '(空白)',
+          member_name: getFirstValue(row, ['认领员工', '服务人员', '服务人员姓名', '开发人员', '开发人员姓名']) || '(空白)',
+          subscription_date: null,
+          order_status: '',
+          asset_amount: 0,
+          valid: false,
+          skipped: true,
+          error: '非千1产品'
+        }
+      }
+    } else if (selectedProductType.value === '万2及其他') {
+      if (String(productName).toLowerCase().includes('pro')) {
+        return {
+          row_num: index + 1,
+          group_name: getFirstValue(row, ['营业部简称', '营业部', '部门']) || '(空白)',
+          member_name: getFirstValue(row, ['认领员工', '服务人员', '服务人员姓名', '开发人员', '开发人员姓名']) || '(空白)',
+          subscription_date: null,
+          order_status: '',
+          asset_amount: 0,
+          valid: false,
+          skipped: true,
+          error: '非万2产品'
+        }
+      }
+      if (String(productName).trim() === '新户专项服务') {
+        return {
+          row_num: index + 1,
+          group_name: getFirstValue(row, ['营业部简称', '营业部', '部门']) || '(空白)',
+          member_name: getFirstValue(row, ['认领员工', '服务人员', '服务人员姓名', '开发人员', '开发人员姓名']) || '(空白)',
+          subscription_date: null,
+          order_status: '',
+          asset_amount: 0,
+          valid: false,
+          skipped: true,
+          error: '新户专项服务不参与统计'
+        }
+      }
+    }
+
     // Extract fields from various possible column names
-    const groupName = getFirstValue(row, ['营业部', '部门']) || ''
-    const memberName = getFirstValue(row, ['认领员工', '服务人员', '开发人员', ...(selectedProductType.value === '量化T策略' ? ['推荐人'] : [])]) || ''
+    const groupName = getFirstValue(row, ['营业部简称', '营业部', '部门']) || ''
+
+    // 万2、千1、千3、量化T：营业部必须在系统列表中
+    const strictProducts = ['万2及其他', '千1', '千3', '量化T策略']
+    if (strictProducts.includes(selectedProductType.value)) {
+      const normalizedGroupName = groupName.replace(/\s/g, '')
+      const isKnownGroup = groupMap[groupName] || groupMap[normalizedGroupName]
+      if (!isKnownGroup) {
+        return {
+          row_num: index + 1,
+          group_name: groupName || '(空白)',
+          member_name: '(未检查)',
+          subscription_date: null,
+          order_status: '',
+          asset_amount: 0,
+          valid: false,
+          skipped: true,
+          error: '营业部不在系统中'
+        }
+      }
+    }
+    const memberName = getFirstValue(row, [
+      '认领员工',
+      '服务人员', '服务人员姓名',
+      '开发人员', '开发人员姓名',
+      ...(selectedProductType.value === '量化T策略' ? ['推荐人'] : [])
+    ]) || ''
     const orderDateRaw = getFirstValue(row, ['订购日期', '订阅日期', '日期', '签约日期']) || ''
     const orderStatus = getFirstValue(row, ['订单状态', '状态', '交易状态', '处理状态', '支付状态']) || ''
     const assetAmountRaw = selectedProductType.value === '量化T策略'
@@ -344,8 +416,8 @@ const parseProductData = (rawData) => {
 
     // Check if order status is valid
     if (selectedProductType.value === '量化T策略') {
-      // 量化T策略：只跳过"取消"状态，其他都导入
-      if (String(orderStatus).includes('取消') || String(orderStatus).includes('退订')) {
+      // 量化T策略：只保留"已生效"状态
+      if (String(orderStatus).trim() !== '已生效') {
         return {
           row_num: index + 1,
           group_name: groupName,
@@ -355,11 +427,26 @@ const parseProductData = (rawData) => {
           asset_amount: assetAmount,
           valid: false,
           skipped: true,
-          error: '订单已取消/退订'
+          error: '订单状态非已生效'
+        }
+      }
+    } else if (['千3', '千1', '万2及其他'].includes(selectedProductType.value)) {
+      // 千1、千3、万2及其他：只保留"支付成功"状态
+      if (String(orderStatus).trim() !== '支付成功') {
+        return {
+          row_num: index + 1,
+          group_name: groupName,
+          member_name: memberName,
+          subscription_date: parseDate(orderDateRaw),
+          order_status: orderStatus,
+          asset_amount: assetAmount,
+          valid: false,
+          skipped: true,
+          error: '订单状态非支付成功'
         }
       }
     } else {
-      // 其他产品：保持原有支付成功校验
+      // ETF投顾、GWT等其他产品：保持原有支付成功校验
       const validStatuses = ['支付成功', '已支付', '成功', '正常', '有效', '已成交', '确认', '完成']
       const isValidStatus = validStatuses.some(s => String(orderStatus).includes(s))
       if (!isValidStatus) {

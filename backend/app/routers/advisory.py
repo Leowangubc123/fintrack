@@ -466,8 +466,11 @@ def import_subscriptions(
 
             # 检查订单状态
             if product_type == '量化T策略':
-                if '取消' in str(order_status) or '退订' in str(order_status):
-                    continue  # 跳过取消/退订订单
+                if str(order_status).strip() != '已生效':
+                    continue  # 只导入已生效订单
+            elif product_type in ('千3', '千1', '万2及其他'):
+                if str(order_status).strip() != '支付成功':
+                    continue  # 千1/千3/万2只导入支付成功订单
             else:
                 valid_statuses = ['支付成功', '已支付', '成功', '正常', '有效', '已成交', '确认', '完成']
                 if not any(s in str(order_status) for s in valid_statuses):
@@ -491,6 +494,9 @@ def import_subscriptions(
             # 查找营业部
             group = group_by_name.get(group_name)
             if not group:
+                # 万2、千1、千3、量化T：营业部必须在系统列表中
+                if product_type in ('万2及其他', '千1', '千3', '量化T策略'):
+                    continue  # 严格跳过未知营业部
                 errors.append(f"未找到营业部: {group_name}")
                 continue
 
