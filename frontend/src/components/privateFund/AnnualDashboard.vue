@@ -1,6 +1,6 @@
 <template>
   <div class="annual-dashboard">
-    <!-- 三个KPI卡片 -->
+    <!-- 四个KPI卡片 -->
     <div class="kpi-grid">
       <div class="kpi-card assessed">
         <div class="kpi-label">本年度总考核销量</div>
@@ -11,6 +11,11 @@
         <div class="kpi-label">本年度总实际销量</div>
         <div class="kpi-value">{{ formatNumber(stats.total_actual_sales) }}万</div>
         <div class="kpi-sub">原始销售金额</div>
+      </div>
+      <div class="kpi-card completion">
+        <div class="kpi-label">年度考核销量完成率</div>
+        <div class="kpi-value completion">{{ completionRate }}%</div>
+        <div class="kpi-sub">考核销量 / 销量目标</div>
       </div>
       <div class="kpi-card count">
         <div class="kpi-label">销售笔数</div>
@@ -158,6 +163,7 @@ import { Download } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import * as echarts from 'echarts'
 import { privateFundApi } from '../../api'
+import { membersApi } from '../../api'
 
 const stats = ref({
   total_assessed_sales: 0,
@@ -168,6 +174,9 @@ const stats = ref({
 const viewMode = ref('all')
 const productFilterMode = ref('product') // 'product' 或 'strategy'
 const salesRecords = ref([])
+const allMembers = ref([])
+const fundTargets = ref([])
+const currentYear = new Date().getFullYear()
 const monthlyChart = ref(null)
 const memberChart = ref(null)
 const productChart = ref(null)
@@ -177,6 +186,13 @@ let monthlyChartInstance = null
 let memberChartInstance = null
 let productChartInstance = null
 let groupChartInstance = null
+
+const completionRate = computed(() => {
+  if (!fundTargets.value || fundTargets.value.length === 0) return 0
+  const totalTarget = fundTargets.value.reduce((sum, t) => sum + (t.sales_target || 0), 0)
+  const totalCurrent = fundTargets.value.reduce((sum, t) => sum + (t.current_sales || 0), 0)
+  return totalTarget > 0 ? Math.round(totalCurrent / totalTarget * 100 * 100) / 100 : 0
+})
 
 const tableData = computed(() => {
   const sortedRecords = [...salesRecords.value].sort((a, b) => {
@@ -210,8 +226,25 @@ const tableData = computed(() => {
   }
 
   if (viewMode.value === 'member') {
-    // 按个人分组汇总
+    // 按个人分组汇总，包含所有营销人员（无销售数据显示为0）
     const memberStats = {}
+
+    // 先初始化所有成员
+    allMembers.value.forEach(m => {
+      const groupName = m.group_name || (salesRecords.value.find(r => r.member_name === m.name)?.group_name) || '-'
+      memberStats[m.name] = {
+        id: `member-${m.name}`,
+        transaction_date: '-',
+        product_name: '-',
+        strategy_type: '-',
+        member_name: m.name,
+        group_name: groupName,
+        amount: 0,
+        assessed_amount: 0
+      }
+    })
+
+    // 再叠加销售记录
     sortedRecords.forEach(r => {
       if (!memberStats[r.member_name]) {
         memberStats[r.member_name] = {
@@ -228,6 +261,7 @@ const tableData = computed(() => {
       memberStats[r.member_name].amount += r.amount || 0
       memberStats[r.member_name].assessed_amount += r.assessed_amount || 0
     })
+
     return Object.values(memberStats).sort((a, b) => b.assessed_amount - a.assessed_amount)
   }
 
@@ -529,7 +563,7 @@ const initGroupChart = (data) => {
 
 const loadStats = async () => {
   try {
-    const res = await privateFundApi.getAnnualStats()
+    const res = await privateFundApi.getAnnualStats(currentYear)
     stats.value = res
   } catch (error) {
     ElMessage.error('加载统计数据失败')
@@ -538,7 +572,7 @@ const loadStats = async () => {
 
 const loadSalesRecords = async () => {
   try {
-    const res = await privateFundApi.getAnnualSales()
+    const res = await privateFundApi.getAnnualSales(currentYear)
     salesRecords.value = res
 
     // 初始化图表
@@ -548,6 +582,24 @@ const loadSalesRecords = async () => {
     initGroupChart(res)
   } catch (error) {
     ElMessage.error('加载销售记录失败')
+  }
+}
+
+const loadMembers = async () => {
+  try {
+    const res = await membersApi.getAll()
+    allMembers.value = res
+  } catch (error) {
+    console.error('加载营销人员失败:', error)
+  }
+}
+
+const loadTargets = async () => {
+  try {
+    const res = await privateFundApi.getTargets(currentYear)
+    fundTargets.value = res
+  } catch (error) {
+    console.error('加载考核目标失败:', error)
   }
 }
 
@@ -628,6 +680,8 @@ watch(productFilterMode, () => {
 onMounted(() => {
   loadStats()
   loadSalesRecords()
+  loadMembers()
+  loadTargets()
   window.addEventListener('resize', handleResize)
 })
 </script>
@@ -639,7 +693,7 @@ onMounted(() => {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -665,6 +719,7 @@ onMounted(() => {
 .kpi-card.assessed::before { background: linear-gradient(90deg, #007AFF, #5856D6); }
 .kpi-card.actual::before { background: linear-gradient(90deg, #7C3AED, #A855F7); }
 .kpi-card.count::before { background: linear-gradient(90deg, #34C759, #30D158); }
+.kpi-card.completion::before { background: linear-gradient(90deg, #FF9500, #FF3B30); }
 
 .kpi-label {
   font-size: 13px;
@@ -686,6 +741,12 @@ onMounted(() => {
 
 .kpi-value.count {
   color: #34C759;
+}
+
+.kpi-value.completion {
+  background: linear-gradient(135deg, #FF9500, #FF3B30);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .kpi-sub {

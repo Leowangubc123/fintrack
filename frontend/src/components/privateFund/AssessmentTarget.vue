@@ -71,6 +71,38 @@
             </div>
           </div>
         </div>
+        <!-- 汇总行 -->
+        <div v-if="summaryData" class="table-body-row summary-row">
+          <div class="td" style="width: 50px" data-label="序号">—</div>
+          <div class="td" style="width: 140px" data-label="营业部">
+            <span class="group-name summary-label">全辖区合计</span>
+          </div>
+          <div class="td" style="width: 120px" align="right" data-label="销量目标">
+            {{ summaryData.sales_target?.toFixed(2) || '0.00' }}万
+          </div>
+          <div class="td" style="width: 120px" align="right" data-label="当前考核销量">
+            {{ summaryData.current_sales?.toFixed(2) || '0.00' }}万
+          </div>
+          <div class="td" style="width: 140px" align="right" data-label="完成率">
+            <div class="rate-cell">
+              <div class="rate-bar-bg">
+                <div
+                  class="rate-bar-fill"
+                  :class="getProgressClass(summaryData.completion_rate)"
+                  :style="{ width: Math.min(summaryData.completion_rate || 0, 100) + '%' }"
+                />
+              </div>
+              <span class="rate-text" :class="getProgressClass(summaryData.completion_rate)">
+                {{ summaryData.completion_rate || 0 }}%
+              </span>
+            </div>
+          </div>
+          <div class="td" style="width: 100px" align="right" data-label="时间进度">{{ summaryData.time_progress }}%</div>
+          <div class="td" style="width: 80px" align="center" data-label="状态">
+            <el-tag :type="getStatusTagType(summaryData.status)" size="small">{{ getStatusLabel(summaryData.status) }}</el-tag>
+          </div>
+          <div class="td" style="width: 100px" align="center" data-label="操作">—</div>
+        </div>
       </div>
     </div>
 
@@ -151,6 +183,28 @@ const tableData = computed(() => {
     if (idxB === -1) return -1
     return idxA - idxB
   })
+})
+
+const summaryData = computed(() => {
+  if (!targets.value || targets.value.length === 0) return null
+
+  const totalTarget = targets.value.reduce((sum, t) => sum + (t.sales_target || 0), 0)
+  const totalCurrent = targets.value.reduce((sum, t) => sum + (t.current_sales || 0), 0)
+  const completionRate = totalTarget > 0 ? (totalCurrent / totalTarget * 100) : 0
+  const timeProgress = targets.value[0]?.time_progress || 0
+
+  const diff = completionRate - timeProgress
+  let status = 'normal'
+  if (diff >= 5) status = 'ahead'
+  else if (diff <= -5) status = 'behind'
+
+  return {
+    sales_target: totalTarget,
+    current_sales: totalCurrent,
+    completion_rate: Math.round(completionRate * 100) / 100,
+    time_progress: timeProgress,
+    status
+  }
 })
 
 const startEdit = (row) => {
@@ -310,6 +364,18 @@ onMounted(() => {
 
 .table-body-row.editing {
   background: #FFFBEB;
+}
+
+.table-body-row.summary-row {
+  background: #F0F9FF;
+  border-top: 2px solid #BFDBFE;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.table-body-row.summary-row .summary-label {
+  color: #1D4ED8;
+  font-weight: 700;
 }
 
 .th,
