@@ -554,8 +554,8 @@ async function loadData() {
       analysisApi.salesTrend({ year: dashboardYear.value, group_by: 'month' })
     ])
 
-    // 初始化产品矩阵数据
-    matrixProducts.value = matrixRes.products.slice(0, 5)
+    // 初始化产品矩阵数据（显示所有产品，支持横向滚动）
+    matrixProducts.value = matrixRes.products
     const groupOrder = ['上一', '上二', '上三', '上四', '上五', '上六', '上海分公司']
     matrixGroups.value = matrixRes.groups.map(g => ({
       ...g,
@@ -1261,7 +1261,8 @@ function exportMatrixToExcel() {
 }
 
 .matrix-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -30,9 +30,12 @@ class InvestmentAdvisorySubscription(Base):
 class InvestmentAdvisoryTarget(Base):
     """投资顾问目标设置模型"""
     __tablename__ = "investment_advisory_targets"
+    __table_args__ = (
+        UniqueConstraint('group_id', 'year', name='uq_group_year'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False, unique=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     year = Column(Integer, nullable=False)  # 年度
     income_target = Column(Numeric(15, 2), default=0)  # 收入目标(万元)
     households_target = Column(Integer, default=0)  # 户数目标

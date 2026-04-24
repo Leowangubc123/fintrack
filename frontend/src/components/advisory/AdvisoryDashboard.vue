@@ -49,7 +49,7 @@
                 :class="{ 'inside-left': isBarWide(product) }"
               >{{ dataMap[product]?.households || 0 }}户</span>
             </div>
-            <div class="product-asset-text">{{ formatAsset(dataMap[product]?.assets || 0) }}万</div>
+            <div class="product-asset-text">{{ formatAsset(dataMap[product]?.assets || 0) }}</div>
           </div>
         </div>
       </div>
