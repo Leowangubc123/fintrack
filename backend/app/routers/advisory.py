@@ -445,10 +445,80 @@ def import_subscriptions(
         success_count = 0
         errors = []
 
-        # 验证产品类型（已移除"投顾收入"）
-        valid_product_types = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
+        # 验证产品类型
+        valid_product_types = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT', '投顾收入']
         if product_type not in valid_product_types:
             raise HTTPException(status_code=400, detail=f"无效的产品类型: {product_type}")
+
+        # 投顾收入：单独处理（更新/创建收入记录，不按产品全量删除）
+        if product_type == '投顾收入':
+            for item in request.data:
+                group_name = item.get('group_name') or item.get('营业部', '')
+                income_value = item.get('advisory_income') or item.get('投顾收入', 0)
+
+                group = group_by_name.get(group_name)
+                if not group:
+                    errors.append(f"未找到营业部: {group_name}")
+                    continue
+
+                try:
+                    income_yuan = float(income_value)
+                except (ValueError, TypeError):
+                    errors.append(f"无效的收入金额: {income_value} (营业部: {group_name})")
+                    continue
+
+                # 查找该营业部的一个成员作为记录关联
+                group_member = next((m for m in members if m.group_id == group.id), None)
+                member_id = group_member.id if group_member else (members[0].id if members else None)
+                if not member_id:
+                    errors.append(f"没有可用成员: {group_name}")
+                    continue
+
+                # 查找或创建该营业部该日期的收入记录
+                existing = db.query(InvestmentAdvisorySubscription).filter(
+                    InvestmentAdvisorySubscription.group_id == group.id,
+                    InvestmentAdvisorySubscription.record_date == record_date,
+                    InvestmentAdvisorySubscription.product_type == '投顾收入'
+                ).first()
+
+                if existing:
+                    existing.advisory_income = Decimal(str(income_yuan))
+                else:
+                    subscription = InvestmentAdvisorySubscription(
+                        member_id=member_id,
+                        group_id=group.id,
+                        product_type='投顾收入',
+                        subscription_date=record_date,
+                        asset_amount=Decimal('0'),
+                        advisory_income=Decimal(str(income_yuan)),
+                        original_households=0,
+                        converted_households=0,
+                        record_date=record_date
+                    )
+                    db.add(subscription)
+
+                success_count += 1
+
+            db.commit()
+
+            # 记录导入日志
+            log = AdvisoryImportLog(
+                import_date=record_date,
+                product_type=product_type,
+                record_count=len(request.data),
+                success_count=success_count,
+                error_count=len(errors),
+                operator=operator
+            )
+            db.add(log)
+            db.commit()
+
+            return SubscriptionImportResponse(
+                success_count=success_count,
+                error_count=len(errors),
+                errors=errors[:20],
+                log_id=log.id
+            )
 
         # 1. 删除该产品类型的所有历史记录（全量覆盖，不限日期）
         db.query(InvestmentAdvisorySubscription).filter(
