@@ -8,29 +8,20 @@
           <span class="kpi-date-sub">（最近更新：{{ stats.last_product_update_date || '-' }}）</span>
         </div>
         <div class="kpi-value" :style="{ color: themeColor }">{{ formatNumber(stats.total_households) }}<span class="unit">户</span></div>
-        <div v-if="scope === 'new'" class="kpi-change" :class="{ 'is-positive': stats.households_change >= 0, 'is-negative': stats.households_change < 0 }">
-          较上次更新 {{ stats.households_change >= 0 ? '新增' : '减少' }} {{ Math.abs(stats.households_change || 0) }}户
-        </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">
           {{ scope === 'new' ? '本年签约资产' : '存量签约资产' }}
           <span class="kpi-date-sub">（最近更新：{{ stats.last_product_update_date || '-' }}）</span>
         </div>
-        <div class="kpi-value" :style="{ color: themeColor }">{{ formatNumber(stats.total_assets) }}<span class="unit">万</span></div>
-        <div v-if="scope === 'new'" class="kpi-change" :class="{ 'is-positive': stats.assets_change >= 0, 'is-negative': stats.assets_change < 0 }">
-          较上次更新 {{ stats.assets_change >= 0 ? '新增' : '减少' }} {{ Math.abs(stats.assets_change || 0) }}万
-        </div>
+        <div class="kpi-value" :style="{ color: themeColor }">{{ formatBigAsset(stats.total_assets) }}</div>
       </div>
       <div v-if="scope === 'new'" class="kpi-card">
         <div class="kpi-label">
           本年投顾收入
           <span class="kpi-date-sub">（最近更新：{{ stats.last_income_update_date || '-' }}）</span>
         </div>
-        <div class="kpi-value" style="color: #1EAEDB">{{ formatNumber((stats.total_income / 10000).toFixed(2)) }}<span class="unit">万</span></div>
-        <div class="kpi-change" :class="{ 'is-positive': stats.income_change >= 0, 'is-negative': stats.income_change < 0 }">
-          较上次更新 {{ stats.income_change >= 0 ? '新增' : '减少' }} {{ Math.abs((stats.income_change / 10000) || 0).toFixed(2) }}万
-        </div>
+        <div class="kpi-value" style="color: #1EAEDB">{{ formatBigAsset((stats.total_income / 10000).toFixed(2)) }}</div>
       </div>
     </div>
 
@@ -113,11 +104,11 @@ let trendChartInstance = null
 const productOrder = ['万2及其他', '千1', '千3', 'ETF投顾', '量化T策略', 'GWT']
 
 const productColors = {
-  '万2及其他': props.scope === 'stock' ? '#10B981' : '#0EA5E9',
-  '千1': props.scope === 'stock' ? '#34D399' : '#10B981',
+  '万2及其他': '#0EA5E9',
+  '千1': '#10B981',
   '千3': '#F59E0B',
-  'ETF投顾': props.scope === 'stock' ? '#059669' : '#3B82F6',
-  '量化T策略': props.scope === 'stock' ? '#6EE7B7' : '#8B5CF6',
+  'ETF投顾': '#3B82F6',
+  '量化T策略': '#8B5CF6',
   'GWT': '#F43F5E'
 }
 
@@ -156,8 +147,15 @@ const getProductColor = (product) => productColors[product] || themeColor.value
 
 const formatAsset = (num) => {
   if (num === null || num === undefined) return '0'
-  if (num >= 10000) return (num / 10000).toFixed(0) + '亿'
-  return Math.round(num).toLocaleString('zh-CN')
+  if (num >= 10000) return (num / 10000).toFixed(1) + '亿'
+  return Math.round(num).toLocaleString('zh-CN') + '万'
+}
+
+const formatBigAsset = (num) => {
+  const val = parseFloat(num)
+  if (isNaN(val)) return '0'
+  if (val >= 10000) return (val / 10000).toFixed(2) + '亿'
+  return val.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '万'
 }
 
 const formatNumber = (num) => {
@@ -262,18 +260,25 @@ const updateTrendChart = () => {
       ]
     }
   } else {
-    // 存量统计：近5年年度柱状
+    // 存量统计：近5年年度柱状 + 累计签约户数折线
     const years = trendData.map(t => t.year + '年')
     const householdsData = trendData.map(t => t.households || 0)
     const assetsData = trendData.map(t => t.assets || 0)
 
+    // 计算累计签约户数
+    let cumulative = 0
+    const cumulativeData = trendData.map(t => {
+      cumulative += (t.households || 0)
+      return cumulative
+    })
+
     option = {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       legend: {
-        data: ['签约户数', '签约资产(万)'],
+        data: ['签约户数', '签约资产(万)', '累计签约户数'],
         top: '5%'
       },
-      grid: { left: '3%', right: '4%', bottom: '3%', top: '18%', containLabel: true },
+      grid: { left: '3%', right: '10%', bottom: '3%', top: '18%', containLabel: true },
       xAxis: {
         type: 'category',
         data: years,
@@ -303,16 +308,27 @@ const updateTrendChart = () => {
           name: '签约户数',
           type: 'bar',
           data: householdsData,
-          itemStyle: { color: '#10B981', borderRadius: [4, 4, 0, 0] },
-          barWidth: '35%'
+          itemStyle: { color: '#3B82F6', borderRadius: [4, 4, 0, 0] },
+          barWidth: '25%'
         },
         {
           name: '签约资产(万)',
           type: 'bar',
           yAxisIndex: 1,
           data: assetsData,
-          itemStyle: { color: '#34D399', borderRadius: [4, 4, 0, 0] },
-          barWidth: '35%'
+          itemStyle: { color: '#F59E0B', borderRadius: [4, 4, 0, 0] },
+          barWidth: '25%'
+        },
+        {
+          name: '累计签约户数',
+          type: 'line',
+          data: cumulativeData,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 8,
+          lineStyle: { color: '#10B981', width: 3 },
+          itemStyle: { color: '#10B981', borderWidth: 2, borderColor: '#fff' },
+          label: { show: true, position: 'top', formatter: '{c}', fontSize: 11, color: '#10B981' }
         }
       ]
     }

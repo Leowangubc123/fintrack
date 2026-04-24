@@ -1,8 +1,8 @@
 <template>
   <div class="advisory-group-view">
-    <!-- Header with year selector -->
+    <!-- Header -->
     <div class="view-header">
-      <div class="year-selector">
+      <div class="year-selector" v-if="isNew">
         <el-select v-model="selectedYear" style="width: 120px">
           <el-option v-for="year in years" :key="year" :label="year + '年'" :value="year" />
         </el-select>
@@ -12,9 +12,9 @@
           <span class="summary-label">{{ isNew ? '全辖区本年合计' : '全辖区存量合计' }}</span>
           <span class="summary-value">签约户数 {{ formatNumber(totalStats.households) }}户</span>
           <span class="summary-dot">·</span>
-          <span class="summary-value">签约资产 {{ formatNumber(totalStats.assets) }}万</span>
+          <span class="summary-value">{{ isNew ? '签约资产' : '存量签约资产' }} {{ formatBigAsset(totalStats.assets) }}</span>
           <span v-if="isNew" class="summary-dot">·</span>
-          <span v-if="isNew" class="summary-value">投顾收入 {{ formatNumber((totalStats.income / 10000).toFixed(2)) }}万</span>
+          <span v-if="isNew" class="summary-value">投顾收入 {{ formatBigAsset((totalStats.income / 10000).toFixed(2)) }}</span>
         </span>
       </div>
     </div>
@@ -35,9 +35,9 @@
             <div class="group-meta">
               <span>{{ isNew ? '本年签约' : '存量累计' }} {{ group.total_households }}户</span>
               <span class="meta-dot">·</span>
-              <span>签约资产 ¥{{ formatBigAsset(group.total_assets) }}</span>
-              <span class="meta-dot">·</span>
-              <span>投顾收入 ¥{{ formatNumber(group.total_income) }}万</span>
+              <span>{{ isNew ? '签约资产' : '存量签约资产' }} ¥{{ formatBigAsset(group.total_assets) }}</span>
+              <span v-if="isNew" class="meta-dot">·</span>
+              <span v-if="isNew">投顾收入 ¥{{ formatBigAsset((group.total_income / 10000).toFixed(2)) }}</span>
             </div>
           </div>
           <div v-if="isNew" class="group-rates">
@@ -84,7 +84,7 @@
                 {{ group.product_stats[product]?.households || 0 }}<span class="unit">户</span>
               </div>
               <div class="product-assets">
-                ¥{{ (group.product_stats[product]?.assets || 0).toFixed(1) }}<span class="unit">万</span>
+                ¥{{ formatBigAsset(group.product_stats[product]?.assets || 0) }}
               </div>
             </div>
           </div>
@@ -173,9 +173,10 @@ const formatNumber = (num) => {
 }
 
 const formatBigAsset = (num) => {
-  if (num === null || num === undefined) return '0万'
-  if (num >= 10000) return (num / 10000).toFixed(1) + '亿'
-  return num.toFixed(1) + '万'
+  const val = parseFloat(num)
+  if (isNaN(val)) return '0'
+  if (val >= 10000) return (val / 10000).toFixed(2) + '亿'
+  return val.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '万'
 }
 
 const fetchGroups = async () => {

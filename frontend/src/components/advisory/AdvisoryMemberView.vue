@@ -70,7 +70,7 @@
 
         <el-table-column prop="total_assets" label="签约资产" min-width="120" align="right" sortable>
           <template #default="{ row }">
-            {{ row.total_assets.toFixed(2) }}万
+            {{ formatAsset(row.total_assets) }}
           </template>
         </el-table-column>
       </el-table>
@@ -274,6 +274,13 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
+const formatAsset = (num) => {
+  const val = parseFloat(num)
+  if (isNaN(val)) return '0'
+  if (val >= 10000) return (val / 10000).toFixed(2) + '亿'
+  return val.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '万'
+}
+
 const exportToExcel = () => {
   const exportData = filteredData.value.map(m => ({
     '员工': m.member_name,
@@ -285,7 +292,7 @@ const exportToExcel = () => {
     '量化T策略(户)': m.products.量化T策略.households,
     'GWT(户)': m.products.GWT.households,
     '合计户数': m.total_households,
-    '签约资产(万)': m.total_assets.toFixed(2)
+    '签约资产': formatAsset(m.total_assets)
   }))
 
   const ws = XLSX.utils.json_to_sheet(exportData)
