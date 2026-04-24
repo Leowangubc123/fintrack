@@ -312,8 +312,8 @@ const parseProductData = (rawData) => {
     // Extract fields from various possible column names
     const groupName = getFirstValue(row, ['营业部简称', '营业部', '部门']) || ''
 
-    // 万2、千1、千3、量化T：营业部必须在系统列表中
-    const strictProducts = ['万2及其他', '千1', '千3', '量化T策略']
+    // 万2、千1、千3、量化T、ETF投顾：营业部必须在系统列表中
+    const strictProducts = ['万2及其他', '千1', '千3', '量化T策略', 'ETF投顾']
     if (strictProducts.includes(selectedProductType.value)) {
       const normalizedGroupName = groupName.replace(/\s/g, '')
       const isKnownGroup = groupMap[groupName] || groupMap[normalizedGroupName]
@@ -430,8 +430,8 @@ const parseProductData = (rawData) => {
           error: '订单状态非已生效'
         }
       }
-    } else if (['千3', '千1', '万2及其他'].includes(selectedProductType.value)) {
-      // 千1、千3、万2及其他：只保留"支付成功"状态
+    } else if (['千3', '千1', '万2及其他', 'ETF投顾'].includes(selectedProductType.value)) {
+      // 千1、千3、万2及其他、ETF投顾：只保留"支付成功"状态
       if (String(orderStatus).trim() !== '支付成功') {
         return {
           row_num: index + 1,
