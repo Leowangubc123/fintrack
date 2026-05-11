@@ -662,8 +662,12 @@ async function loadMemberDetail(memberId) {
       const actual = salesMap[product.id] || 0
       const rate = target > 0 ? Math.round((actual / target) * 100) : 0
 
-      // 判断是否已结束募集但未完成
-      const isExpired = product.status === '已结束'
+      // 判断是否已结束募集但未完成（根据 end_date 实时计算，不依赖 status 字段）
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const endDate = product.end_date ? new Date(product.end_date) : null
+      if (endDate) endDate.setHours(0, 0, 0, 0)
+      const isExpired = endDate && endDate < today
       const isIncomplete = rate < 100
       const showIncomplete = isIncomplete && isExpired
 
