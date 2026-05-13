@@ -5,7 +5,11 @@ from app.models.product import Product
 from app.models.sales import ProductTarget, SalesRecord, ImportLog
 from app.models.private_fund import PrivateFundProduct, PrivateFundTransaction, PrivateFundHolding, PrivateFundTarget
 from app.models.advisory import InvestmentAdvisorySubscription, InvestmentAdvisoryTarget, AdvisoryImportLog
+from app.models.margin_trading import (MarginBalanceMember, MarginBalanceGroup, MarginIncome,
+                                        MarginNewAccount, MarginTarget, MarginImportLog)
 
 __all__ = ["User", "Group", "Member", "Product", "ProductTarget", "SalesRecord", "ImportLog",
            "PrivateFundProduct", "PrivateFundTransaction", "PrivateFundHolding", "PrivateFundTarget",
-           "InvestmentAdvisorySubscription", "InvestmentAdvisoryTarget", "AdvisoryImportLog"]
+           "InvestmentAdvisorySubscription", "InvestmentAdvisoryTarget", "AdvisoryImportLog",
+           "MarginBalanceMember", "MarginBalanceGroup", "MarginIncome",
+           "MarginNewAccount", "MarginTarget", "MarginImportLog"]

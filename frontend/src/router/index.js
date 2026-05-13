@@ -8,6 +8,7 @@ import Analysis from '../views/Analysis.vue'
 import Login from '../views/Login.vue'
 import PrivateSecuritiesFund from '../views/PrivateSecuritiesFund.vue'
 import AdvisoryService from '../views/AdvisoryService.vue'
+import MarginTrading from '../views/MarginTrading.vue'
 
 const routes = [
   {
@@ -27,6 +28,7 @@ const routes = [
       { path: 'analysis', name: 'Analysis', component: Analysis, meta: { title: '数据分析' } },
       { path: 'private-fund', name: 'PrivateSecuritiesFund', component: PrivateSecuritiesFund, meta: { title: '私募销售' } },
       { path: 'advisory', name: 'AdvisoryService', component: AdvisoryService, meta: { title: '投顾签约' } },
+      { path: 'margin-trading', name: 'MarginTrading', component: MarginTrading, meta: { title: '两融数据' } },
     ]
   }
 ]

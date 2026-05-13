@@ -91,7 +91,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton, Collection, DocumentChecked, Shop, ArrowDown } from '@element-plus/icons-vue'
+import { DataLine, UserFilled, Box, Upload, TrendCharts, SwitchButton, Collection, DocumentChecked, Shop, ArrowDown, Wallet } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -108,6 +108,7 @@ const publicFundChildren = [
 const otherMenuItems = [
   { path: '/private-fund', title: '私募销售', icon: Collection },
   { path: '/advisory', title: '投顾签约', icon: DocumentChecked },
+  { path: '/margin-trading', title: '两融数据', icon: Wallet },
   { path: '/organization', title: '营销人员', icon: UserFilled }
 ]
 
