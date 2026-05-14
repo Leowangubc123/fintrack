@@ -210,7 +210,7 @@ const steps = ['选择产品', '上传文件', '字段映射', '数据预览', '
 // 字段映射配置（根据实际Excel表头）
 const columnMapping = ref([
   { systemField: '销售人员', excelColumn: '开发人员 / 服务人员', matched: true },
-  { systemField: '销售金额', excelColumn: '委托数量（元→万元）', matched: true },
+  { systemField: '销售金额', excelColumn: '委托数量 / 买入（元→万元）', matched: true },
   { systemField: '交易日期', excelColumn: '委托日期', matched: true },
 ])
 
@@ -319,7 +319,7 @@ async function uploadFile() {
       const salesPerson = devPerson || svcPerson
 
       // 2. 销售金额：委托数量（元 → 万元）
-      const amount = parseAmount(getCellValue(row, ['委托数量', '认购金额', '金额', '成交数量']))
+      const amount = parseAmount(getCellValue(row, ['委托数量', '买入', '认购金额', '金额', '成交数量']))
 
       // 3. 交易日期：委托日期
       const saleDate = formatSaleDate(getCellValue(row, ['委托日期', '交易日期', '认购日期', '日期']))
