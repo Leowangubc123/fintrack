@@ -149,6 +149,24 @@
         <div v-if="currentStep === 3" class="wizard-step-content active">
           <div class="step-title">数据预览</div>
           <div class="step-desc">共 {{ previewData.length }} 条数据，请检查是否正确</div>
+
+          <!-- 汇总统计 -->
+          <div class="summary-stats-bar">
+            <div class="summary-stat-item">
+              <div class="summary-stat-label">本次上传汇总销量</div>
+              <div class="summary-stat-value">{{ previewTotalAmount }} <span class="summary-unit">万元</span></div>
+            </div>
+            <div class="summary-stat-divider"></div>
+            <div class="summary-stat-item">
+              <div class="summary-stat-label">销售人员数</div>
+              <div class="summary-stat-value">{{ previewUniqueMembers }} <span class="summary-unit">人</span></div>
+            </div>
+            <div class="summary-stat-divider"></div>
+            <div class="summary-stat-item">
+              <div class="summary-stat-label">人均销量</div>
+              <div class="summary-stat-value">{{ previewAvgAmount }} <span class="summary-unit">万元</span></div>
+            </div>
+          </div>
           <div v-if="selectedProductInfo" class="selected-product-info">
             <div class="selected-product-label">当前导入产品</div>
             <div class="selected-product-name">{{ selectedProductInfo.name }}</div>
@@ -204,6 +222,23 @@ const uploadFileRaw = ref(null)
 const uploading = ref(false)
 const importing = ref(false)
 const previewData = ref([])
+
+// 预览数据汇总统计
+const previewTotalAmount = computed(() => {
+  const total = previewData.value.reduce((sum, row) => sum + (parseFloat(row['销售金额']) || 0), 0)
+  return total.toFixed(2)
+})
+
+const previewUniqueMembers = computed(() => {
+  const members = new Set(previewData.value.map(row => row['销售人员']).filter(Boolean))
+  return members.size
+})
+
+const previewAvgAmount = computed(() => {
+  const total = previewData.value.reduce((sum, row) => sum + (parseFloat(row['销售金额']) || 0), 0)
+  const count = previewUniqueMembers.value
+  return count > 0 ? (total / count).toFixed(2) : '0.00'
+})
 
 const steps = ['选择产品', '上传文件', '字段映射', '数据预览', '完成']
 
@@ -720,5 +755,47 @@ function downloadTemplate() {
 .success-desc {
   color: #6E6E73;
   margin-bottom: 24px;
+}
+
+/* 汇总统计 */
+.summary-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+  border-radius: 12px;
+  padding: 20px 0;
+  margin-bottom: 24px;
+}
+
+.summary-stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 0 16px;
+}
+
+.summary-stat-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+}
+
+.summary-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+}
+
+.summary-unit {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 2px;
+}
+
+.summary-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>
