@@ -139,6 +139,21 @@
             </div>
           </div>
 
+          <!-- 营业部映射统计 -->
+          <div class="validation-result" style="background: #E0F2FE;">
+            <div class="validation-title" style="color: #0369A1;">
+              <el-icon><Check /></el-icon>
+              营业部自动映射完成
+            </div>
+            <div style="font-size: 13px; color: #0369A1; margin-top: 4px;">
+              系统已根据销售人员姓名自动匹配所属营业部
+              <span v-if="previewData.length > 0">
+                · 共匹配 <strong>{{ previewUniqueMembers }}</strong> 位销售人员，
+                分布在 <strong>{{ previewUniqueGroups }}</strong> 个营业部
+              </span>
+            </div>
+          </div>
+
           <div class="wizard-actions">
             <el-button @click="prevStep">上一步</el-button>
             <el-button type="primary" @click="loadPreviewData" :disabled="codeValidationResult && !codeValidationResult.match">下一步</el-button>
@@ -208,11 +223,24 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { productsApi, importApi } from '../api'
+import { groupsApi, membersApi } from '../api/index.js'
 import { Upload, Check, Download, Close, InfoFilled } from '@element-plus/icons-vue'
 
 const currentStep = ref(0)
 const selectedProduct = ref(null)
 const products = ref([])
+const groups = ref([])
+const existingMembers = ref([])
+
+// 成员名称 → 营业部名称 的映射（用于预览显示）
+const memberGroupMap = computed(() => {
+  const map = {}
+  existingMembers.value.forEach(m => {
+    const group = groups.value.find(g => g.id === m.group_id)
+    map[m.name] = group?.name || '-'
+  })
+  return map
+})
 
 // 获取选中的产品信息
 const selectedProductInfo = computed(() => {
@@ -232,6 +260,11 @@ const previewTotalAmount = computed(() => {
 const previewUniqueMembers = computed(() => {
   const members = new Set(previewData.value.map(row => row['销售人员']).filter(Boolean))
   return members.size
+})
+
+const previewUniqueGroups = computed(() => {
+  const groups = new Set(previewData.value.map(row => row['所属营业部']).filter(g => g && g !== '未匹配' && g !== '未知营业部'))
+  return groups.size
 })
 
 const previewAvgAmount = computed(() => {
@@ -256,6 +289,7 @@ const rowFilterStats = ref({ total: 0, valid: 0, skipped: 0 })
 
 onMounted(() => {
   loadProducts()
+  loadGroups()
 })
 
 async function loadProducts() {
@@ -265,6 +299,15 @@ async function loadProducts() {
     products.value = res.filter(p => !p.is_archived)
   } catch (error) {
     console.error('加载产品失败:', error)
+  }
+}
+
+async function loadGroups() {
+  try {
+    const res = await groupsApi.list()
+    groups.value = res
+  } catch (error) {
+    console.error('加载营业部失败:', error)
   }
 }
 
@@ -313,6 +356,9 @@ async function uploadFile() {
     console.log('[DEBUG] Selected product:', selectedProduct.value)
     const res = await importApi.preview(selectedProduct.value, uploadFileRaw.value)
     const rawPreview = res.preview || []
+
+    // 保存成员数据用于营业部映射
+    existingMembers.value = res.existing_members || []
 
     // ========== 证券代码验证 ==========
     const productCode = selectedProductInfo.value?.code
@@ -371,9 +417,14 @@ async function uploadFile() {
       }
 
       validRows++
+
+      // 根据销售人员查找所属营业部
+      const member = existingMembers.value.find(m => m.name === salesPerson)
+      const groupName = member ? (groups.value.find(g => g.id === member.group_id)?.name || '未知营业部') : '未匹配'
+
       return {
         '销售人员': salesPerson,
-        '所属营业部': '', // 后端会根据销售人员自动匹配营业部
+        '所属营业部': groupName, // 自动匹配到的营业部
         '销售金额': amount.toFixed(2),
         '交易日期': saleDate,
         '备注': remark,
