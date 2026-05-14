@@ -51,11 +51,15 @@ def auto_detect_columns(columns: List[str]) -> dict:
     matched_columns = set()
 
     # 按照优先级排序的字段配置（优先级高的先匹配）
+    # 公募委托查询表中：开发人员优先于服务人员；委托数量为金额（元单位）
     field_configs = [
-        ("member_name", ["销售人员", "姓名", "名字", "理财师", "成员", "员工"]),
+        ("member_name", ["开发人员", "销售人员", "服务人员", "姓名", "名字", "理财师", "成员", "员工"]),
         ("group_name", ["所属营业部", "营业部", "团队", "部门", "门店"]),
-        ("amount", ["销售金额", "销售额", "认购金额", "金额", "业绩", "认购额"]),
-        ("sale_date", ["交易日期", "销售日期", "成交日期", "日期", "时间"]),
+        ("amount", ["委托数量", "销售金额", "销售额", "认购金额", "金额", "业绩", "认购额"]),
+        ("sale_date", ["委托日期", "交易日期", "销售日期", "成交日期", "日期", "时间"]),
+        ("security_code", ["证券代码", "产品代码", "基金代码"]),
+        ("order_status", ["委托状态", "状态"]),
+        ("service_member", ["服务人员"]),
         ("remark", ["备注", "说明", "附注"]),
     ]
 
@@ -109,6 +113,10 @@ async def preview_import(
         df = parse_excel(content, file.filename)
         print(f"[DEBUG] parsed df shape: {df.shape}, columns: {df.columns.tolist()}")
 
+        # 获取所选产品代码，用于前端做证券代码验证
+        product = db.query(Product).filter(Product.id == product_id).first()
+        product_code = product.code if product else None
+
         # 自动检测列映射
         suggested_mapping = auto_detect_columns(df.columns.tolist())
 
@@ -127,7 +135,8 @@ async def preview_import(
             "columns": df.columns.tolist(),
             "suggested_mapping": suggested_mapping,
             "preview": preview_df.to_dict('records'),
-            "existing_members": members_data
+            "existing_members": members_data,
+            "product_code": product_code
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")

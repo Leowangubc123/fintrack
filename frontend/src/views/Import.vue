@@ -96,6 +96,24 @@
             <div class="selected-product-name">{{ selectedProductInfo.name }}</div>
             <div class="selected-product-code">{{ selectedProductInfo.issuer }} | {{ selectedProductInfo.code }}</div>
           </div>
+
+          <!-- 证券代码校验提示 -->
+          <div v-if="codeValidationResult" class="validation-result" :class="{ error: !codeValidationResult.match }">
+            <div class="validation-title">
+              <el-icon><Check v-if="codeValidationResult.match" /><Close v-else /></el-icon>
+              {{ codeValidationResult.match ? '证券代码校验通过' : '证券代码不匹配！' }}
+            </div>
+            <div style="font-size: 13px; color: #6E6E73; margin-top: 4px;">
+              所选产品代码：<strong>{{ selectedProductInfo?.code }}</strong>
+              <span v-if="codeValidationResult.foundCodes.length">
+                · Excel中的证券代码：<strong>{{ codeValidationResult.foundCodes.join(', ') }}</strong>
+              </span>
+            </div>
+            <div v-if="!codeValidationResult.match" style="font-size: 12px; color: #DC2626; margin-top: 4px;">
+              请检查您选择的产品是否与上传的Excel数据匹配，避免错误导入。
+            </div>
+          </div>
+
           <div class="validation-result">
             <div class="validation-title">
               <el-icon><Check /></el-icon>
@@ -107,9 +125,23 @@
               </li>
             </ul>
           </div>
+
+          <div v-if="rowFilterStats.skipped > 0" class="validation-result" style="background: #FEF3C7;">
+            <div class="validation-title" style="color: #92400E;">
+              <el-icon><InfoFilled /></el-icon>
+              数据过滤说明
+            </div>
+            <div style="font-size: 13px; color: #92400E; margin-top: 4px;">
+              共 {{ rowFilterStats.total }} 行数据，
+              其中 <strong>{{ rowFilterStats.valid }}</strong> 行有效，
+              <strong>{{ rowFilterStats.skipped }}</strong> 行被过滤
+              （销售人员为空或委托数量为0）
+            </div>
+          </div>
+
           <div class="wizard-actions">
             <el-button @click="prevStep">上一步</el-button>
-            <el-button type="primary" @click="loadPreviewData">下一步</el-button>
+            <el-button type="primary" @click="loadPreviewData" :disabled="codeValidationResult && !codeValidationResult.match">下一步</el-button>
           </div>
         </div>
 
@@ -158,7 +190,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { productsApi, importApi } from '../api'
-import { Upload, Check, Download } from '@element-plus/icons-vue'
+import { Upload, Check, Download, Close, InfoFilled } from '@element-plus/icons-vue'
 
 const currentStep = ref(0)
 const selectedProduct = ref(null)
@@ -175,13 +207,17 @@ const previewData = ref([])
 
 const steps = ['选择产品', '上传文件', '字段映射', '数据预览', '完成']
 
+// 字段映射配置（根据实际Excel表头）
 const columnMapping = ref([
-  { systemField: '销售人员', excelColumn: '销售人员', matched: true },
-  { systemField: '所属营业部', excelColumn: '所属营业部', matched: true },
-  { systemField: '销售金额', excelColumn: '销售金额', matched: true },
-  { systemField: '交易日期', excelColumn: '交易日期', matched: true },
-  { systemField: '备注', excelColumn: '备注', matched: true },
+  { systemField: '销售人员', excelColumn: '开发人员 / 服务人员', matched: true },
+  { systemField: '销售金额', excelColumn: '委托数量（元→万元）', matched: true },
+  { systemField: '交易日期', excelColumn: '委托日期', matched: true },
 ])
+
+// 证券代码验证结果
+const codeValidationResult = ref(null)
+// 数据过滤统计
+const rowFilterStats = ref({ total: 0, valid: 0, skipped: 0 })
 
 onMounted(() => {
   loadProducts()
@@ -201,6 +237,39 @@ function handleFileChange(file) {
   uploadFileRaw.value = file.raw
 }
 
+// 获取单元格值（处理空值）
+function getCellValue(row, keys) {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+      return String(row[key]).trim()
+    }
+  }
+  return ''
+}
+
+// 格式化委托日期：YYYYMMDD → YYYY-MM-DD
+function formatSaleDate(dateStr) {
+  if (!dateStr || dateStr === '') return ''
+  const s = String(dateStr).trim()
+  // 如果已经是 YYYY-MM-DD 格式，直接返回
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  // 如果是 YYYYMMDD 格式，转换为 YYYY-MM-DD
+  if (/^\d{8}$/.test(s)) {
+    return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`
+  }
+  return s
+}
+
+// 解析委托数量（元 → 万元）
+function parseAmount(amountVal) {
+  if (amountVal === undefined || amountVal === null || amountVal === '') return 0
+  const s = String(amountVal).replace(/,/g, '').trim()
+  const num = parseFloat(s)
+  if (isNaN(num)) return 0
+  // 委托数量单位是元，转换为万元
+  return num / 10000
+}
+
 async function uploadFile() {
   if (!uploadFileRaw.value) return
   uploading.value = true
@@ -208,48 +277,77 @@ async function uploadFile() {
     console.log('[DEBUG] Uploading file:', uploadFileRaw.value.name, 'size:', uploadFileRaw.value.size)
     console.log('[DEBUG] Selected product:', selectedProduct.value)
     const res = await importApi.preview(selectedProduct.value, uploadFileRaw.value)
-    const mapping = res.suggested_mapping || {}
     const rawPreview = res.preview || []
 
-    // 将原始数据映射到系统字段
-    previewData.value = rawPreview.map(row => {
-      const mappedRow = {}
-      // 使用中文列名直接映射
-      if (mapping.member_name && row[mapping.member_name] !== undefined) {
-        mappedRow['销售人员'] = row[mapping.member_name]
-      }
-      if (mapping.group_name && row[mapping.group_name] !== undefined) {
-        mappedRow['所属营业部'] = row[mapping.group_name]
-      }
-      if (mapping.amount !== undefined && row[mapping.amount] !== undefined) {
-        mappedRow['销售金额'] = row[mapping.amount]
-      }
-      if (mapping.sale_date && row[mapping.sale_date] !== undefined) {
-        mappedRow['交易日期'] = row[mapping.sale_date]
-      }
-      if (mapping.remark && row[mapping.remark] !== undefined) {
-        mappedRow['备注'] = row[mapping.remark]
-      }
+    // ========== 证券代码验证 ==========
+    const productCode = selectedProductInfo.value?.code
+    const codeKeys = ['证券代码', '产品代码', '基金代码', '代码']
+    const foundCodes = new Set()
+    let codeMismatch = false
 
-      // 如果没有匹配到映射，尝试直接匹配列名
-      if (!mappedRow['销售人员'] && row['销售人员'] !== undefined) {
-        mappedRow['销售人员'] = row['销售人员']
+    rawPreview.forEach((row, idx) => {
+      const code = getCellValue(row, codeKeys)
+      if (code && code !== '' && code !== 'None') {
+        foundCodes.add(code)
+        // 去掉前导零后比较
+        const normalizedCode = code.replace(/^0+/, '') || code
+        const normalizedProductCode = productCode ? productCode.replace(/^0+/, '') : ''
+        if (normalizedCode !== normalizedProductCode) {
+          codeMismatch = true
+          console.warn(`[IMPORT] Row ${idx + 1}: 证券代码不匹配: ${code} vs ${productCode}`)
+        }
       }
-      if (!mappedRow['所属营业部'] && row['所属营业部'] !== undefined) {
-        mappedRow['所属营业部'] = row['所属营业部']
-      }
-      if (mappedRow['销售金额'] === undefined && row['销售金额'] !== undefined) {
-        mappedRow['销售金额'] = row['销售金额']
-      }
-      if (!mappedRow['交易日期'] && row['交易日期'] !== undefined) {
-        mappedRow['交易日期'] = row['交易日期']
-      }
-      if (!mappedRow['备注'] && row['备注'] !== undefined) {
-        mappedRow['备注'] = row['备注']
-      }
-
-      return mappedRow
     })
+
+    codeValidationResult.value = {
+      match: !codeMismatch && foundCodes.size > 0,
+      foundCodes: Array.from(foundCodes),
+      productCode
+    }
+
+    // ========== 字段映射（新的系统导出格式）==========
+    let totalRows = 0
+    let validRows = 0
+    let skippedRows = 0
+
+    const mappedData = rawPreview.map((row, idx) => {
+      totalRows++
+
+      // 1. 销售人员：开发人员优先，没有则用服务人员
+      const devPerson = getCellValue(row, ['开发人员'])
+      const svcPerson = getCellValue(row, ['服务人员'])
+      const salesPerson = devPerson || svcPerson
+
+      // 2. 销售金额：委托数量（元 → 万元）
+      const amount = parseAmount(getCellValue(row, ['委托数量', '认购金额', '金额', '成交数量']))
+
+      // 3. 交易日期：委托日期
+      const saleDate = formatSaleDate(getCellValue(row, ['委托日期', '交易日期', '认购日期', '日期']))
+
+      // 4. 备注：证券名称 + 委托状态
+      const secName = getCellValue(row, ['证券名称', '产品名称'])
+      const status = getCellValue(row, ['委托状态', '状态'])
+      const remark = [secName, status].filter(Boolean).join(' | ')
+
+      // 5. 过滤条件：销售人员为空或金额为0的跳过
+      if (!salesPerson || amount <= 0) {
+        skippedRows++
+        return null
+      }
+
+      validRows++
+      return {
+        '销售人员': salesPerson,
+        '所属营业部': '', // 后端会根据销售人员自动匹配营业部
+        '销售金额': amount.toFixed(2),
+        '交易日期': saleDate,
+        '备注': remark,
+        '_raw': row // 保留原始数据用于调试
+      }
+    }).filter(Boolean)
+
+    rowFilterStats.value = { total: totalRows, valid: validRows, skipped: skippedRows }
+    previewData.value = mappedData
 
     nextStep()
   } catch (error) {
@@ -303,6 +401,8 @@ function resetWizard() {
   selectedProduct.value = null
   uploadFileRaw.value = null
   previewData.value = []
+  codeValidationResult.value = null
+  rowFilterStats.value = { total: 0, valid: 0, skipped: 0 }
 }
 
 function nextStep() {
