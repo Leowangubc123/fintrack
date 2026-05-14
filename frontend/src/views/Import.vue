@@ -402,8 +402,8 @@ async function uploadFile() {
       // 2. 销售金额：委托数量（元 → 万元）
       const amount = parseAmount(getCellValue(row, ['委托数量', '买入', '认购金额', '金额', '成交数量']))
 
-      // 3. 交易日期：委托日期
-      const saleDate = formatSaleDate(getCellValue(row, ['委托日期', '交易日期', '认购日期', '日期']))
+      // 3. 交易日期：委托日期/开始日期
+      const saleDate = formatSaleDate(getCellValue(row, ['委托日期', '交易日期', '认购日期', '开始日期', '日期']))
 
       // 4. 备注：证券名称 + 委托状态
       const secName = getCellValue(row, ['证券名称', '产品名称'])
