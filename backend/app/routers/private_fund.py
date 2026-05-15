@@ -162,8 +162,9 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
         if existing:
             raise HTTPException(status_code=400, detail="产品代码已存在")
 
-    # 记录旧的保有系数，用于判断是否需要更新保有数据
+    # 记录旧的保有系数和销售系数，用于判断是否需要更新相关数据
     old_holding_coefficient = float(db_product.holding_coefficient) if db_product.holding_coefficient is not None else 1.0
+    old_sales_coefficient = float(db_product.sales_coefficient) if db_product.sales_coefficient is not None else 1.0
 
     db_product.name = product.name
     db_product.code = product.code
@@ -182,6 +183,22 @@ def update_product(product_id: int, product: PrivateFundProductCreate, db: Sessi
 
     db.commit()
     db.refresh(db_product)
+
+    # 如果销售系数发生变化，更新所有相关的销售交易记录
+    new_sales_coefficient = float(db_product.sales_coefficient) if db_product.sales_coefficient is not None else 1.0
+    if old_sales_coefficient != new_sales_coefficient:
+        transactions = db.query(PrivateFundTransaction).filter(
+            PrivateFundTransaction.product_id == db_product.id,
+            PrivateFundTransaction.transaction_type == 'sale'
+        ).all()
+
+        for tx in transactions:
+            tx.sales_coefficient = Decimal(str(new_sales_coefficient))
+            # 重新计算考核销量
+            amount = float(tx.amount)
+            tx.assessed_amount = Decimal(str(round(amount * new_sales_coefficient, 2)))
+
+        db.commit()
 
     # 如果保有系数发生变化，更新所有相关的保有数据记录
     new_holding_coefficient = float(db_product.holding_coefficient) if db_product.holding_coefficient is not None else 1.0
