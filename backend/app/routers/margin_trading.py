@@ -550,7 +550,7 @@ def get_stats(
         func.sum(MarginIncome.income_amount).label("total_income")
     ).join(Group).filter(
         extract('year', MarginIncome.record_date) == year
-    ).group_by(MarginIncome.group_id).order_by(func.sum(MarginIncome.income_amount).desc()).all()
+    ).group_by(MarginIncome.group_id, Group.name).order_by(func.sum(MarginIncome.income_amount).desc()).all()
     income_distribution = [
         {"group_name": r.group_name, "income": float(r.total_income)}
         for r in income_by_group
@@ -569,12 +569,13 @@ def get_stats(
     ]
 
     # 月度开户趋势
+    month_expr = extract('month', MarginNewAccount.account_date).label("month")
     monthly_trend = db.query(
-        extract('month', MarginNewAccount.account_date).label("month"),
+        month_expr,
         func.count(MarginNewAccount.id).label("count")
     ).filter(
         extract('year', MarginNewAccount.account_date) == year
-    ).group_by('month').order_by('month').all()
+    ).group_by(month_expr).order_by(month_expr).all()
     monthly_account_trend = [
         {"month": int(r.month), "count": r.count}
         for r in monthly_trend
