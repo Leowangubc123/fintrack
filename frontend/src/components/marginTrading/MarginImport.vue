@@ -18,7 +18,7 @@
           class="upload-area"
           drag
           :auto-upload="false"
-          :on-change="handleFileChange($event, 'member_balance')"
+          :on-change="(file) => handleFileChange(file, 'member_balance')"
           :limit="1"
           accept=".xlsx,.xls"
         >
@@ -43,7 +43,7 @@
           class="upload-area"
           drag
           :auto-upload="false"
-          :on-change="handleFileChange($event, 'group_balance')"
+          :on-change="(file) => handleFileChange(file, 'group_balance')"
           :limit="1"
           accept=".xlsx,.xls"
         >
@@ -68,7 +68,7 @@
           class="upload-area"
           drag
           :auto-upload="false"
-          :on-change="handleFileChange($event, 'income')"
+          :on-change="(file) => handleFileChange(file, 'income')"
           :limit="1"
           accept=".xlsx,.xls"
         >
@@ -93,7 +93,7 @@
           class="upload-area"
           drag
           :auto-upload="false"
-          :on-change="handleFileChange($event, 'new_account')"
+          :on-change="(file) => handleFileChange(file, 'new_account')"
           :limit="1"
           accept=".xlsx,.xls"
         >
