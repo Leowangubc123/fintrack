@@ -211,8 +211,8 @@ const updateCharts = () => {
         name: '累计收入', type: 'line',
         data: cumulativeData,
         smooth: true, symbol: 'circle', symbolSize: 6,
-        lineStyle: { color: '#7C3AED', width: 3 },
-        itemStyle: { color: '#7C3AED', borderWidth: 2, borderColor: '#fff' }
+        lineStyle: { color: '#EA580C', width: 3 },
+        itemStyle: { color: '#EA580C', borderWidth: 2, borderColor: '#fff' }
       }
     ]
   }, true)
@@ -275,9 +275,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .margin-income { padding: 0; }
 .annotation {
-  background: #F3E8FF; border-left: 3px solid #7C3AED;
+  background: #FFF7ED; border-left: 3px solid #EA580C;
   padding: 12px 16px; border-radius: 0 8px 8px 0;
-  margin-bottom: 20px; font-size: 13px; color: #581C87;
+  margin-bottom: 20px; font-size: 13px; color: #9A3412;
 }
 .filter-bar {
   display: flex; gap: 12px; margin-bottom: 20px; align-items: center;
@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
 .table-container {
   background: white; border-radius: 12px; border: 1px solid #E5E7EB; overflow: hidden;
 }
-:deep(.el-button--primary) { background: #7C3AED; border-color: #7C3AED; }
+:deep(.el-button--primary) { background: #EA580C; border-color: #EA580C; }
 .change-up { color: #EF4444; font-weight: 500; }
 .change-down { color: #10B981; font-weight: 500; }
 .change-flat { color: #9CA3AF; font-weight: 500; }

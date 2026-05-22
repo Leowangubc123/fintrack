@@ -14,26 +14,22 @@
     </div>
 
     <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #EFF6FF;">👤</div>
+      <div class="kpi-card primary">
         <div class="kpi-label">本年累计开户</div>
         <div class="kpi-value">{{ stats.total }}户</div>
         <div class="kpi-change">数据截至：{{ selectedYear }}年</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #ECFDF5;">📅</div>
+      <div class="kpi-card secondary">
         <div class="kpi-label">本周新增开户</div>
         <div class="kpi-value">{{ stats.thisWeek }}户</div>
         <div class="kpi-change">较上周 {{ stats.weekChange >= 0 ? '+' : '' }}{{ stats.weekChange }}户</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #FEF3C7;">📆</div>
+      <div class="kpi-card accent">
         <div class="kpi-label">本月新增开户</div>
         <div class="kpi-value">{{ stats.thisMonth }}户</div>
         <div class="kpi-change">较上月 {{ stats.monthChange >= 0 ? '+' : '' }}{{ stats.monthChange }}户</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #F3E8FF;">📈</div>
+      <div class="kpi-card info">
         <div class="kpi-label">日均新增开户</div>
         <div class="kpi-value">{{ stats.dailyAvg }}户</div>
         <div class="kpi-change">本年数据</div>
@@ -186,7 +182,7 @@ const updateCharts = () => {
     },
     series: [{
       type: 'bar', data: sortedWeeks.map(w => weeklyMap[w]),
-      itemStyle: { color: '#7C3AED', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: '#EA580C', borderRadius: [4, 4, 0, 0] },
       barWidth: '50%'
     }]
   }, true)
@@ -216,7 +212,7 @@ const updateCharts = () => {
     },
     series: [{
       type: 'bar', data: months.map(m => monthlyMap[m] || 0),
-      itemStyle: { color: '#8B5CF6', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: '#FB923C', borderRadius: [4, 4, 0, 0] },
       barWidth: '50%'
     }]
   }, true)
@@ -261,29 +257,41 @@ onBeforeUnmount(() => {
 <style scoped>
 .margin-newaccount { padding: 0; }
 .annotation {
-  background: #F3E8FF; border-left: 3px solid #7C3AED;
+  background: #FFF7ED; border-left: 3px solid #EA580C;
   padding: 12px 16px; border-radius: 0 8px 8px 0;
-  margin-bottom: 20px; font-size: 13px; color: #581C87;
+  margin-bottom: 20px; font-size: 13px; color: #9A3412;
 }
 .filter-bar {
   display: flex; gap: 12px; margin-bottom: 20px; align-items: center;
 }
 .kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
   margin-bottom: 24px;
 }
 .kpi-card {
-  background: white; border-radius: 12px; padding: 20px;
-  border: 1px solid #E5E7EB; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  background: white; border-radius: 16px; padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  position: relative; overflow: hidden;
 }
-.kpi-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; margin-bottom: 12px;
+.kpi-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.kpi-card.primary::before {
+  background: linear-gradient(90deg, #EA580C, #FB923C);
+}
+.kpi-card.secondary::before {
+  background: linear-gradient(90deg, #FB923C, #FDBA74);
+}
+.kpi-card.accent::before {
+  background: linear-gradient(90deg, #F59E0B, #FB923C);
+}
+.kpi-card.info::before {
+  background: linear-gradient(90deg, #10B981, #34D399);
 }
 .kpi-label { font-size: 13px; color: #6B7280; margin-bottom: 8px; }
 .kpi-value {
-  font-size: 26px; font-weight: 700; color: #7C3AED; margin-bottom: 8px;
+  font-size: 28px; font-weight: 700; color: #111827; margin-bottom: 8px;
 }
 .kpi-change { font-size: 12px; color: #9CA3AF; }
 .charts-grid {
@@ -302,7 +310,7 @@ onBeforeUnmount(() => {
   font-size: 15px; font-weight: 600; color: #111827;
   padding: 16px 20px 0;
 }
-:deep(.el-button--primary) { background: #7C3AED; border-color: #7C3AED; }
+:deep(.el-button--primary) { background: #EA580C; border-color: #EA580C; }
 @media (max-width: 900px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-grid { grid-template-columns: 1fr; }

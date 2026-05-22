@@ -75,14 +75,14 @@ const activeTab = ref('dashboard')
 }
 
 .tab-item:hover {
-  color: #7C3AED;
-  background: #F3E8FF;
+  color: #EA580C;
+  background: #FFF7ED;
 }
 
 .tab-item.active {
-  color: #7C3AED;
-  border-bottom-color: #7C3AED;
-  background: #F3E8FF;
+  color: #EA580C;
+  border-bottom-color: #EA580C;
+  background: #FFF7ED;
   font-weight: 600;
 }
 

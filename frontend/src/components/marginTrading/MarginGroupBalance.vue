@@ -145,7 +145,7 @@ const updateCharts = () => {
   if (data.length === 0) return
 
   // Pie chart
-  const colors = ['#7C3AED', '#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE']
+  const colors = ['#EA580C', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5', '#FFF7ED']
   spotPieInstance.setOption({
     tooltip: { trigger: 'item', formatter: '{b}: {c}万 ({d}%)' },
     color: colors,
@@ -245,9 +245,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .margin-group { padding: 0; }
 .annotation {
-  background: #F3E8FF; border-left: 3px solid #7C3AED;
+  background: #FFF7ED; border-left: 3px solid #EA580C;
   padding: 12px 16px; border-radius: 0 8px 8px 0;
-  margin-bottom: 20px; font-size: 13px; color: #581C87;
+  margin-bottom: 20px; font-size: 13px; color: #9A3412;
 }
 .filter-bar {
   display: flex; gap: 12px; margin-bottom: 20px; align-items: center;
@@ -266,7 +266,7 @@ onBeforeUnmount(() => {
 .table-container {
   background: white; border-radius: 12px; border: 1px solid #E5E7EB; overflow: hidden;
 }
-:deep(.el-button--primary) { background: #7C3AED; border-color: #7C3AED; }
+:deep(.el-button--primary) { background: #EA580C; border-color: #EA580C; }
 .change-up { color: #EF4444; font-weight: 500; }
 .change-down { color: #10B981; font-weight: 500; }
 .change-flat { color: #9CA3AF; font-weight: 500; }

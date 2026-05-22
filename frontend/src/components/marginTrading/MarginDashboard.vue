@@ -2,8 +2,7 @@
   <div class="margin-dashboard">
     <!-- KPI Cards -->
     <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #F3E8FF;">💰</div>
+      <div class="kpi-card primary">
         <div class="kpi-label">辖区时点余额</div>
         <div class="kpi-value">{{ formatBigNumber(stats.spot_balance) }}</div>
         <div class="kpi-change" :class="stats.spot_change >= 0 ? 'up' : 'down'">
@@ -11,8 +10,7 @@
         </div>
         <div class="kpi-update">最近更新：{{ stats.last_update_date || '-' }}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #ECFDF5;">📊</div>
+      <div class="kpi-card secondary">
         <div class="kpi-label">辖区日均余额</div>
         <div class="kpi-value">{{ formatBigNumber(stats.daily_balance) }}</div>
         <div class="kpi-change" :class="stats.daily_change >= 0 ? 'up' : 'down'">
@@ -20,8 +18,7 @@
         </div>
         <div class="kpi-update">最近更新：{{ stats.last_update_date || '-' }}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #EFF6FF;">👤</div>
+      <div class="kpi-card info">
         <div class="kpi-label">今年开户数量</div>
         <div class="kpi-value">{{ stats.new_account_count }}户</div>
         <div class="kpi-change" :class="stats.account_change >= 0 ? 'up' : 'down'">
@@ -29,8 +26,7 @@
         </div>
         <div class="kpi-update">最近更新：{{ stats.last_update_date || '-' }}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-icon" style="background: #FEF3C7;">💵</div>
+      <div class="kpi-card accent">
         <div class="kpi-label">息费收入</div>
         <div class="kpi-value">{{ formatNumber(stats.income_total) }}万</div>
         <div class="kpi-change" :class="stats.income_change >= 0 ? 'up' : 'down'">
@@ -166,7 +162,7 @@ const updateCharts = () => {
 
 const updatePieChart = (instance, data, valueKey, name) => {
   if (!instance || !data || data.length === 0) return
-  const colors = ['#7C3AED', '#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE']
+  const colors = ['#EA580C', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5', '#FFF7ED']
   const option = {
     tooltip: { trigger: 'item', formatter: '{b}: {c}万 ({d}%)' },
     color: colors,
@@ -211,7 +207,7 @@ const updateWeeklyChart = () => {
     series: [{
       type: 'bar',
       data: trend.map(t => t.count),
-      itemStyle: { color: '#7C3AED', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: '#EA580C', borderRadius: [4, 4, 0, 0] },
       barWidth: '50%'
     }]
   }
@@ -240,7 +236,7 @@ const updateMonthlyChart = () => {
     series: [{
       type: 'bar',
       data: trend.map(t => t.count),
-      itemStyle: { color: '#8B5CF6', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: '#FB923C', borderRadius: [4, 4, 0, 0] },
       barWidth: '50%'
     }]
   }
@@ -270,27 +266,42 @@ onBeforeUnmount(() => {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 20px;
   margin-bottom: 24px;
 }
 
 .kpi-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
 }
 
-.kpi-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  margin-bottom: 12px;
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.kpi-card.primary::before {
+  background: linear-gradient(90deg, #EA580C, #FB923C);
+}
+
+.kpi-card.secondary::before {
+  background: linear-gradient(90deg, #FB923C, #FDBA74);
+}
+
+.kpi-card.info::before {
+  background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+.kpi-card.accent::before {
+  background: linear-gradient(90deg, #F59E0B, #FB923C);
 }
 
 .kpi-label {
@@ -300,7 +311,7 @@ onBeforeUnmount(() => {
 }
 
 .kpi-value {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   color: #111827;
   margin-bottom: 8px;

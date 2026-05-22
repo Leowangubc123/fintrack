@@ -255,9 +255,9 @@ onMounted(() => {
 <style scoped>
 .margin-import { padding: 0; }
 .annotation {
-  background: #F3E8FF; border-left: 3px solid #7C3AED;
+  background: #FFF7ED; border-left: 3px solid #EA580C;
   padding: 12px 16px; border-radius: 0 8px 8px 0;
-  margin-bottom: 20px; font-size: 13px; color: #581C87;
+  margin-bottom: 20px; font-size: 13px; color: #9A3412;
 }
 .import-grid {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
@@ -273,7 +273,7 @@ onMounted(() => {
 }
 .icon-circle {
   width: 28px; height: 28px; border-radius: 8px;
-  background: #F3E8FF; color: #7C3AED;
+  background: #FFF7ED; color: #EA580C;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px;
 }
@@ -289,17 +289,17 @@ onMounted(() => {
   padding: 24px;
 }
 .upload-area :deep(.el-upload-dragger:hover) {
-  border-color: #7C3AED;
+  border-color: #EA580C;
   background: #FAFAFB;
 }
 .upload-icon {
-  font-size: 28px; color: #7C3AED; margin-bottom: 8px;
+  font-size: 28px; color: #EA580C; margin-bottom: 8px;
 }
 .upload-text {
   font-size: 13px; color: #6B7280;
 }
 .upload-text em {
-  color: #7C3AED; font-style: normal; font-weight: 500;
+  color: #EA580C; font-style: normal; font-weight: 500;
 }
 .history-card {
   background: white; border-radius: 12px; padding: 20px;
@@ -310,7 +310,7 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 :deep(.el-button--primary) {
-  background: #7C3AED; border-color: #7C3AED;
+  background: #EA580C; border-color: #EA580C;
 }
 @media (max-width: 900px) {
   .import-grid { grid-template-columns: 1fr; }
