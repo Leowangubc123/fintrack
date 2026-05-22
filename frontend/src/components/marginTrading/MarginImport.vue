@@ -36,8 +36,9 @@
           营业部余额
         </div>
         <div class="import-desc">
-          包含字段：营业部、时点余额(万)、日均余额(万)<br>
-          每个营业部一行，展示时点余额和日均余额
+          支持双Sheet：营业部时点余额 + 营业部日均余额<br>
+          自动抓取：机构名称 → 时点/日均融资融券余额（元→万元）<br>
+          自动映射营业部名称，合并同一营业部时点和日均数据
         </div>
         <el-upload
           class="upload-area"
@@ -181,7 +182,7 @@ const handleImport = async (dataType) => {
 
   importing.value[dataType] = true
   try {
-    const data = await readExcel(file)
+    const data = await readExcel(file, dataType)
     const recordWeek = getCurrentWeek()
     const recordDate = new Date().toISOString().split('T')[0]
 
@@ -212,7 +213,36 @@ const handleImport = async (dataType) => {
   }
 }
 
-const readExcel = async (file) => {
+// 营业部名称映射：Excel中的名称 -> 系统中的名称
+const groupNameMapping = {
+  '上海延安西路营业部': '上一',
+  '上海民生路营业部': '上二',
+  '上海分公司': '上海分公司',
+  '上海黄浦区西藏中路营业部': '上五',
+  '上海向城路营业部': '上六',
+  '上海金吉路营业部': '上三',
+  '上海静安区北苏州路营业部': '上四'
+}
+
+// 将Excel列名中的空格去除
+const normalizeColName = (name) => {
+  if (!name) return ''
+  return String(name).replace(/\s+/g, '').trim()
+}
+
+// 自动识别sheet中的列索引
+const detectColumns = (headers) => {
+  const normalized = headers.map(h => normalizeColName(h))
+  const result = {}
+  normalized.forEach((h, idx) => {
+    if (h.includes('机构名称')) result.groupNameCol = idx
+    if (h.includes('时点融资融券余额')) result.spotBalanceCol = idx
+    if (h.includes('日均融资融券余额')) result.dailyBalanceCol = idx
+  })
+  return result
+}
+
+const readExcel = async (file, dataType) => {
   const xlsx = await loadXlsx()
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -220,6 +250,67 @@ const readExcel = async (file) => {
       try {
         const data = new Uint8Array(e.target.result)
         const workbook = xlsx.read(data, { type: 'array' })
+
+        // 营业部余额特殊处理：读取两个sheet，合并同一营业部的数据
+        if (dataType === 'group_balance') {
+          const merged = {} // key: group_name, value: { spot_balance, daily_balance }
+
+          workbook.SheetNames.forEach(sheetName => {
+            const sheet = workbook.Sheets[sheetName]
+            const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 })
+            if (rawData.length < 2) return
+
+            const headers = rawData[0]
+            const cols = detectColumns(headers)
+
+            // 判断sheet类型
+            const normalizedSheetName = normalizeColName(sheetName)
+            let balanceType = null
+            if (normalizedSheetName.includes('时点') || cols.spotBalanceCol !== undefined) {
+              balanceType = 'spot'
+            } else if (normalizedSheetName.includes('日均') || cols.dailyBalanceCol !== undefined) {
+              balanceType = 'daily'
+            }
+
+            if (!balanceType) return
+
+            // 从第2行开始读取数据（跳过表头）
+            for (let i = 1; i < rawData.length; i++) {
+              const row = rawData[i]
+              if (!row || row.length === 0) continue
+
+              const rawGroupName = row[cols.groupNameCol] || ''
+              if (!rawGroupName) continue
+              if (String(rawGroupName).includes('合计')) continue
+              if (String(rawGroupName).includes('查询表')) continue
+
+              const mappedGroupName = groupNameMapping[String(rawGroupName).trim()] || String(rawGroupName).trim()
+
+              const balanceCol = balanceType === 'spot' ? cols.spotBalanceCol : cols.dailyBalanceCol
+              if (balanceCol === undefined) continue
+
+              const rawAmount = row[balanceCol]
+              if (rawAmount === undefined || rawAmount === null || rawAmount === '') continue
+
+              // 单位为元，转换为万元
+              const amountWan = parseFloat(rawAmount) / 10000
+
+              if (!merged[mappedGroupName]) {
+                merged[mappedGroupName] = { group_name: mappedGroupName, spot_balance: 0, daily_balance: 0 }
+              }
+              if (balanceType === 'spot') {
+                merged[mappedGroupName].spot_balance = amountWan
+              } else {
+                merged[mappedGroupName].daily_balance = amountWan
+              }
+            }
+          })
+
+          resolve(Object.values(merged))
+          return
+        }
+
+        // 其他类型：读取第一个sheet
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const jsonData = xlsx.utils.sheet_to_json(firstSheet)
         resolve(jsonData)
