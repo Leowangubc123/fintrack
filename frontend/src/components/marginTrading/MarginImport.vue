@@ -133,8 +133,16 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
-import * as XLSX from 'xlsx'
 import { marginTradingApi } from '../../api/marginTrading.js'
+
+// 动态导入 xlsx，避免构建时阻塞
+let XLSX = null
+const loadXlsx = async () => {
+  if (!XLSX) {
+    XLSX = await import('xlsx')
+  }
+  return XLSX
+}
 
 const importing = ref({
   member_balance: false,
@@ -204,15 +212,16 @@ const handleImport = async (dataType) => {
   }
 }
 
-const readExcel = (file) => {
+const readExcel = async (file) => {
+  const xlsx = await loadXlsx()
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result)
-        const workbook = XLSX.read(data, { type: 'array' })
+        const workbook = xlsx.read(data, { type: 'array' })
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet)
+        const jsonData = xlsx.utils.sheet_to_json(firstSheet)
         resolve(jsonData)
       } catch (err) {
         reject(err)
