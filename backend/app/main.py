@@ -39,8 +39,19 @@ async def general_exception_handler(request: Request, exc: Exception):
 # 创建数据表
 Base.metadata.create_all(bind=engine)
 
+# 迁移：为 members 表添加 scope 列（如果不存在）
+try:
+    inspector = inspect(engine)
+    member_columns = [c['name'] for c in inspector.get_columns('members')]
+    if 'scope' not in member_columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE members ADD COLUMN scope VARCHAR(100) DEFAULT 'public_fund,private_fund,advisory,margin_trading'"))
+            conn.commit()
+            print("[MIGRATION] Added scope column to members")
+except Exception as e:
+    print(f"[MIGRATION WARNING] members scope: {e}")
+
 # 迁移：为 investment_advisory_targets 添加缺失列并修复约束
-from sqlalchemy import inspect, text
 try:
     inspector = inspect(engine)
     columns = [c['name'] for c in inspector.get_columns('investment_advisory_targets')]
