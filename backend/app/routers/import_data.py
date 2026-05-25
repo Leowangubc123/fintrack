@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Body, Query, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Optional
 from pydantic import BaseModel
 import uuid
@@ -120,9 +121,9 @@ async def preview_import(
         # 自动检测列映射
         suggested_mapping = auto_detect_columns(df.columns.tolist())
 
-        # 获取所有成员用于匹配
-        members = db.query(Member).all()
-        members_data = [{"id": m.id, "name": m.name, "group_id": m.group_id} for m in members]
+        # 获取所有成员用于匹配（使用原生 SQL 避免选择不存在的 scope 列）
+        member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
+        members_data = [{"id": row.id, "name": row.name, "group_id": row.group_id} for row in member_rows]
 
         # 处理预览数据，将 NaN 转为空字符串
         # 返回所有数据用于预览（前端可自行限制显示数量）
@@ -161,8 +162,9 @@ async def execute_import(
     fail_count = 0
     errors = []
 
-    # 预加载所有成员和营业部数据
-    members = db.query(Member).all()
+    # 预加载所有成员和营业部数据（使用原生 SQL 避免选择不存在的 scope 列）
+    member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
+    members = [{'id': row.id, 'name': row.name, 'group_id': row.group_id} for row in member_rows]
     groups = db.query(Group).all()
     # 创建名称映射，支持带空格和不带空格的匹配
     member_name_map = {}
@@ -174,10 +176,10 @@ async def execute_import(
     }
     for m in members:
         # 原始名称
-        member_name_map[m.name] = m
+        member_name_map[m['name']] = m
         # 去除空格后的名称（用于匹配Excel中姓名中间有空格的情况）
-        normalized_name = m.name.replace(' ', '').replace('\u3000', '').strip()
-        if normalized_name != m.name:
+        normalized_name = m['name'].replace(' ', '').replace('\u3000', '').strip()
+        if normalized_name != m['name']:
             member_name_map[normalized_name] = m
     group_name_map = {g.name: g for g in groups}
 
@@ -210,14 +212,14 @@ async def execute_import(
                 continue
 
             # 确定营业部ID
-            group_id = member.group_id
+            group_id = member['group_id']
             if group_name:
                 # 如果提供了营业部名称，验证是否匹配
                 group = group_name_map.get(group_name)
                 if group:
                     group_id = group.id
                     # 验证成员是否属于该营业部
-                    if member.group_id != group_id:
+                    if member['group_id'] != group_id:
                         # 成员不属于该营业部，但不阻止导入
                         pass
 
@@ -246,7 +248,7 @@ async def execute_import(
             # 检查是否已存在相同产品+成员+日期的记录
             existing = db.query(SalesRecord).filter(
                 SalesRecord.product_id == product_id,
-                SalesRecord.member_id == member.id,
+                SalesRecord.member_id == member['id'],
                 SalesRecord.sale_date == sale_date
             ).first()
 

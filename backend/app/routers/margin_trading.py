@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, text
 from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
@@ -143,10 +143,11 @@ def import_data(
     if data_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"无效的数据类型: {data_type}")
 
-    # 预加载成员（只加载 scope 包含 margin_trading 的）和营业部
-    members = db.query(Member).all()
+    # 预加载成员（使用原生 SQL 避免选择不存在的 scope 列）和营业部
+    member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
+    members = [{'id': row.id, 'name': row.name, 'group_id': row.group_id} for row in member_rows]
     groups = db.query(Group).all()
-    member_by_name = {m.name: m for m in members if m.scope and 'margin_trading' in m.scope}
+    member_by_name = {m['name']: m for m in members}
     group_by_name = {g.name: g for g in groups}
 
     success_count = 0
@@ -197,7 +198,7 @@ def import_data(
                     continue
 
                 db.add(MarginBalanceMember(
-                    member_id=member.id,
+                    member_id=member['id'],
                     group_id=group.id,
                     development_balance=Decimal(str(dev_balance)),
                     service_balance=Decimal(str(svc_balance)),
@@ -271,7 +272,7 @@ def import_data(
                     continue
 
                 db.add(MarginNewAccount(
-                    member_id=member.id,
+                    member_id=member['id'],
                     group_id=group.id,
                     customer_name=customer,
                     asset_amount=Decimal(str(asset)),
