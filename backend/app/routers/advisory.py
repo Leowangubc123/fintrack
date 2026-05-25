@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract, and_, case
+from sqlalchemy import func, text, extract, and_, case
 from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
@@ -435,11 +435,12 @@ def import_subscriptions(
     product_type = request.product_type
 
     try:
-        # 获取所有成员和营业部用于匹配
-        members = db.query(Member).all()
+        # 获取所有成员和营业部用于匹配（使用原生 SQL 避免选择不存在的 scope 列）
+        member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
+        members = [{"id": row.id, "name": row.name, "group_id": row.group_id} for row in member_rows]
         groups = db.query(Group).all()
 
-        member_by_name = {m.name: m for m in members}
+        member_by_name = {m['name']: m for m in members}
         group_by_name = {g.name: g for g in groups}
 
         success_count = 0
@@ -684,8 +685,11 @@ def update_subscription(
     db.commit()
     db.refresh(subscription)
 
-    # 获取关联信息
-    member = db.query(Member).filter(Member.id == subscription.member_id).first()
+    # 获取关联信息（使用原生 SQL 避免选择不存在的 scope 列）
+    member = db.execute(
+        text("SELECT id, name, group_id FROM members WHERE id = :id"),
+        {"id": subscription.member_id}
+    ).fetchone()
     group = db.query(Group).filter(Group.id == subscription.group_id).first()
 
     return SubscriptionResponse(

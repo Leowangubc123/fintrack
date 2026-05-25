@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, text
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
@@ -262,8 +262,11 @@ def create_transaction(transaction: PrivateFundTransactionCreate, db: Session = 
     if not product:
         raise HTTPException(status_code=404, detail="产品不存在")
 
-    # 获取销售人员信息
-    member = db.query(Member).filter(Member.id == transaction.member_id).first()
+    # 获取销售人员信息（使用原生 SQL 避免选择不存在的 scope 列）
+    member = db.execute(
+        text("SELECT id, name, group_id FROM members WHERE id = :id"),
+        {"id": transaction.member_id}
+    ).fetchone()
     if not member:
         raise HTTPException(status_code=404, detail="销售人员不存在")
 
@@ -320,7 +323,11 @@ def get_recent_transactions(limit: int = 10, db: Session = Depends(get_db)):
 
     result = []
     for t in transactions:
-        member = db.query(Member).filter(Member.id == t.member_id).first()
+        # 使用原生 SQL 避免选择不存在的 scope 列
+        member = db.execute(
+            text("SELECT id, name, group_id FROM members WHERE id = :id"),
+            {"id": t.member_id}
+        ).fetchone()
         product = db.query(PrivateFundProduct).filter(PrivateFundProduct.id == t.product_id).first()
         group = db.query(Group).filter(Group.id == member.group_id).first() if member else None
 
@@ -402,7 +409,11 @@ def get_annual_sales(year: Optional[int] = None, db: Session = Depends(get_db)):
 
     result = []
     for t in transactions:
-        member = db.query(Member).filter(Member.id == t.member_id).first()
+        # 使用原生 SQL 避免选择不存在的 scope 列
+        member = db.execute(
+            text("SELECT id, name, group_id FROM members WHERE id = :id"),
+            {"id": t.member_id}
+        ).fetchone()
         product = db.query(PrivateFundProduct).filter(PrivateFundProduct.id == t.product_id).first()
         group = db.query(Group).filter(Group.id == member.group_id).first() if member else None
 
@@ -600,12 +611,14 @@ def get_group_holdings(db: Session = Depends(get_db)):
     # 获取所有交易记录
     transactions = db.query(PrivateFundTransaction).all()
     products = db.query(PrivateFundProduct).all()
-    members = db.query(Member).all()
+    # 使用原生 SQL 避免选择不存在的 scope 列
+    member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
+    members = [{"id": row.id, "name": row.name, "group_id": row.group_id} for row in member_rows]
     groups = db.query(Group).all()
 
     # 构建查询映射
     product_map = {p.id: p for p in products}
-    member_map = {m.id: m for m in members}
+    member_map = {m["id"]: m for m in members}
     group_map = {g.id: g for g in groups}
 
     # 计算每个成员每个产品的净保有

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Optional
 from datetime import date
 from app.database import get_db
@@ -181,12 +182,13 @@ def get_member_assignments(product_id: int, group_id: int = None, db: Session = 
 
     assignments = query.all()
 
-    # 获取所有相关成员ID
+    # 获取所有相关成员ID（使用原生 SQL 避免选择不存在的 scope 列）
     member_ids = [a.member_id for a in assignments if a.member_id]
     members_map = {}
     if member_ids:
-        members = db.query(Member).filter(Member.id.in_(member_ids)).all()
-        members_map = {m.id: m for m in members}
+        placeholders = ', '.join([str(mid) for mid in member_ids])
+        member_rows = db.execute(text(f"SELECT id, name, group_id FROM members WHERE id IN ({placeholders})")).fetchall()
+        members_map = {row.id: row for row in member_rows}
 
     return [
         {

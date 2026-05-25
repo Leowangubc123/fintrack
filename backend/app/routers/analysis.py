@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import List, Optional
 from datetime import date
 from app.database import get_db
@@ -89,8 +89,11 @@ def get_member_summary(member_id: int, db: Session = Depends(get_db)):
         SalesRecord.member_id == member_id
     ).count()
 
-    # 获取成员信息
-    member = db.query(Member).filter(Member.id == member_id).first()
+    # 获取成员信息（使用原生 SQL 避免选择不存在的 scope 列）
+    member = db.execute(
+        text("SELECT id, name, group_id FROM members WHERE id = :id"),
+        {"id": member_id}
+    ).fetchone()
     if not member:
         raise HTTPException(status_code=404, detail="成员不存在")
 
@@ -147,7 +150,9 @@ def get_group_comparison(
         start_date = today.replace(month=1, day=1)
 
     groups = db.query(Group).all()
-    members = db.query(Member).all()
+    # 使用原生 SQL 避免选择不存在的 scope 列
+    member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
+    members = [{"id": row.id, "name": row.name, "group_id": row.group_id} for row in member_rows]
 
     # 获取所有有目标分配的产品ID（不限制在售状态）
     product_ids_with_target = db.query(ProductTarget.product_id).filter(
@@ -157,8 +162,8 @@ def get_group_comparison(
     result = []
     for group in groups:
         # 该营业部的成员
-        group_members = [m for m in members if m.group_id == group.id]
-        member_ids = [m.id for m in group_members]
+        group_members = [m for m in members if m['group_id'] == group.id]
+        member_ids = [m['id'] for m in group_members]
 
         # 该营业部在有目标分配的产品上的总目标
         target = db.query(func.sum(ProductTarget.target_amount)).filter(
@@ -294,7 +299,11 @@ def get_group_members_detail(
     if not group:
         raise HTTPException(status_code=404, detail="营业部不存在")
 
-    members = db.query(Member).filter(Member.group_id == group_id).all()
+    # 使用原生 SQL 避免选择不存在的 scope 列
+    members = db.execute(
+        text("SELECT id, name, group_id FROM members WHERE group_id = :group_id"),
+        {"group_id": group_id}
+    ).fetchall()
 
     result = []
     for member in members:
@@ -594,9 +603,9 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
     # 获取所有产品（包括已结束的，以便统计历史数据）
     products = db.query(Product).all()
 
-    # 获取所有营业部和成员
+    # 获取所有营业部和成员（使用原生 SQL 避免选择不存在的 scope 列）
     groups = db.query(Group).all()
-    members = db.query(Member).all()
+    members = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
 
     # 获取所有销售记录统计（成员级别）
     sales_stats = db.query(
