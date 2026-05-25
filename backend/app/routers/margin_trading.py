@@ -174,19 +174,26 @@ def import_data(
     for item in request.data:
         try:
             if data_type == 'member_balance':
-                group_name = item.get('group_name') or item.get('营业部', '')
-                member_name = item.get('member_name') or item.get('员工姓名', '')
-                dev_balance = float(item.get('development_balance') or item.get('开发关系-两融余额', 0))
-                svc_balance = float(item.get('service_balance') or item.get('服务关系-两融余额', 0))
-                balance_type = item.get('balance_type') or item.get('余额类型', 'spot')
+                group_name = item.get('group_name', '')
+                member_name = item.get('member_name', '')
+                dev_balance = float(item.get('development_balance', 0))
+                svc_balance = float(item.get('service_balance', 0))
+                balance_type = item.get('balance_type', 'spot')
+
+                if not group_name or not member_name:
+                    errors.append(f"缺少必要字段: 营业部或员工姓名")
+                    fail_count += 1
+                    continue
 
                 group = group_by_name.get(group_name)
                 member = member_by_name.get(member_name)
                 if not group:
                     errors.append(f"未找到营业部: {group_name}")
+                    fail_count += 1
                     continue
                 if not member:
-                    errors.append(f"未找到员工: {member_name}")
+                    errors.append(f"未找到员工: {member_name}（请先在营销人员中添加该员工）")
+                    fail_count += 1
                     continue
 
                 db.add(MarginBalanceMember(

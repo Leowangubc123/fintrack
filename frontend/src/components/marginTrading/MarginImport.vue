@@ -11,8 +11,9 @@
           个人余额
         </div>
         <div class="import-desc">
-          包含字段：营业部、员工姓名、开发关系-两融余额(万)、服务关系-两融余额(万)<br>
-          每位员工一行，开发和服务口径并列展示
+          支持双Sheet：员工日均余额 + 员工时点余额<br>
+          自动抓取：机构名称、员工姓名、融资融券余额、客户关系（开发/服务）<br>
+          单位元→万元，按员工合并开发/服务关系数据
         </div>
         <el-upload
           class="upload-area"
@@ -242,6 +243,20 @@ const detectColumns = (headers) => {
   return result
 }
 
+// 识别员工余额sheet中的列索引
+const detectMemberColumns = (headers) => {
+  const normalized = headers.map(h => normalizeColName(h))
+  const result = {}
+  normalized.forEach((h, idx) => {
+    if (h.includes('机构名称')) result.groupNameCol = idx
+    if (h.includes('员工姓名') || h.includes('员工')) result.memberNameCol = idx
+    if (h.includes('融资融券余额')) result.balanceCol = idx
+    if (h.includes('融资业务余额') && h.includes('本金')) result.balanceCol = idx
+    if (h.includes('客户关系') || h.includes('关系类型')) result.relationTypeCol = idx
+  })
+  return result
+}
+
 const readExcel = async (file, dataType) => {
   const xlsx = await loadXlsx()
   return new Promise((resolve, reject) => {
@@ -303,6 +318,82 @@ const readExcel = async (file, dataType) => {
                 merged[mappedGroupName].spot_balance = amountWan
               } else {
                 merged[mappedGroupName].daily_balance = amountWan
+              }
+            }
+          })
+
+          resolve(Object.values(merged))
+          return
+        }
+
+        // 个人余额特殊处理：读取两个sheet，合并同一员工的开发/服务关系
+        if (dataType === 'member_balance') {
+          const merged = {} // key: `${group_name}-${member_name}-${balance_type}`, value: { group_name, member_name, development_balance, service_balance, balance_type }
+
+          workbook.SheetNames.forEach(sheetName => {
+            const sheet = workbook.Sheets[sheetName]
+            const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 })
+            // Excel格式：第1行=sheet标题，第2行=表头，第3行起=数据
+            if (rawData.length < 3) return
+
+            const headers = rawData[1]
+            const cols = detectMemberColumns(headers)
+
+            // 判断sheet类型
+            const normalizedSheetName = normalizeColName(sheetName)
+            let balanceType = null
+            if (normalizedSheetName.includes('日均')) {
+              balanceType = 'daily'
+            } else if (normalizedSheetName.includes('时点')) {
+              balanceType = 'spot'
+            }
+
+            if (!balanceType) return
+
+            // 从第3行开始读取数据（跳过sheet标题和表头）
+            for (let i = 2; i < rawData.length; i++) {
+              const row = rawData[i]
+              if (!row || row.length === 0) continue
+
+              const rawGroupName = row[cols.groupNameCol] || ''
+              const rawMemberName = row[cols.memberNameCol] || ''
+              if (!rawGroupName || !rawMemberName) continue
+              if (String(rawGroupName).includes('合计')) continue
+              if (String(rawGroupName).includes('查询表')) continue
+
+              // 机构名称映射（Sheet1中的完整名称→简写，Sheet2中的简写保持不变）
+              let mappedGroupName = groupNameMapping[String(rawGroupName).trim()] || String(rawGroupName).trim()
+
+              const balanceCol = cols.balanceCol
+              if (balanceCol === undefined) continue
+
+              const rawAmount = row[balanceCol]
+              if (rawAmount === undefined || rawAmount === null || rawAmount === '') continue
+
+              // 单位为元，转换为万元
+              const amountWan = parseFloat(rawAmount) / 10000
+
+              // 关系类型：开发关系/服务关系
+              const relationType = String(row[cols.relationTypeCol] || '').trim()
+
+              const key = `${mappedGroupName}-${rawMemberName}-${balanceType}`
+              if (!merged[key]) {
+                merged[key] = {
+                  group_name: mappedGroupName,
+                  member_name: String(rawMemberName).trim(),
+                  development_balance: 0,
+                  service_balance: 0,
+                  balance_type: balanceType
+                }
+              }
+
+              if (relationType.includes('开发')) {
+                merged[key].development_balance = amountWan
+              } else if (relationType.includes('服务')) {
+                merged[key].service_balance = amountWan
+              } else {
+                // 如果没有明确的关系类型，默认作为开发关系
+                merged[key].development_balance = amountWan
               }
             }
           })
