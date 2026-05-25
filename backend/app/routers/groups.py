@@ -53,7 +53,7 @@ def update_group(group_id: int, group: GroupUpdate, db: Session = Depends(get_db
     db_group.leader = group.leader
     db.commit()
     db.refresh(db_group)
-    member_count = db.query(Member).filter(Member.group_id == db_group.id).count()
+    member_count = db.query(func.count(Member.id)).filter(Member.group_id == db_group.id).scalar()
     return GroupResponse(
         id=db_group.id,
         name=db_group.name,
