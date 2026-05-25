@@ -339,7 +339,7 @@ const readExcel = async (file, dataType) => {
             const headers = rawData[1]
             const cols = detectMemberColumns(headers)
 
-            // 判断sheet类型
+            // 判断sheet类型：优先从sheet名称判断，否则从第一行内容判断
             const normalizedSheetName = normalizeColName(sheetName)
             let balanceType = null
             if (normalizedSheetName.includes('日均')) {
@@ -348,7 +348,22 @@ const readExcel = async (file, dataType) => {
               balanceType = 'spot'
             }
 
-            if (!balanceType) return
+            // 如果sheet名称不包含关键词，尝试从第一行内容判断（如Sheet1/Sheet2）
+            if (!balanceType && rawData.length > 0 && rawData[0].length > 0) {
+              const firstCell = normalizeColName(String(rawData[0][0] || ''))
+              if (firstCell.includes('日均')) {
+                balanceType = 'daily'
+              } else if (firstCell.includes('时点')) {
+                balanceType = 'spot'
+              }
+            }
+
+            console.log(`[DEBUG] Sheet: ${sheetName}, balanceType: ${balanceType}, detected columns:`, cols)
+
+            if (!balanceType) {
+              console.warn(`[WARN] 无法识别sheet类型，跳过: ${sheetName}`)
+              return
+            }
 
             // 从第3行开始读取数据（跳过sheet标题和表头）
             for (let i = 2; i < rawData.length; i++) {
