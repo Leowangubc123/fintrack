@@ -13,8 +13,10 @@ def _has_scope_column(db):
     """检查 members 表是否有 scope 列"""
     try:
         db.execute(text("SELECT scope FROM members LIMIT 0"))
+        db.rollback()
         return True
     except Exception:
+        db.rollback()
         return False
 
 
