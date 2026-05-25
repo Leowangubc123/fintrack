@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from typing import List
 from app.database import get_db
 from app.models import Member, Group
@@ -12,11 +12,10 @@ router = APIRouter(prefix="/api/members", tags=["members"])
 def _has_scope_column(db):
     """检查 members 表是否有 scope 列"""
     try:
-        db.execute(text("SELECT scope FROM members LIMIT 0"))
-        db.rollback()
-        return True
+        inspector = inspect(db.bind)
+        columns = [c['name'] for c in inspector.get_columns('members')]
+        return 'scope' in columns
     except Exception:
-        db.rollback()
         return False
 
 
