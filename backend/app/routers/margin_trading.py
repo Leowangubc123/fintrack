@@ -151,6 +151,7 @@ def import_data(
     group_by_name = {g.name: g for g in groups}
 
     success_count = 0
+    fail_count = 0
     errors = []
 
     # 1. 删除该类型当周的历史记录（全量覆盖）
