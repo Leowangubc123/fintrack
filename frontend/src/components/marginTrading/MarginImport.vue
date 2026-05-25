@@ -128,14 +128,63 @@
         </el-table-column>
       </el-table>
     </div>
+
+    <!-- Error Detail Dialog -->
+    <el-dialog v-model="showErrorDialog" title="导入失败详情" width="600px" destroy-on-close>
+      <div v-if="errorSummary.missingMembers.length > 0" class="error-section">
+        <div class="error-title">
+          <el-icon color="#F56C6C"><CircleClose /></el-icon>
+          以下员工不存在（{{ errorSummary.missingMembers.length }}人）
+        </div>
+        <div class="error-desc">请在"营销人员"中添加这些员工后再导入</div>
+        <div class="error-tags">
+          <el-tag v-for="name in errorSummary.missingMembers" :key="name" type="danger" size="small" effect="plain">
+            {{ name }}
+          </el-tag>
+        </div>
+      </div>
+
+      <div v-if="errorSummary.missingGroups.length > 0" class="error-section">
+        <div class="error-title">
+          <el-icon color="#E6A23C"><Warning /></el-icon>
+          以下营业部不存在（{{ errorSummary.missingGroups.length }}个）
+        </div>
+        <div class="error-tags">
+          <el-tag v-for="name in errorSummary.missingGroups" :key="name" type="warning" size="small" effect="plain">
+            {{ name }}
+          </el-tag>
+        </div>
+      </div>
+
+      <div v-if="errorSummary.otherErrors.length > 0" class="error-section">
+        <div class="error-title">
+          <el-icon color="#909399"><InfoFilled /></el-icon>
+          其他错误（{{ errorSummary.otherErrors.length }}条）
+        </div>
+        <ul class="error-list">
+          <li v-for="(err, idx) in errorSummary.otherErrors.slice(0, 10)" :key="idx">{{ err }}</li>
+          <li v-if="errorSummary.otherErrors.length > 10">...还有 {{ errorSummary.otherErrors.length - 10 }} 条错误</li>
+        </ul>
+      </div>
+
+      <template #footer>
+        <el-button @click="showErrorDialog = false">关闭</el-button>
+        <el-button v-if="errorSummary.missingMembers.length > 0" type="primary" @click="goToMemberMgmt">
+          去添加员工
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Upload } from '@element-plus/icons-vue'
+import { Upload, CircleClose, Warning, InfoFilled } from '@element-plus/icons-vue'
 import { marginTradingApi } from '../../api/marginTrading.js'
+
+const router = useRouter()
 
 // 动态导入 xlsx，避免构建时阻塞
 let XLSX = null
@@ -161,6 +210,32 @@ const fileMap = ref({
 })
 
 const importLogs = ref([])
+const showErrorDialog = ref(false)
+const importErrors = ref([])
+
+const errorSummary = computed(() => {
+  const missingMembers = new Set()
+  const missingGroups = new Set()
+  const otherErrors = []
+
+  for (const err of importErrors.value) {
+    if (err.includes('未找到员工') || err.includes('员工不存在')) {
+      const match = err.match(/[：:](.+?)(?:（|，|$)/)
+      if (match) missingMembers.add(match[1].trim())
+    } else if (err.includes('未找到营业部') || err.includes('营业部不存在')) {
+      const match = err.match(/[：:](.+?)(?:（|，|$)/)
+      if (match) missingGroups.add(match[1].trim())
+    } else {
+      otherErrors.push(err)
+    }
+  }
+
+  return {
+    missingMembers: Array.from(missingMembers),
+    missingGroups: Array.from(missingGroups),
+    otherErrors
+  }
+})
 
 const getCurrentWeek = () => {
   const now = new Date()
@@ -198,9 +273,8 @@ const handleImport = async (dataType) => {
       ElMessage.success(`导入成功：${res.success_count} 条`)
     } else {
       ElMessage.warning(`导入完成：${res.success_count} 条成功，${res.error_count} 条失败`)
-      if (res.errors.length > 0) {
-        console.warn('Import errors:', res.errors)
-      }
+      importErrors.value = res.errors || []
+      showErrorDialog.value = true
     }
 
     fileMap.value[dataType] = null
@@ -439,6 +513,11 @@ const fetchImportLogs = async () => {
   }
 }
 
+const goToMemberMgmt = () => {
+  showErrorDialog.value = false
+  router.push('/organization')
+}
+
 const getDataTypeLabel = (type) => {
   const map = {
     'member_balance': '个人余额',
@@ -518,6 +597,40 @@ onMounted(() => {
 }
 :deep(.el-button--primary) {
   background: #EA580C; border-color: #EA580C;
+}
+.error-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+.error-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+.error-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.error-desc {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+.error-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.error-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.8;
 }
 @media (max-width: 900px) {
   .import-grid { grid-template-columns: 1fr; }
