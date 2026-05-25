@@ -88,6 +88,7 @@
               <tr>
                 <th>姓名</th>
                 <th>手机号</th>
+                <th>功能范围</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -108,6 +109,14 @@
                   </div>
                 </td>
                 <td>{{ member.phone ? maskPhone(member.phone) : '-' }}</td>
+                <td>
+                  <div class="scope-tags">
+                    <span v-if="member.scope && member.scope.includes('public_fund')" class="scope-tag">公募</span>
+                    <span v-if="member.scope && member.scope.includes('private_fund')" class="scope-tag">私募</span>
+                    <span v-if="member.scope && member.scope.includes('advisory')" class="scope-tag">投顾</span>
+                    <span v-if="member.scope && member.scope.includes('margin_trading')" class="scope-tag">两融</span>
+                  </div>
+                </td>
                 <td>
                   <div class="member-actions">
                     <span class="action-link" @click="editMember(member)">编辑</span>
@@ -169,6 +178,14 @@
         </el-form-item>
         <el-form-item label="手机号">
           <el-input v-model="memberForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="功能范围">
+          <el-checkbox-group v-model="memberForm.scopeList">
+            <el-checkbox label="public_fund">公募产品</el-checkbox>
+            <el-checkbox label="private_fund">私募产品</el-checkbox>
+            <el-checkbox label="advisory">投资顾问</el-checkbox>
+            <el-checkbox label="margin_trading">两融数据</el-checkbox>
+          </el-checkbox-group>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -259,7 +276,7 @@ const editingGroupMembers = ref([])
 
 // 表单
 const groupForm = ref({ name: '', leader: '', region: '', remark: '' })
-const memberForm = ref({ name: '', phone: '' })
+const memberForm = ref({ name: '', phone: '', scopeList: ['public_fund', 'private_fund', 'advisory', 'margin_trading'] })
 const leaderForm = ref({ leader: '' })
 const groupFormRef = ref()
 const memberFormRef = ref()
@@ -335,9 +352,10 @@ async function saveGroup() {
 function openMemberDialog(member = null) {
   editingMember.value = member
   if (member) {
-    memberForm.value = { name: member.name, phone: member.phone }
+    const scopeList = member.scope ? member.scope.split(',') : ['public_fund', 'private_fund', 'advisory', 'margin_trading']
+    memberForm.value = { name: member.name, phone: member.phone, scopeList }
   } else {
-    memberForm.value = { name: '', phone: '' }
+    memberForm.value = { name: '', phone: '', scopeList: ['public_fund', 'private_fund', 'advisory', 'margin_trading'] }
   }
   showMemberDialog.value = true
 }
@@ -345,11 +363,17 @@ function openMemberDialog(member = null) {
 async function saveMember() {
   await memberFormRef.value.validate()
   try {
+    const scope = memberForm.value.scopeList.join(',')
+    const payload = {
+      name: memberForm.value.name,
+      phone: memberForm.value.phone,
+      scope
+    }
     if (editingMember.value) {
-      await membersApi.update(editingMember.value.id, memberForm.value)
+      await membersApi.update(editingMember.value.id, payload)
       ElMessage.success('更新成功')
     } else {
-      await membersApi.create({ ...memberForm.value, group_id: selectedGroup.value.id })
+      await membersApi.create({ ...payload, group_id: selectedGroup.value.id })
       ElMessage.success('添加成功')
     }
     showMemberDialog.value = false
@@ -827,6 +851,40 @@ async function deleteGroup(group) {
 
 .action-link:hover {
   text-decoration: underline;
+}
+
+.scope-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.scope-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.scope-tag:nth-child(1) {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.scope-tag:nth-child(2) {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+.scope-tag:nth-child(3) {
+  background: #CCFBF1;
+  color: #0F766E;
+}
+
+.scope-tag:nth-child(4) {
+  background: #FFF7ED;
+  color: #EA580C;
 }
 
 .action-link.delete {

@@ -23,6 +23,7 @@ def list_members(group_id: int = None, db: Session = Depends(get_db)):
             name=member.name,
             phone=member.phone,
             group_id=member.group_id,
+            scope=member.scope,
             group_name=group.name if group else None
         ))
     return result
@@ -31,7 +32,7 @@ def list_members(group_id: int = None, db: Session = Depends(get_db)):
 @router.post("", response_model=MemberResponse)
 def create_member(member: MemberCreate, db: Session = Depends(get_db)):
     """创建成员"""
-    db_member = Member(name=member.name, phone=member.phone, group_id=member.group_id)
+    db_member = Member(name=member.name, phone=member.phone, group_id=member.group_id, scope=member.scope)
     db.add(db_member)
     db.commit()
     db.refresh(db_member)
@@ -41,6 +42,7 @@ def create_member(member: MemberCreate, db: Session = Depends(get_db)):
         name=db_member.name,
         phone=db_member.phone,
         group_id=db_member.group_id,
+        scope=db_member.scope,
         group_name=group.name if group else None
     )
 
@@ -53,10 +55,12 @@ def update_member(member_id: int, member: MemberUpdate, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="成员不存在")
     if member.name:
         db_member.name = member.name
-    if member.phone:
+    if member.phone is not None:
         db_member.phone = member.phone
     if member.group_id:
         db_member.group_id = member.group_id
+    if member.scope is not None:
+        db_member.scope = member.scope
     db.commit()
     db.refresh(db_member)
     group = db.query(Group).filter(Group.id == db_member.group_id).first()
@@ -65,6 +69,7 @@ def update_member(member_id: int, member: MemberUpdate, db: Session = Depends(ge
         name=db_member.name,
         phone=db_member.phone,
         group_id=db_member.group_id,
+        scope=db_member.scope,
         group_name=group.name if group else None
     )
 

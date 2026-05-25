@@ -143,10 +143,10 @@ def import_data(
     if data_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"无效的数据类型: {data_type}")
 
-    # 预加载成员和营业部
+    # 预加载成员（只加载 scope 包含 margin_trading 的）和营业部
     members = db.query(Member).all()
     groups = db.query(Group).all()
-    member_by_name = {m.name: m for m in members}
+    member_by_name = {m.name: m for m in members if m.scope and 'margin_trading' in m.scope}
     group_by_name = {g.name: g for g in groups}
 
     success_count = 0
