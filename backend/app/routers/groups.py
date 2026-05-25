@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from app.database import get_db
 from app.models import Group, Member
@@ -14,7 +15,7 @@ def list_groups(db: Session = Depends(get_db)):
     groups = db.query(Group).all()
     result = []
     for group in groups:
-        member_count = db.query(Member).filter(Member.group_id == group.id).count()
+        member_count = db.query(func.count(Member.id)).filter(Member.group_id == group.id).scalar()
         group_data = GroupResponse(
             id=group.id,
             name=group.name,
