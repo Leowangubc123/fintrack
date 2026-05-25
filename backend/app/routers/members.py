@@ -14,8 +14,11 @@ def _has_scope_column(db):
     try:
         inspector = inspect(db.bind)
         columns = [c['name'] for c in inspector.get_columns('members')]
-        return 'scope' in columns
-    except Exception:
+        has_it = 'scope' in columns
+        print(f"[DEBUG] _has_scope_column: columns={columns}, has_scope={has_it}")
+        return has_it
+    except Exception as e:
+        print(f"[DEBUG] _has_scope_column ERROR: {e}")
         return False
 
 
