@@ -258,9 +258,10 @@ const readExcel = async (file, dataType) => {
           workbook.SheetNames.forEach(sheetName => {
             const sheet = workbook.Sheets[sheetName]
             const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 })
-            if (rawData.length < 2) return
+            // Excel格式：第1行=sheet标题，第2行=表头，第3行起=数据
+            if (rawData.length < 3) return
 
-            const headers = rawData[0]
+            const headers = rawData[1]
             const cols = detectColumns(headers)
 
             // 判断sheet类型
@@ -274,8 +275,8 @@ const readExcel = async (file, dataType) => {
 
             if (!balanceType) return
 
-            // 从第2行开始读取数据（跳过表头）
-            for (let i = 1; i < rawData.length; i++) {
+            // 从第3行开始读取数据（跳过sheet标题和表头）
+            for (let i = 2; i < rawData.length; i++) {
               const row = rawData[i]
               if (!row || row.length === 0) continue
 
