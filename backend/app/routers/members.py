@@ -1,19 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import text, inspect
+from sqlalchemy import text
 from typing import List
-from app.database import get_db, engine
+from app.database import get_db
 from app.models import Member, Group
 from app.schemas.member import MemberCreate, MemberUpdate, MemberResponse
 
 router = APIRouter(prefix="/api/members", tags=["members"])
 
 
+def _has_scope_column(db):
+    """检查 members 表是否有 scope 列"""
+    try:
+        db.execute(text("SELECT scope FROM members LIMIT 0"))
+        return True
+    except Exception:
+        return False
+
+
 @router.get("", response_model=List[MemberResponse])
 def list_members(group_id: int = None, db: Session = Depends(get_db)):
     """获取成员列表，可按营业部筛选"""
-    # 使用原生 SQL 避免 SQLAlchemy ORM 选择不存在的 scope 列
-    sql = "SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members"
+    has_scope = _has_scope_column(db)
+    if has_scope:
+        sql = "SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members"
+    else:
+        sql = "SELECT id, name, phone, group_id, 'public_fund,private_fund,advisory,margin_trading' as scope FROM members"
     params = {}
     if group_id:
         sql += " WHERE group_id = :group_id"
@@ -36,15 +48,12 @@ def list_members(group_id: int = None, db: Session = Depends(get_db)):
 @router.post("", response_model=MemberResponse)
 def create_member(member: MemberCreate, db: Session = Depends(get_db)):
     """创建成员"""
-    # 使用原生 SQL 插入，兼容 scope 列不存在的情况
+    has_scope = _has_scope_column(db)
     columns = ["name", "phone", "group_id"]
     values = [":name", ":phone", ":group_id"]
     params = {"name": member.name, "phone": member.phone or "", "group_id": member.group_id}
 
-    # 检查 scope 列是否存在
-    inspector = inspect(engine)
-    member_columns = [c['name'] for c in inspector.get_columns('members')]
-    if 'scope' in member_columns:
+    if has_scope:
         columns.append("scope")
         values.append(":scope")
         params["scope"] = member.scope or 'public_fund,private_fund,advisory,margin_trading'
@@ -54,17 +63,23 @@ def create_member(member: MemberCreate, db: Session = Depends(get_db)):
     db.commit()
     new_id = result.lastrowid
 
-    row = db.execute(
-        text("SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members WHERE id = :id"),
-        {"id": new_id}
-    ).fetchone()
+    if has_scope:
+        row = db.execute(
+            text("SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members WHERE id = :id"),
+            {"id": new_id}
+        ).fetchone()
+    else:
+        row = db.execute(
+            text("SELECT id, name, phone, group_id FROM members WHERE id = :id"),
+            {"id": new_id}
+        ).fetchone()
     group = db.query(Group).filter(Group.id == row.group_id).first()
     return MemberResponse(
         id=row.id,
         name=row.name,
         phone=row.phone,
         group_id=row.group_id,
-        scope=row.scope,
+        scope=row.scope if has_scope else 'public_fund,private_fund,advisory,margin_trading',
         group_name=group.name if group else None
     )
 
@@ -72,7 +87,9 @@ def create_member(member: MemberCreate, db: Session = Depends(get_db)):
 @router.put("/{member_id}", response_model=MemberResponse)
 def update_member(member_id: int, member: MemberUpdate, db: Session = Depends(get_db)):
     """更新成员"""
-    # 检查成员是否存在（使用原生 SQL 避免选择不存在的 scope 列）
+    has_scope = _has_scope_column(db)
+
+    # 检查成员是否存在
     row = db.execute(text("SELECT id, name, phone, group_id FROM members WHERE id = :id"), {"id": member_id}).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="成员不存在")
@@ -89,7 +106,7 @@ def update_member(member_id: int, member: MemberUpdate, db: Session = Depends(ge
     if member.group_id:
         updates.append("group_id = :group_id")
         params["group_id"] = member.group_id
-    if member.scope is not None:
+    if has_scope and member.scope is not None:
         updates.append("scope = :scope")
         params["scope"] = member.scope
 
@@ -99,17 +116,23 @@ def update_member(member_id: int, member: MemberUpdate, db: Session = Depends(ge
         db.commit()
 
     # 重新查询
-    row = db.execute(
-        text("SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members WHERE id = :id"),
-        {"id": member_id}
-    ).fetchone()
+    if has_scope:
+        row = db.execute(
+            text("SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members WHERE id = :id"),
+            {"id": member_id}
+        ).fetchone()
+    else:
+        row = db.execute(
+            text("SELECT id, name, phone, group_id FROM members WHERE id = :id"),
+            {"id": member_id}
+        ).fetchone()
     group = db.query(Group).filter(Group.id == row.group_id).first()
     return MemberResponse(
         id=row.id,
         name=row.name,
         phone=row.phone,
         group_id=row.group_id,
-        scope=row.scope,
+        scope=row.scope if has_scope else 'public_fund,private_fund,advisory,margin_trading',
         group_name=group.name if group else None
     )
 
