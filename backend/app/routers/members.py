@@ -62,10 +62,22 @@ def create_member(member: MemberCreate, db: Session = Depends(get_db)):
         values.append(":scope")
         params["scope"] = member.scope or 'public_fund,private_fund,advisory,margin_trading'
 
-    sql = f"INSERT INTO members ({', '.join(columns)}) VALUES ({', '.join(values)})"
-    result = db.execute(text(sql), params)
-    db.commit()
-    new_id = result.lastrowid
+    is_postgres = 'postgresql' in str(db.bind.url).lower()
+
+    if is_postgres:
+        sql = f"INSERT INTO members ({', '.join(columns)}) VALUES ({', '.join(values)}) RETURNING id"
+        result = db.execute(text(sql), params)
+        db.commit()
+        row_returned = result.fetchone()
+        new_id = row_returned[0] if row_returned else None
+    else:
+        sql = f"INSERT INTO members ({', '.join(columns)}) VALUES ({', '.join(values)})"
+        result = db.execute(text(sql), params)
+        db.commit()
+        new_id = result.lastrowid
+
+    if not new_id:
+        raise HTTPException(status_code=500, detail="创建成员失败，无法获取新成员ID")
 
     if has_scope:
         row = db.execute(
@@ -77,6 +89,8 @@ def create_member(member: MemberCreate, db: Session = Depends(get_db)):
             text("SELECT id, name, phone, group_id FROM members WHERE id = :id"),
             {"id": new_id}
         ).fetchone()
+    if not row:
+        raise HTTPException(status_code=500, detail="创建成员失败，无法查询到新成员")
     group = db.query(Group).filter(Group.id == row.group_id).first()
     return MemberResponse(
         id=row.id,
