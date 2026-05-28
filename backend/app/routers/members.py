@@ -10,13 +10,18 @@ router = APIRouter(prefix="/api/members", tags=["members"])
 
 
 def _has_scope_column(db):
-    """检查 members 表是否有 scope 列"""
+    """检查 members 表是否有 scope 列，不存在则自动添加"""
     try:
         inspector = inspect(db.bind)
         columns = [c['name'] for c in inspector.get_columns('members')]
-        has_it = 'scope' in columns
-        print(f"[DEBUG] _has_scope_column: columns={columns}, has_scope={has_it}")
-        return has_it
+        if 'scope' in columns:
+            return True
+        # 列不存在，尝试自动添加（使用独立连接避免事务冲突）
+        with db.bind.connect() as conn:
+            conn.execute(text("ALTER TABLE members ADD COLUMN scope VARCHAR(100) DEFAULT 'public_fund,private_fund,advisory,margin_trading'"))
+            conn.commit()
+            print("[MIGRATION] Auto-added scope column to members")
+        return True
     except Exception as e:
         print(f"[DEBUG] _has_scope_column ERROR: {e}")
         return False
