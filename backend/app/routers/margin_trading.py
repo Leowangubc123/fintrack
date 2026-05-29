@@ -315,38 +315,43 @@ def get_member_balances(
     group_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取个人余额列表"""
-    query = db.query(
-        MarginBalanceMember,
-        Member.name.label("member_name"),
-        Group.name.label("group_name")
-    ).join(Member, MarginBalanceMember.member_id == Member.id
-    ).join(Group, MarginBalanceMember.group_id == Group.id
-    ).filter(MarginBalanceMember.balance_type == balance_type)
-
+    """获取个人余额列表（使用原生SQL避免选择不存在的scope列）"""
+    sql = """
+        SELECT
+            mbm.id, mbm.member_id, mbm.group_id,
+            mbm.development_balance, mbm.service_balance,
+            mbm.balance_type, mbm.record_week, mbm.record_date,
+            m.name as member_name, g.name as group_name
+        FROM margin_balance_members mbm
+        JOIN (SELECT id, name FROM members) m ON mbm.member_id = m.id
+        JOIN (SELECT id, name FROM groups) g ON mbm.group_id = g.id
+        WHERE mbm.balance_type = :balance_type
+    """
+    params = {"balance_type": balance_type}
     if record_week:
-        query = query.filter(MarginBalanceMember.record_week == record_week)
+        sql += " AND mbm.record_week = :record_week"
+        params["record_week"] = record_week
     if group_id:
-        query = query.filter(MarginBalanceMember.group_id == group_id)
+        sql += " AND mbm.group_id = :group_id"
+        params["group_id"] = group_id
+    sql += " ORDER BY (mbm.development_balance + mbm.service_balance) DESC"
 
-    results = query.order_by(
-        (MarginBalanceMember.development_balance + MarginBalanceMember.service_balance).desc()
-    ).all()
+    rows = db.execute(text(sql), params).fetchall()
 
     return [
         MemberBalanceResponse(
-            id=r.MarginBalanceMember.id,
-            member_id=r.MarginBalanceMember.member_id,
-            member_name=r.member_name,
-            group_id=r.MarginBalanceMember.group_id,
-            group_name=r.group_name,
-            development_balance=float(r.MarginBalanceMember.development_balance),
-            service_balance=float(r.MarginBalanceMember.service_balance),
-            balance_type=r.MarginBalanceMember.balance_type,
-            record_week=r.MarginBalanceMember.record_week,
-            record_date=r.MarginBalanceMember.record_date
+            id=row.id,
+            member_id=row.member_id,
+            member_name=row.member_name,
+            group_id=row.group_id,
+            group_name=row.group_name,
+            development_balance=float(row.development_balance),
+            service_balance=float(row.service_balance),
+            balance_type=row.balance_type,
+            record_week=row.record_week,
+            record_date=row.record_date
         )
-        for r in results
+        for row in rows
     ]
 
 
@@ -419,36 +424,45 @@ def get_new_accounts(
     group_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取新开户列表"""
-    query = db.query(
-        MarginNewAccount,
-        Member.name.label("member_name"),
-        Group.name.label("group_name")
-    ).join(Member, MarginNewAccount.member_id == Member.id
-    ).join(Group, MarginNewAccount.group_id == Group.id)
-
+    """获取新开户列表（使用原生SQL避免选择不存在的scope列）"""
+    sql = """
+        SELECT
+            mna.id, mna.member_id, mna.group_id,
+            mna.customer_name, mna.asset_amount, mna.account_date,
+            mna.record_week,
+            m.name as member_name, g.name as group_name
+        FROM margin_new_accounts mna
+        JOIN (SELECT id, name FROM members) m ON mna.member_id = m.id
+        JOIN (SELECT id, name FROM groups) g ON mna.group_id = g.id
+        WHERE 1=1
+    """
+    params = {}
     if year:
-        query = query.filter(extract('year', MarginNewAccount.account_date) == year)
+        sql += " AND EXTRACT(year FROM mna.account_date) = :year"
+        params["year"] = year
     if record_week:
-        query = query.filter(MarginNewAccount.record_week == record_week)
+        sql += " AND mna.record_week = :record_week"
+        params["record_week"] = record_week
     if group_id:
-        query = query.filter(MarginNewAccount.group_id == group_id)
+        sql += " AND mna.group_id = :group_id"
+        params["group_id"] = group_id
+    sql += " ORDER BY mna.account_date DESC"
 
-    results = query.order_by(MarginNewAccount.account_date.desc()).all()
+    rows = db.execute(text(sql), params).fetchall()
 
     return [
         NewAccountResponse(
-            id=r.MarginNewAccount.id,
-            member_id=r.MarginNewAccount.member_id,
-            member_name=r.member_name,
-            group_id=r.MarginNewAccount.group_id,
-            group_name=r.group_name,
-            customer_name=r.MarginNewAccount.customer_name,
-            asset_amount=float(r.MarginNewAccount.asset_amount),
-            account_date=r.MarginNewAccount.account_date,
-            record_week=r.MarginNewAccount.record_week
+            id=row.id,
+            member_id=row.member_id,
+            member_name=row.member_name,
+            group_id=row.group_id,
+            group_name=row.group_name,
+            customer_name=row.customer_name,
+            asset_amount=float(row.asset_amount),
+            account_date=row.account_date,
+            record_week=row.record_week
         )
-        for r in results
+        for row in rows
     ]
 
 
