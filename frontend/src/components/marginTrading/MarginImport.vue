@@ -15,6 +15,15 @@
           自动抓取：机构名称、员工姓名、融资融券余额、客户关系（开发/服务）<br>
           单位元→万元，按员工合并开发/服务关系数据
         </div>
+        <el-date-picker
+          v-model="importDates.member_balance"
+          type="date"
+          placeholder="选择数据日期"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          style="width: 100%; margin-bottom: 12px;"
+          size="small"
+        />
         <el-upload
           class="upload-area"
           drag
@@ -41,6 +50,15 @@
           自动抓取：机构名称 → 时点/日均融资融券余额（元→万元）<br>
           自动映射营业部名称，合并同一营业部时点和日均数据
         </div>
+        <el-date-picker
+          v-model="importDates.group_balance"
+          type="date"
+          placeholder="选择数据日期"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          style="width: 100%; margin-bottom: 12px;"
+          size="small"
+        />
         <el-upload
           class="upload-area"
           drag
@@ -66,6 +84,15 @@
           包含字段：营业部、本周息费收入(万)<br>
           按营业部统计本周两融息费收入数据
         </div>
+        <el-date-picker
+          v-model="importDates.income"
+          type="date"
+          placeholder="选择数据日期"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          style="width: 100%; margin-bottom: 12px;"
+          size="small"
+        />
         <el-upload
           class="upload-area"
           drag
@@ -91,6 +118,15 @@
           包含字段：开户日期、客户姓名、所属员工、营业部、开户资产(万)<br>
           每条开户记录一行
         </div>
+        <el-date-picker
+          v-model="importDates.new_account"
+          type="date"
+          placeholder="选择数据日期"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          style="width: 100%; margin-bottom: 12px;"
+          size="small"
+        />
         <el-upload
           class="upload-area"
           drag
@@ -209,6 +245,13 @@ const fileMap = ref({
   new_account: null
 })
 
+const importDates = ref({
+  member_balance: null,
+  group_balance: null,
+  income: null,
+  new_account: null
+})
+
 const importLogs = ref([])
 const showErrorDialog = ref(false)
 const importErrors = ref([])
@@ -237,11 +280,11 @@ const errorSummary = computed(() => {
   }
 })
 
-const getCurrentWeek = () => {
-  const now = new Date()
-  const year = now.getFullYear()
+const getWeekFromDate = (dateStr) => {
+  const date = dateStr ? new Date(dateStr) : new Date()
+  const year = date.getFullYear()
   const oneJan = new Date(year, 0, 1)
-  const weekNum = Math.ceil((((now - oneJan) / 86400000) + oneJan.getDay() + 1) / 7)
+  const weekNum = Math.ceil((((date - oneJan) / 86400000) + oneJan.getDay() + 1) / 7)
   return `${year}-W${String(weekNum).padStart(2, '0')}`
 }
 
@@ -256,11 +299,17 @@ const handleImport = async (dataType) => {
     return
   }
 
+  const selectedDate = importDates.value[dataType]
+  if (!selectedDate) {
+    ElMessage.warning('请先选择数据日期')
+    return
+  }
+
   importing.value[dataType] = true
   try {
     const data = await readExcel(file, dataType)
-    const recordWeek = getCurrentWeek()
-    const recordDate = new Date().toISOString().split('T')[0]
+    const recordWeek = getWeekFromDate(selectedDate)
+    const recordDate = selectedDate
 
     const res = await marginTradingApi.importData({
       data_type: dataType,
