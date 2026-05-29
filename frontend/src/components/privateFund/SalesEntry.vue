@@ -293,7 +293,7 @@ const loadGroups = async () => {
 
 const loadMembers = async () => {
   try {
-    const res = await membersApi.getAll()
+    const res = await membersApi.getAll('private_fund')
     members.value = res
   } catch (error) {
     ElMessage.error('加载营销人员列表失败')

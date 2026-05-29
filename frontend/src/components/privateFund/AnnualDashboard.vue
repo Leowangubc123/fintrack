@@ -587,7 +587,7 @@ const loadSalesRecords = async () => {
 
 const loadMembers = async () => {
   try {
-    const res = await membersApi.getAll()
+    const res = await membersApi.getAll('private_fund')
     allMembers.value = res
   } catch (error) {
     console.error('加载营销人员失败:', error)

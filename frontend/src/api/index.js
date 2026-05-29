@@ -53,14 +53,19 @@ export const groupsApi = {
 }
 
 export const membersApi = {
-  list: (groupId) => api.get('/members', { params: { group_id: groupId } }),
+  list: (groupId, scope) => {
+    const params = {}
+    if (groupId) params.group_id = groupId
+    if (scope) params.scope = scope
+    return api.get('/members', { params })
+  },
   create: (data) => api.post('/members', data),
   update: (id, data) => api.put(`/members/${id}`, data),
   delete: (id) => api.delete(`/members/${id}`),
   transfer: (id, targetGroupId) => api.post(`/members/${id}/transfer`, null, {
     params: { target_group_id: targetGroupId }
   }),
-  getAll: () => api.get('/members')
+  getAll: (scope) => api.get('/members', { params: scope ? { scope } : {} })
 }
 
 // 组织架构API（兼容命名）

@@ -540,7 +540,7 @@ async function loadData() {
     const [productsRes, groupsRes, membersRes] = await Promise.all([
       productsApi.list(),
       groupsApi.list(),
-      membersApi.list()
+      membersApi.list(null, 'public_fund')
     ])
     products.value = productsRes
     groups.value = groupsRes

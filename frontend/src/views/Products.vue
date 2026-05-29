@@ -818,7 +818,7 @@ async function onGroupChange(groupId) {
   selectAllMembers.value = false
   try {
     // 获取该营业部的成员
-    const membersRes = await membersApi.list(groupId)
+    const membersRes = await membersApi.list(groupId, 'public_fund')
 
     // 获取已保存的个人分配
     const savedAssignments = await productsApi.getMemberAssignments(assignProduct.value.id, groupId)

@@ -28,17 +28,23 @@ def _has_scope_column(db):
 
 
 @router.get("", response_model=List[MemberResponse])
-def list_members(group_id: int = None, db: Session = Depends(get_db)):
-    """获取成员列表，可按营业部筛选"""
+def list_members(group_id: int = None, scope: str = None, db: Session = Depends(get_db)):
+    """获取成员列表，可按营业部和功能模块筛选"""
     has_scope = _has_scope_column(db)
     if has_scope:
         sql = "SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members"
     else:
         sql = "SELECT id, name, phone, group_id, 'public_fund,private_fund,advisory,margin_trading' as scope FROM members"
+    conditions = []
     params = {}
     if group_id:
-        sql += " WHERE group_id = :group_id"
+        conditions.append("group_id = :group_id")
         params['group_id'] = group_id
+    if scope and has_scope:
+        conditions.append("scope LIKE :scope_pattern")
+        params['scope_pattern'] = f"%{scope}%"
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
     result_rows = db.execute(text(sql), params).fetchall()
     result = []
     for row in result_rows:

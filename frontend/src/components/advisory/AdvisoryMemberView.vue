@@ -142,7 +142,7 @@ const fetchGroups = async () => {
 
 const fetchMembers = async () => {
   try {
-    const res = await membersApi.getAll()
+    const res = await membersApi.getAll('advisory')
     members.value = res
   } catch (error) {
     console.error('Failed to fetch members:', error)
