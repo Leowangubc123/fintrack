@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
@@ -193,9 +193,18 @@ watch([balanceType, recordWeek], () => {
   fetchData()
 })
 
+const onDataImported = () => {
+  fetchData()
+}
+
 onMounted(() => {
   fetchGroups()
   fetchData()
+  window.addEventListener('margin-data-imported', onDataImported)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('margin-data-imported', onDataImported)
 })
 </script>
 

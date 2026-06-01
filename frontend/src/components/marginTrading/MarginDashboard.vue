@@ -243,13 +243,19 @@ const updateMonthlyChart = () => {
   monthlyInstance.setOption(option, true)
 }
 
+const onDataImported = () => {
+  fetchStats()
+}
+
 onMounted(() => {
   fetchStats()
   initCharts()
+  window.addEventListener('margin-data-imported', onDataImported)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('margin-data-imported', onDataImported)
   spotPieInstance?.dispose()
   dailyPieInstance?.dispose()
   incomePieInstance?.dispose()

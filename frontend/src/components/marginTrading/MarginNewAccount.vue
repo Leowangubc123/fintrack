@@ -242,13 +242,19 @@ watch(selectedYear, () => {
   fetchData()
 })
 
+const onDataImported = () => {
+  fetchData()
+}
+
 onMounted(() => {
   fetchData()
   initCharts()
+  window.addEventListener('margin-data-imported', onDataImported)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('margin-data-imported', onDataImported)
   weeklyInstance?.dispose()
   monthlyInstance?.dispose()
 })

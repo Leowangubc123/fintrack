@@ -226,6 +226,12 @@ watch([recordWeek], () => {
   })
 })
 
+const onDataImported = () => {
+  fetchData().then(() => {
+    nextTick(() => updateCharts())
+  })
+}
+
 onMounted(() => {
   fetchData().then(() => {
     nextTick(() => {
@@ -233,10 +239,12 @@ onMounted(() => {
       updateCharts()
     })
   })
+  window.addEventListener('margin-data-imported', onDataImported)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('margin-data-imported', onDataImported)
   spotPieInstance?.dispose()
   changeBarInstance?.dispose()
 })
