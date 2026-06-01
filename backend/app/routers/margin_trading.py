@@ -395,6 +395,32 @@ def get_group_balances(
     ]
 
 
+@router.delete("/member-balances")
+def delete_member_balances(
+    record_week: str,
+    db: Session = Depends(get_db)
+):
+    """删除指定周的个人余额数据"""
+    count = db.query(MarginBalanceMember).filter(
+        MarginBalanceMember.record_week == record_week
+    ).delete()
+    db.commit()
+    return {"message": f"已删除 {record_week} 的个人余额数据", "deleted_count": count}
+
+
+@router.delete("/group-balances")
+def delete_group_balances(
+    record_week: str,
+    db: Session = Depends(get_db)
+):
+    """删除指定周的营业部余额数据"""
+    count = db.query(MarginBalanceGroup).filter(
+        MarginBalanceGroup.record_week == record_week
+    ).delete()
+    db.commit()
+    return {"message": f"已删除 {record_week} 的营业部余额数据", "deleted_count": count}
+
+
 @router.get("/income", response_model=List[IncomeResponse])
 def get_income(
     record_week: Optional[str] = None,

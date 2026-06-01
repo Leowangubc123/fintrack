@@ -16,6 +16,9 @@
       <el-button type="primary" @click="exportToExcel">
         <el-icon><Download /></el-icon>导出Excel
       </el-button>
+      <el-button type="danger" plain @click="handleDeleteWeek">
+        <el-icon><Delete /></el-icon>删除本周数据
+      </el-button>
     </div>
 
     <!-- 余额类型切换 -->
@@ -60,7 +63,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { Download, Delete } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { marginTradingApi } from '../../api/marginTrading.js'
 import { groupsApi } from '../../api/index.js'
@@ -187,6 +190,28 @@ const exportToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, '个人余额')
   XLSX.writeFile(wb, `两融个人余额_${balanceTypeLabel.value}_${recordWeek.value}.xlsx`)
   ElMessage.success('导出成功')
+}
+
+const handleDeleteWeek = async () => {
+  if (!recordWeek.value) {
+    ElMessage.warning('请先选择要删除的周')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定删除 ${recordWeek.value} 的个人余额数据吗？此操作不可恢复。`,
+      '确认删除',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+    )
+    await marginTradingApi.deleteMemberBalances(recordWeek.value)
+    ElMessage.success(`已删除 ${recordWeek.value} 的数据`)
+    fetchData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Delete error:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 watch([balanceType, recordWeek], () => {

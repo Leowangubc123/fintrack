@@ -25,6 +25,12 @@ export const marginTradingApi = {
   // 保存考核指标
   saveTarget: (data) => api.post('/margin-trading/targets', data),
 
+  // 删除指定周个人余额
+  deleteMemberBalances: (record_week) => api.delete('/margin-trading/member-balances', { params: { record_week } }),
+
+  // 删除指定周营业部余额
+  deleteGroupBalances: (record_week) => api.delete('/margin-trading/group-balances', { params: { record_week } }),
+
   // 获取导入日志
   getImportLogs: (limit = 50) => api.get('/margin-trading/import-logs', { params: { limit } })
 }
