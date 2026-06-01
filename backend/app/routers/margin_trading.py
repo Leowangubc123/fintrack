@@ -147,8 +147,16 @@ def import_data(
     member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
     members = [{'id': row.id, 'name': row.name, 'group_id': row.group_id} for row in member_rows]
     groups = db.query(Group).all()
-    member_by_name = {m['name']: m for m in members}
+    # 支持重名员工：联合 key 为 (member_name, group_name)
+    group_by_id = {g.id: g for g in groups}
     group_by_name = {g.name: g for g in groups}
+    member_by_name = {m['name']: m for m in members}
+    member_by_name_and_group = {}
+    for m in members:
+        g = group_by_id.get(m['group_id'])
+        if g:
+            key = (m['name'], g.name)
+            member_by_name_and_group[key] = m
 
     success_count = 0
     fail_count = 0
@@ -188,7 +196,8 @@ def import_data(
                     continue
 
                 group = group_by_name.get(group_name)
-                member = member_by_name.get(member_name)
+                # 优先按 (姓名, 营业部) 联合匹配，支持重名员工
+                member = member_by_name_and_group.get((member_name, group_name)) or member_by_name.get(member_name)
                 if not group:
                     errors.append(f"未找到营业部: {group_name}")
                     fail_count += 1
@@ -250,7 +259,8 @@ def import_data(
                 account_date_str = item.get('account_date') or item.get('开户日期', '')
 
                 group = group_by_name.get(group_name)
-                member = member_by_name.get(member_name)
+                # 优先按 (姓名, 营业部) 联合匹配，支持重名员工
+                member = member_by_name_and_group.get((member_name, group_name)) or member_by_name.get(member_name)
                 if not group:
                     errors.append(f"未找到营业部: {group_name}")
                     continue
