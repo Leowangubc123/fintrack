@@ -319,7 +319,7 @@ const handleImport = async (dataType) => {
     })
 
     if (res.error_count === 0) {
-      ElMessage.success(`导入成功：${res.success_count} 条`)
+      ElMessage.success(`导入成功：${res.success_count} 条，数据日期：${recordDate}（${recordWeek}）`)
     } else {
       ElMessage.warning(`导入完成：${res.success_count} 条成功，${res.error_count} 条失败`)
       importErrors.value = res.errors || []
