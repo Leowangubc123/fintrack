@@ -168,10 +168,18 @@ def update_member(member_id: int, member: MemberUpdate, db: Session = Depends(ge
 
 @router.delete("/{member_id}")
 def delete_member(member_id: int, db: Session = Depends(get_db)):
-    """删除成员"""
+    """删除成员（先清理关联数据避免外键冲突）"""
     row = db.execute(text("SELECT id FROM members WHERE id = :id"), {"id": member_id}).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="成员不存在")
+
+    # PostgreSQL 外键约束严格，需先清理关联表数据
+    db.execute(text("DELETE FROM margin_balance_members WHERE member_id = :id"), {"id": member_id})
+    db.execute(text("DELETE FROM margin_new_accounts WHERE member_id = :id"), {"id": member_id})
+    db.execute(text("DELETE FROM private_fund_transactions WHERE member_id = :id"), {"id": member_id})
+    db.execute(text("DELETE FROM sales_records WHERE member_id = :id"), {"id": member_id})
+    db.execute(text("DELETE FROM investment_advisory_subscriptions WHERE member_id = :id"), {"id": member_id})
+
     db.execute(text("DELETE FROM members WHERE id = :id"), {"id": member_id})
     db.commit()
     return {"message": "成员已删除"}
