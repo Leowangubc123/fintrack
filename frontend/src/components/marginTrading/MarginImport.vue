@@ -540,6 +540,57 @@ const readExcel = async (file, dataType) => {
           return
         }
 
+        // 开户数据特殊处理：系统导出的多级表头格式
+        if (dataType === 'new_account') {
+          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 })
+          if (rawData.length < 4) {
+            resolve([])
+            return
+          }
+
+          // Excel格式：第1行=标题，第2行=一级表头，第3行=二级表头，第4行起=数据
+          const result = []
+          for (let i = 3; i < rawData.length; i++) {
+            const row = rawData[i]
+            if (!row || row.length === 0) continue
+
+            const groupName = String(row[2] || '').trim() // 机构名称
+            const customerCode = String(row[3] || '').trim() // 客户代码
+            const devMember = String(row[4] || '').trim() // 开发人员
+            const svcMember = String(row[5] || '').trim() // 服务人员
+            const accountDate = String(row[7] || '').trim() // 开户日期
+
+            if (!groupName || !customerCode) continue
+            if (groupName.includes('合计') || groupName.includes('查询表')) continue
+
+            // 营业部名称映射
+            const mappedGroupName = groupNameMapping[groupName] || groupName
+
+            // 开发人员优先，如果为空则使用服务人员
+            const memberName = devMember || svcMember
+            if (!memberName) continue
+
+            // 开户日期格式转换：20260325 -> 2026-03-25
+            let formattedDate = accountDate
+            if (accountDate && accountDate.length === 8 && /^\d{8}$/.test(accountDate)) {
+              formattedDate = `${accountDate.slice(0, 4)}-${accountDate.slice(4, 6)}-${accountDate.slice(6, 8)}`
+            }
+
+            result.push({
+              group_name: mappedGroupName,
+              member_name: memberName,
+              customer_name: customerCode,
+              account_date: formattedDate,
+              asset_amount: 0 // 该报表无开户资产列
+            })
+          }
+
+          console.log(`[DEBUG] new_account parsed ${result.length} records`)
+          resolve(result)
+          return
+        }
+
         // 其他类型：读取第一个sheet
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const jsonData = xlsx.utils.sheet_to_json(firstSheet)
