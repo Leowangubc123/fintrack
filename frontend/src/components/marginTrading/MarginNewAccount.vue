@@ -67,7 +67,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Delete } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import * as XLSX from 'xlsx'

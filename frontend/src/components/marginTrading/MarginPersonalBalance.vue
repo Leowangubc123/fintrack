@@ -62,7 +62,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Delete } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { marginTradingApi } from '../../api/marginTrading.js'
