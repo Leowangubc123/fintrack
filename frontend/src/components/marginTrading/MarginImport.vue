@@ -601,6 +601,49 @@ const readExcel = async (file, dataType) => {
           return
         }
 
+        // 息费收入特殊处理：系统导出的多级表头格式
+        if (dataType === 'income') {
+          // 优先读取名为"营业部"的sheet，否则读取第一个sheet
+          const sheetName = workbook.SheetNames.find(name => name.includes('营业部')) || workbook.SheetNames[0]
+          const sheet = workbook.Sheets[sheetName]
+          const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 })
+          if (rawData.length < 3) {
+            resolve([])
+            return
+          }
+
+          // 第1行=标题，第2行=表头，第3行起=数据
+          const result = []
+          for (let i = 2; i < rawData.length; i++) {
+            const row = rawData[i]
+            if (!row || row.length === 0) continue
+
+            const groupName = String(row[4] || '').trim() // 营业部简称 (E列)
+            const rawAmount = row[6] // 累计完成息费收入（税后）（元） (G列)
+
+            if (!groupName) continue
+            if (groupName.includes('合计') || groupName.includes('查询')) continue
+
+            // 金额处理：元 → 万元
+            let amountWan = 0
+            if (rawAmount !== undefined && rawAmount !== null && rawAmount !== '') {
+              amountWan = parseFloat(rawAmount) / 10000
+            }
+
+            // 营业部名称映射
+            const mappedGroupName = groupNameMapping[groupName] || groupName
+
+            result.push({
+              group_name: mappedGroupName,
+              income_amount: amountWan
+            })
+          }
+
+          console.log(`[DEBUG] income parsed ${result.length} records from sheet "${sheetName}"`)
+          resolve(result)
+          return
+        }
+
         // 其他类型：读取第一个sheet
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const jsonData = xlsx.utils.sheet_to_json(firstSheet)
