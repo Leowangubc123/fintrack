@@ -31,6 +31,12 @@ export const marginTradingApi = {
   // 删除指定周营业部余额
   deleteGroupBalances: (record_week) => api.delete('/margin-trading/group-balances', { params: { record_week } }),
 
+  // 删除指定周息费收入
+  deleteIncome: (record_week) => api.delete('/margin-trading/income', { params: { record_week } }),
+
+  // 删除指定周新开户
+  deleteNewAccounts: (record_week) => api.delete('/margin-trading/new-accounts', { params: { record_week } }),
+
   // 获取导入日志
   getImportLogs: (limit = 50) => api.get('/margin-trading/import-logs', { params: { limit } })
 }

@@ -421,6 +421,32 @@ def delete_group_balances(
     return {"message": f"已删除 {record_week} 的营业部余额数据", "deleted_count": count}
 
 
+@router.delete("/income")
+def delete_income(
+    record_week: str,
+    db: Session = Depends(get_db)
+):
+    """删除指定周的息费收入数据"""
+    count = db.query(MarginIncome).filter(
+        MarginIncome.record_week == record_week
+    ).delete()
+    db.commit()
+    return {"message": f"已删除 {record_week} 的息费收入数据", "deleted_count": count}
+
+
+@router.delete("/new-accounts")
+def delete_new_accounts(
+    record_week: str,
+    db: Session = Depends(get_db)
+):
+    """删除指定周的新开户数据"""
+    count = db.query(MarginNewAccount).filter(
+        MarginNewAccount.record_week == record_week
+    ).delete()
+    db.commit()
+    return {"message": f"已删除 {record_week} 的新开户数据", "deleted_count": count}
+
+
 @router.get("/income", response_model=List[IncomeResponse])
 def get_income(
     record_week: Optional[str] = None,

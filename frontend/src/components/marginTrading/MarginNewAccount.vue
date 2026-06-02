@@ -8,8 +8,14 @@
       <el-select v-model="selectedYear" style="width: 120px">
         <el-option v-for="y in yearOptions" :key="y" :label="y + '年'" :value="y" />
       </el-select>
+      <el-select v-model="selectedWeek" placeholder="选择周数" clearable style="width: 200px">
+        <el-option v-for="w in weekOptions" :key="w" :label="w" :value="w" />
+      </el-select>
       <el-button type="primary" @click="exportToExcel">
         <el-icon><Download /></el-icon>导出Excel
+      </el-button>
+      <el-button type="danger" plain @click="handleDeleteWeek">
+        <el-icon><Delete /></el-icon>删除本周数据
       </el-button>
     </div>
 
@@ -62,7 +68,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { Download, Delete } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import * as XLSX from 'xlsx'
 import { marginTradingApi } from '../../api/marginTrading.js'
@@ -70,6 +76,12 @@ import { marginTradingApi } from '../../api/marginTrading.js'
 const accountList = ref([])
 const loading = ref(false)
 const selectedYear = ref(new Date().getFullYear())
+const selectedWeek = ref('')
+
+const weekOptions = computed(() => {
+  const weeks = new Set(accountList.value.map(a => a.record_week))
+  return Array.from(weeks).sort().reverse()
+})
 
 const weeklyChart = ref(null)
 const monthlyChart = ref(null)
@@ -228,6 +240,28 @@ const exportToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, '新开户明细')
   XLSX.writeFile(wb, `两融新开户明细_${selectedYear.value}.xlsx`)
   ElMessage.success('导出成功')
+}
+
+const handleDeleteWeek = async () => {
+  if (!selectedWeek.value) {
+    ElMessage.warning('请先选择要删除的周')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定删除 ${selectedWeek.value} 的新开户数据吗？此操作不可恢复。`,
+      '确认删除',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+    )
+    await marginTradingApi.deleteNewAccounts(selectedWeek.value)
+    ElMessage.success(`已删除 ${selectedWeek.value} 的数据`)
+    fetchData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Delete error:', error)
+      ElMessage.error(error.response?.data?.detail || '删除失败')
+    }
+  }
 }
 
 watch(selectedYear, () => {

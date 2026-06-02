@@ -240,7 +240,7 @@ const handleDeleteWeek = async () => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Delete error:', error)
-      ElMessage.error('删除失败')
+      ElMessage.error(error.response?.data?.detail || '删除失败')
     }
   }
 }
