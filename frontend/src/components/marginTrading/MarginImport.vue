@@ -551,6 +551,7 @@ const readExcel = async (file, dataType) => {
 
           // Excel格式：第1行=标题，第2行=一级表头，第3行=二级表头，第4行起=数据
           const result = []
+          let skippedEmptyDate = 0
           for (let i = 3; i < rawData.length; i++) {
             const row = rawData[i]
             if (!row || row.length === 0) continue
@@ -564,6 +565,12 @@ const readExcel = async (file, dataType) => {
             if (!groupName || !customerCode) continue
             if (groupName.includes('合计') || groupName.includes('查询表')) continue
 
+            // 开户日期为空则跳过并记录
+            if (!accountDate) {
+              skippedEmptyDate++
+              continue
+            }
+
             // 营业部名称映射
             const mappedGroupName = groupNameMapping[groupName] || groupName
 
@@ -573,7 +580,7 @@ const readExcel = async (file, dataType) => {
 
             // 开户日期格式转换：20260325 -> 2026-03-25
             let formattedDate = accountDate
-            if (accountDate && accountDate.length === 8 && /^\d{8}$/.test(accountDate)) {
+            if (accountDate.length === 8 && /^\d{8}$/.test(accountDate)) {
               formattedDate = `${accountDate.slice(0, 4)}-${accountDate.slice(4, 6)}-${accountDate.slice(6, 8)}`
             }
 
@@ -586,7 +593,10 @@ const readExcel = async (file, dataType) => {
             })
           }
 
-          console.log(`[DEBUG] new_account parsed ${result.length} records`)
+          if (skippedEmptyDate > 0) {
+            ElMessage.warning(`跳过 ${skippedEmptyDate} 条开户日期为空的数据`)
+          }
+          console.log(`[DEBUG] new_account parsed ${result.length} records, skipped ${skippedEmptyDate} empty dates`)
           resolve(result)
           return
         }
