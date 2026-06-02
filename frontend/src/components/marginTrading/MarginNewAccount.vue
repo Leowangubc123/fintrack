@@ -52,14 +52,8 @@
       <el-table :data="accountList" stripe v-loading="loading" max-height="500">
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="account_date" label="开户日期" width="120" />
-        <el-table-column prop="customer_name" label="客户姓名" width="120" />
         <el-table-column prop="member_name" label="所属员工" width="120" />
         <el-table-column prop="group_name" label="营业部" width="120" />
-        <el-table-column prop="asset_amount" label="开户资产(万)" align="right" width="130">
-          <template #default="{ row }">
-            {{ formatNumber(row.asset_amount) }}
-          </template>
-        </el-table-column>
       </el-table>
     </div>
   </div>
@@ -226,10 +220,8 @@ const formatNumber = (num) => {
 const exportToExcel = () => {
   const exportData = accountList.value.map(row => ({
     '开户日期': row.account_date,
-    '客户姓名': row.customer_name,
     '所属员工': row.member_name,
-    '营业部': row.group_name,
-    '开户资产(万)': row.asset_amount
+    '营业部': row.group_name
   }))
   const ws = XLSX.utils.json_to_sheet(exportData)
   const wb = XLSX.utils.book_new()
