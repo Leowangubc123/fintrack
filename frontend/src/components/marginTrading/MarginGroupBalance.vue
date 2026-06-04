@@ -86,6 +86,17 @@ const weekOptions = computed(() => {
 
 const totalSpot = computed(() => tableData.value.reduce((sum, r) => sum + (r.spot_balance || 0), 0))
 
+// 营业部固定排序顺序
+const GROUP_ORDER = { '上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7 }
+
+const sortByGroup = (data) => {
+  return data.sort((a, b) => {
+    const orderA = GROUP_ORDER[a.group_name] || 99
+    const orderB = GROUP_ORDER[b.group_name] || 99
+    return orderA - orderB
+  })
+}
+
 const tableData = computed(() => {
   let data = balanceData.value.filter(d => d.record_week === recordWeek.value)
   data = data.map(item => {
@@ -97,7 +108,7 @@ const tableData = computed(() => {
     const percentage = totalSpot.value > 0 ? ((item.spot_balance / totalSpot.value) * 100).toFixed(1) : 0
     return { ...item, spot_change, daily_change, percentage }
   })
-  return data.sort((a, b) => b.spot_balance - a.spot_balance)
+  return sortByGroup(data)
 })
 
 const fetchData = async () => {

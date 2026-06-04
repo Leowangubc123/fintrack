@@ -93,6 +93,17 @@ const totalIncome = computed(() => {
   return tableData.value.reduce((sum, r) => sum + (r.income_amount || 0), 0)
 })
 
+// 营业部固定排序顺序
+const GROUP_ORDER = { '上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7 }
+
+const sortByGroup = (data) => {
+  return data.sort((a, b) => {
+    const orderA = GROUP_ORDER[a.group_name] || 99
+    const orderB = GROUP_ORDER[b.group_name] || 99
+    return orderA - orderB
+  })
+}
+
 const tableData = computed(() => {
   let data = incomeData.value.filter(d => d.record_week === recordWeek.value)
   data = data.map(item => {
@@ -105,7 +116,7 @@ const tableData = computed(() => {
     const percentage = totalIncome.value > 0 ? ((item.income_amount / totalIncome.value) * 100).toFixed(1) : 0
     return { ...item, week_change, year_total, percentage }
   })
-  return data.sort((a, b) => b.income_amount - a.income_amount)
+  return sortByGroup(data)
 })
 
 const fetchData = async () => {

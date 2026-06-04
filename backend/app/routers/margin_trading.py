@@ -224,7 +224,8 @@ def import_data(
 
                 group = group_by_name.get(group_name)
                 if not group:
-                    errors.append(f"未找到营业部: {group_name}")
+                    available_groups = ', '.join(sorted(group_by_name.keys()))
+                    errors.append(f"未找到营业部: '{group_name}'。系统中存在的营业部: {available_groups}")
                     continue
 
                 db.add(MarginBalanceGroup(
@@ -241,7 +242,8 @@ def import_data(
 
                 group = group_by_name.get(group_name)
                 if not group:
-                    errors.append(f"未找到营业部: {group_name}")
+                    available_groups = ', '.join(sorted(group_by_name.keys()))
+                    errors.append(f"未找到营业部: '{group_name}'。系统中存在的营业部: {available_groups}")
                     continue
 
                 db.add(MarginIncome(
@@ -500,8 +502,10 @@ def get_new_accounts(
     """
     params = {}
     if year:
-        sql += " AND EXTRACT(year FROM mna.account_date) = :year"
+        # 同时按 account_date 和 record_week 的年份匹配，解决跨年数据问题
+        sql += " AND (EXTRACT(year FROM mna.account_date) = :year OR mna.record_week LIKE :rw_year)"
         params["year"] = year
+        params["rw_year"] = f"{year}-W%"
     if record_week:
         sql += " AND mna.record_week = :record_week"
         params["record_week"] = record_week
@@ -539,8 +543,14 @@ def get_stats(
     if not year:
         year = date.today().year
 
-    # 获取最新一周的数据
-    latest_week = db.query(func.max(MarginBalanceGroup.record_week)).scalar()
+    # 获取最新一周的数据（同时考虑余额、开户和收入表）
+    latest_week_bg = db.query(func.max(MarginBalanceGroup.record_week)).scalar()
+    latest_week_na = db.query(func.max(MarginNewAccount.record_week)).scalar()
+    latest_week_in = db.query(func.max(MarginIncome.record_week)).scalar()
+
+    all_weeks = [w for w in [latest_week_bg, latest_week_na, latest_week_in] if w]
+    latest_week = max(all_weeks) if all_weeks else None
+
     prev_week = None
     if latest_week:
         # 简单计算上一周: 2026-W20 -> 2026-W19
@@ -626,6 +636,9 @@ def get_stats(
              "daily_balance": float(r.MarginBalanceGroup.daily_balance)}
             for r in group_data
         ]
+        # 按固定营业部顺序排序
+        group_order = {'上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7}
+        group_distribution.sort(key=lambda x: group_order.get(x['group_name'], 99))
 
     # 息费收入分布
     income_distribution = []
@@ -640,6 +653,9 @@ def get_stats(
         {"group_name": r.group_name, "income": float(r.total_income)}
         for r in income_by_group
     ]
+    # 按固定营业部顺序排序
+    group_order = {'上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7}
+    income_distribution.sort(key=lambda x: group_order.get(x['group_name'], 99))
 
     # 周度开户趋势
     weekly_trend = db.query(
@@ -766,6 +782,10 @@ def get_targets(
             created_at=target.created_at if target else None,
             updated_at=target.updated_at if target else None
         ))
+
+    # 按固定营业部顺序排序
+    group_order = {'上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7}
+    result.sort(key=lambda x: group_order.get(x.group_name, 99))
 
     return result
 

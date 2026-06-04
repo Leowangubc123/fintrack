@@ -26,7 +26,7 @@
         <div class="kpi-change">数据截至：{{ selectedYear }}年</div>
       </div>
       <div class="kpi-card secondary">
-        <div class="kpi-label">本周新增开户</div>
+        <div class="kpi-label">{{ stats.currentWeek || '本周' }}新增开户</div>
         <div class="kpi-value">{{ stats.thisWeek }}户</div>
         <div class="kpi-change">较上周 {{ stats.weekChange >= 0 ? '+' : '' }}{{ stats.weekChange }}户</div>
       </div>
@@ -53,14 +53,58 @@
       </div>
     </div>
 
+    <!-- 各营业部开户统计 -->
     <div class="table-container" style="margin-top: 20px;">
-      <div class="section-title">近期开户明细</div>
-      <el-table :data="accountList" stripe v-loading="loading" max-height="500">
-        <el-table-column type="index" label="序号" width="60" />
-        <el-table-column prop="account_date" label="开户日期" width="120" />
-        <el-table-column prop="member_name" label="所属员工" width="120" />
-        <el-table-column prop="group_name" label="营业部" width="120" />
+      <div class="section-title">各营业部本周开户统计</div>
+      <el-table :data="groupStats" stripe v-loading="loading" max-height="400" style="width: 100%">
+        <el-table-column type="index" label="排名" width="60" />
+        <el-table-column prop="group_name" label="营业部" min-width="120" />
+        <el-table-column prop="thisWeekCount" label="本周开户数" align="center" width="120">
+          <template #default="{ row }">
+            <strong>{{ row.thisWeekCount }}</strong>
+          </template>
+        </el-table-column>
+        <el-table-column prop="prevWeekCount" label="上周开户数" align="center" width="120" />
+        <el-table-column label="周度增量" align="center" width="120">
+          <template #default="{ row }">
+            <span :class="getChangeClass(row.weekChange)">
+              {{ row.weekChange >= 0 ? '+' : '' }}{{ row.weekChange }}户
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="占全公司" align="center" width="120">
+          <template #default="{ row }">
+            {{ row.percentage }}%
+          </template>
+        </el-table-column>
       </el-table>
+    </div>
+
+    <!-- 员工排名 + 开户明细 -->
+    <div class="tables-grid" style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div class="table-container">
+        <div class="section-title">员工本年度开户排名</div>
+        <el-table :data="memberRanking" stripe v-loading="loading" max-height="500" style="width: 100%">
+          <el-table-column type="index" label="排名" width="60" align="center" />
+          <el-table-column prop="member_name" label="员工姓名" min-width="120" />
+          <el-table-column prop="group_name" label="所属营业部" min-width="120" />
+          <el-table-column prop="count" label="开户数量" align="center" width="100">
+            <template #default="{ row }">
+              <strong>{{ row.count }}户</strong>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <div class="table-container">
+        <div class="section-title">近期开户明细</div>
+        <el-table :data="accountList" stripe v-loading="loading" max-height="500" style="width: 100%">
+          <el-table-column type="index" label="序号" width="60" />
+          <el-table-column prop="account_date" label="开户日期" width="120" />
+          <el-table-column prop="member_name" label="所属员工" width="120" />
+          <el-table-column prop="group_name" label="营业部" width="120" />
+        </el-table>
+      </div>
     </div>
   </div>
 </template>
@@ -78,6 +122,9 @@ const loading = ref(false)
 const selectedYear = ref(new Date().getFullYear())
 const selectedWeek = ref('')
 
+// 营业部固定排序顺序
+const GROUP_ORDER = { '上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7 }
+
 const weekOptions = computed(() => {
   const weeks = new Set(accountList.value.map(a => a.record_week))
   return Array.from(weeks).sort().reverse()
@@ -93,20 +140,31 @@ const yearOptions = computed(() => {
   return [current, current - 1]
 })
 
+const latestWeek = computed(() => {
+  const weeks = accountList.value.map(a => a.record_week).filter(Boolean)
+  if (!weeks.length) return ''
+  return weeks.sort().reverse()[0]
+})
+
 const stats = computed(() => {
   const total = accountList.value.length
   const now = new Date()
-  const currentWeek = getWeekNumber(now)
+
+  // 从数据中提取最新周，而不是用当前日期
+  const currentWeek = latestWeek.value
+  let prevWeek = ''
+  if (currentWeek) {
+    const parts = currentWeek.split('-W')
+    const y = parseInt(parts[0]), w = parseInt(parts[1])
+    prevWeek = w > 1 ? `${y}-W${String(w - 1).padStart(2, '0')}` : `${y - 1}-W52`
+  }
+
+  const thisWeek = currentWeek ? accountList.value.filter(a => a.record_week === currentWeek).length : 0
+  const prevWeekCount = prevWeek ? accountList.value.filter(a => a.record_week === prevWeek).length : 0
+
+  // 本月/上月基于当前实际月份
   const currentMonth = now.getMonth() + 1
   const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
-
-  const thisWeek = accountList.value.filter(a => a.record_week === currentWeek).length
-  const prevWeekCount = accountList.value.filter(a => {
-    const parts = a.record_week.split('-W')
-    const w = parseInt(parts[1])
-    return w === (parseInt(currentWeek.split('-W')[1]) - 1)
-  }).length
-
   const thisMonth = accountList.value.filter(a => {
     const d = new Date(a.account_date)
     return d.getMonth() + 1 === currentMonth
@@ -125,7 +183,8 @@ const stats = computed(() => {
     weekChange: thisWeek - prevWeekCount,
     thisMonth,
     monthChange: thisMonth - prevMonthCount,
-    dailyAvg
+    dailyAvg,
+    currentWeek
   }
 })
 
@@ -222,6 +281,62 @@ const updateCharts = () => {
       barWidth: '50%'
     }]
   }, true)
+}
+
+const memberRanking = computed(() => {
+  const memberMap = {}
+  accountList.value.forEach(a => {
+    const key = `${a.member_name}-${a.group_name}`
+    if (!memberMap[key]) {
+      memberMap[key] = { member_name: a.member_name, group_name: a.group_name, count: 0 }
+    }
+    memberMap[key].count++
+  })
+  return Object.values(memberMap).sort((a, b) => b.count - a.count)
+})
+
+const groupStats = computed(() => {
+  const currentWeek = latestWeek.value
+  if (!currentWeek) return []
+
+  const parts = currentWeek.split('-W')
+  const y = parseInt(parts[0]), w = parseInt(parts[1])
+  const prevWeek = w > 1 ? `${y}-W${String(w - 1).padStart(2, '0')}` : `${y - 1}-W52`
+
+  const groupMap = {}
+  accountList.value.forEach(a => {
+    const g = a.group_name
+    if (!groupMap[g]) {
+      groupMap[g] = { group_name: g, thisWeekCount: 0, prevWeekCount: 0 }
+    }
+    if (a.record_week === currentWeek) {
+      groupMap[g].thisWeekCount++
+    }
+    if (a.record_week === prevWeek) {
+      groupMap[g].prevWeekCount++
+    }
+  })
+
+  const totalThisWeek = Object.values(groupMap).reduce((sum, g) => sum + g.thisWeekCount, 0)
+
+  const result = Object.values(groupMap).map(g => ({
+    ...g,
+    weekChange: g.thisWeekCount - g.prevWeekCount,
+    percentage: totalThisWeek > 0 ? ((g.thisWeekCount / totalThisWeek) * 100).toFixed(1) : '0'
+  }))
+
+  // 按固定营业部顺序排序
+  return result.sort((a, b) => {
+    const orderA = GROUP_ORDER[a.group_name] || 99
+    const orderB = GROUP_ORDER[b.group_name] || 99
+    return orderA - orderB
+  })
+})
+
+const getChangeClass = (val) => {
+  if (val > 0) return 'change-up'
+  if (val < 0) return 'change-down'
+  return 'change-flat'
 }
 
 const formatNumber = (num) => {
@@ -343,6 +458,9 @@ onBeforeUnmount(() => {
   padding: 16px 20px 0;
 }
 :deep(.el-button--primary) { background: #EA580C; border-color: #EA580C; }
+.change-up { color: #EF4444; font-weight: 500; }
+.change-down { color: #10B981; font-weight: 500; }
+.change-flat { color: #9CA3AF; font-weight: 500; }
 @media (max-width: 900px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-grid { grid-template-columns: 1fr; }
