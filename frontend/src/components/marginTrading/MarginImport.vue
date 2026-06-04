@@ -549,7 +549,9 @@ const readExcel = async (file, dataType) => {
 
         // 开户数据特殊处理：系统导出的多级表头格式
         if (dataType === 'new_account') {
-          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          // 优先读取名为"开户明细"的sheet，否则读取第一个sheet
+          const sheetName = workbook.SheetNames.find(name => name.includes('开户明细')) || workbook.SheetNames[0]
+          const sheet = workbook.Sheets[sheetName]
           const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 })
           if (rawData.length < 4) {
             resolve([])
