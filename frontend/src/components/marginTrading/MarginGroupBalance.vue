@@ -174,7 +174,8 @@ const updateCharts = () => {
     }]
   }, true)
 
-  // Bar chart for changes
+  // Bar chart for daily balance changes
+  const hasChangeData = data.some(d => d.daily_change !== 0)
   changeBarInstance.setOption({
     tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
@@ -193,10 +194,20 @@ const updateCharts = () => {
     series: [{
       type: 'bar',
       data: data.map(d => ({
-        value: parseFloat(d.spot_change || 0).toFixed(2),
-        itemStyle: { color: (d.spot_change || 0) >= 0 ? '#EF4444' : '#10B981', borderRadius: [4, 4, 0, 0] }
+        value: parseFloat(d.daily_change || 0).toFixed(2),
+        itemStyle: { color: (d.daily_change || 0) >= 0 ? '#EF4444' : '#10B981', borderRadius: [4, 4, 0, 0] }
       })),
       barWidth: '40%'
+    }],
+    graphic: hasChangeData ? [] : [{
+      type: 'text',
+      left: 'center',
+      top: 'middle',
+      style: {
+        text: '暂无环比数据（上周无数据）',
+        fill: '#9CA3AF',
+        fontSize: 14
+      }
     }]
   }, true)
 }

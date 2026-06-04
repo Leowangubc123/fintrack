@@ -502,10 +502,8 @@ def get_new_accounts(
     """
     params = {}
     if year:
-        # 同时按 account_date 和 record_week 的年份匹配，解决跨年数据问题
-        sql += " AND (EXTRACT(year FROM mna.account_date) = :year OR mna.record_week LIKE :rw_year)"
+        sql += " AND EXTRACT(year FROM mna.account_date) = :year"
         params["year"] = year
-        params["rw_year"] = f"{year}-W%"
     if record_week:
         sql += " AND mna.record_week = :record_week"
         params["record_week"] = record_week
@@ -581,11 +579,10 @@ def get_stats(
         spot_prev = sum(float(g.spot_balance) for g in prev_groups)
         daily_prev = sum(float(g.daily_balance) for g in prev_groups)
 
-    # 今年开户数量
-    new_accounts = db.query(MarginNewAccount).filter(
+    # 今年开户数量（按 account_date 统计）
+    new_account_count = db.query(MarginNewAccount).filter(
         extract('year', MarginNewAccount.account_date) == year
-    ).all()
-    new_account_count = len(new_accounts)
+    ).count()
 
     # 今年息费收入累计
     income_records = db.query(MarginIncome).filter(
@@ -597,19 +594,29 @@ def get_stats(
     spot_change = spot_total - spot_prev
     daily_change = daily_total - daily_prev
 
-    # 开户周环比（本周 vs 上周）
-    if latest_week:
-        week_accounts = db.query(MarginNewAccount).filter(
-            MarginNewAccount.record_week == latest_week
-        ).count()
-        prev_week_accounts = db.query(MarginNewAccount).filter(
-            MarginNewAccount.record_week == prev_week
-        ).count() if prev_week else 0
-        account_change = week_accounts - prev_week_accounts
-    else:
-        account_change = 0
+    # 开户周环比（按 account_date 所在自然周统计）
+    from datetime import timedelta
+    today = date.today()
+    # 本周一和本周日
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    # 上周一和上周日
+    prev_week_start = week_start - timedelta(days=7)
+    prev_week_end = prev_week_start + timedelta(days=6)
 
-    # 息费收入周环比
+    week_accounts = db.query(MarginNewAccount).filter(
+        extract('year', MarginNewAccount.account_date) == year,
+        MarginNewAccount.account_date >= week_start,
+        MarginNewAccount.account_date <= week_end
+    ).count()
+    prev_week_accounts = db.query(MarginNewAccount).filter(
+        extract('year', MarginNewAccount.account_date) == year,
+        MarginNewAccount.account_date >= prev_week_start,
+        MarginNewAccount.account_date <= prev_week_end
+    ).count()
+    account_change = week_accounts - prev_week_accounts
+
+    # 息费收入周环比（按 record_week 统计，因为收入是周度汇总数据）
     income_change = 0.0
     if latest_week:
         latest_income = db.query(MarginIncome).filter(
@@ -657,19 +664,23 @@ def get_stats(
     group_order = {'上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7}
     income_distribution.sort(key=lambda x: group_order.get(x['group_name'], 99))
 
-    # 周度开户趋势
-    weekly_trend = db.query(
-        MarginNewAccount.record_week,
-        func.count(MarginNewAccount.id).label("count")
-    ).filter(
-        extract('year', MarginNewAccount.account_date) == year
-    ).group_by(MarginNewAccount.record_week).order_by(MarginNewAccount.record_week).all()
+    # 周度开户趋势（按 account_date 的自然周统计，ISO 周格式）
+    weekly_trend_sql = text("""
+        SELECT
+            TO_CHAR(account_date, 'YYYY') || '-W' || LPAD(TO_CHAR(account_date, 'IW'), 2, '0') as week,
+            COUNT(*) as count
+        FROM margin_new_accounts
+        WHERE EXTRACT(year FROM account_date) = :year
+        GROUP BY TO_CHAR(account_date, 'YYYY') || '-W' || LPAD(TO_CHAR(account_date, 'IW'), 2, '0')
+        ORDER BY week
+    """)
+    weekly_trend_rows = db.execute(weekly_trend_sql, {"year": year}).fetchall()
     weekly_account_trend = [
-        {"week": r.record_week, "count": r.count}
-        for r in weekly_trend
+        {"week": r.week, "count": r.count}
+        for r in weekly_trend_rows
     ]
 
-    # 月度开户趋势
+    # 月度开户趋势（按 account_date 的月份统计）
     month_expr = extract('month', MarginNewAccount.account_date).label("month")
     monthly_trend = db.query(
         month_expr,
@@ -682,8 +693,10 @@ def get_stats(
         for r in monthly_trend
     ]
 
-    # 最近更新时间
-    last_update = db.query(func.max(MarginBalanceGroup.record_date)).scalar()
+    # 最近更新时间（从余额表和开户表取最新）
+    last_update_bg = db.query(func.max(MarginBalanceGroup.record_date)).scalar()
+    last_update_na = db.query(func.max(MarginNewAccount.account_date)).scalar()
+    last_update = max([d for d in [last_update_bg, last_update_na] if d], default=None)
 
     return StatsResponse(
         spot_balance=round(spot_total, 2),

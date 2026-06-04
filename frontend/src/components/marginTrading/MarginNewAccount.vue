@@ -8,7 +8,7 @@
       <el-select v-model="selectedYear" style="width: 120px">
         <el-option v-for="y in yearOptions" :key="y" :label="y + '年'" :value="y" />
       </el-select>
-      <el-select v-model="selectedWeek" placeholder="选择周数" clearable style="width: 200px">
+      <el-select v-model="selectedWeek" placeholder="选择导入周" clearable style="width: 200px">
         <el-option v-for="w in weekOptions" :key="w" :label="w" :value="w" />
       </el-select>
       <el-button type="primary" @click="exportToExcel">
@@ -21,24 +21,19 @@
 
     <div class="kpi-grid">
       <div class="kpi-card primary">
-        <div class="kpi-label">本年累计开户</div>
+        <div class="kpi-label">本年总开户数</div>
         <div class="kpi-value">{{ stats.total }}户</div>
-        <div class="kpi-change">数据截至：{{ selectedYear }}年</div>
+        <div class="kpi-change">数据截至：{{ stats.lastUpdate }}</div>
       </div>
       <div class="kpi-card secondary">
-        <div class="kpi-label">{{ stats.currentWeek || '本周' }}新增开户</div>
+        <div class="kpi-label">本周新开户</div>
         <div class="kpi-value">{{ stats.thisWeek }}户</div>
-        <div class="kpi-change">较上周 {{ stats.weekChange >= 0 ? '+' : '' }}{{ stats.weekChange }}户</div>
+        <div class="kpi-change">{{ weekRangeText }}</div>
       </div>
       <div class="kpi-card accent">
-        <div class="kpi-label">本月新增开户</div>
+        <div class="kpi-label">本月新开户</div>
         <div class="kpi-value">{{ stats.thisMonth }}户</div>
-        <div class="kpi-change">较上月 {{ stats.monthChange >= 0 ? '+' : '' }}{{ stats.monthChange }}户</div>
-      </div>
-      <div class="kpi-card info">
-        <div class="kpi-label">日均新增开户</div>
-        <div class="kpi-value">{{ stats.dailyAvg }}户</div>
-        <div class="kpi-change">本年数据</div>
+        <div class="kpi-change">{{ monthRangeText }}</div>
       </div>
     </div>
 
@@ -140,60 +135,77 @@ const yearOptions = computed(() => {
   return [current, current - 1]
 })
 
-const latestWeek = computed(() => {
-  const weeks = accountList.value.map(a => a.record_week).filter(Boolean)
-  if (!weeks.length) return ''
-  return weeks.sort().reverse()[0]
-})
+// 获取日期所在周的范围（周一至周日）
+const getWeekRange = (date) => {
+  const d = new Date(date)
+  const day = d.getDay() || 7 // 1=周一, ..., 7=周日
+  const monday = new Date(d)
+  monday.setDate(d.getDate() - day + 1)
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+  return { start: monday, end: sunday }
+}
+
+// 获取日期所在周的 ISO 格式键
+const getWeekKey = (dateStr) => {
+  const d = new Date(dateStr)
+  const year = d.getFullYear()
+  const oneJan = new Date(year, 0, 1)
+  const dayOfYear = Math.floor((d - oneJan) / 86400000) + 1
+  const weekNum = Math.ceil((dayOfYear + oneJan.getDay()) / 7)
+  return `${year}-W${String(weekNum).padStart(2, '0')}`
+}
 
 const stats = computed(() => {
   const total = accountList.value.length
   const now = new Date()
 
-  // 从数据中提取最新周，而不是用当前日期
-  const currentWeek = latestWeek.value
-  let prevWeek = ''
-  if (currentWeek) {
-    const parts = currentWeek.split('-W')
-    const y = parseInt(parts[0]), w = parseInt(parts[1])
-    prevWeek = w > 1 ? `${y}-W${String(w - 1).padStart(2, '0')}` : `${y - 1}-W52`
-  }
+  // 本周范围（周一至周日）
+  const { start: weekStart, end: weekEnd } = getWeekRange(now)
 
-  const thisWeek = currentWeek ? accountList.value.filter(a => a.record_week === currentWeek).length : 0
-  const prevWeekCount = prevWeek ? accountList.value.filter(a => a.record_week === prevWeek).length : 0
+  // 本月范围
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
+  const monthStart = new Date(currentYear, currentMonth, 1)
+  const monthEnd = new Date(currentYear, currentMonth + 1, 0)
+  monthEnd.setHours(23, 59, 59, 999)
 
-  // 本月/上月基于当前实际月份
-  const currentMonth = now.getMonth() + 1
-  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
+  const thisWeek = accountList.value.filter(a => {
+    const d = new Date(a.account_date)
+    return d >= weekStart && d <= weekEnd
+  }).length
+
   const thisMonth = accountList.value.filter(a => {
     const d = new Date(a.account_date)
-    return d.getMonth() + 1 === currentMonth
-  }).length
-  const prevMonthCount = accountList.value.filter(a => {
-    const d = new Date(a.account_date)
-    return d.getMonth() + 1 === prevMonth
+    return d >= monthStart && d <= monthEnd
   }).length
 
-  const daysPassed = now.getDate()
-  const dailyAvg = daysPassed > 0 ? (thisMonth / daysPassed).toFixed(1) : '0'
+  // 最新更新日期（数据中最新的 account_date）
+  const dates = accountList.value.map(a => new Date(a.account_date))
+  const lastUpdate = dates.length > 0
+    ? new Date(Math.max(...dates)).toLocaleDateString('zh-CN')
+    : '-'
 
   return {
     total,
     thisWeek,
-    weekChange: thisWeek - prevWeekCount,
     thisMonth,
-    monthChange: thisMonth - prevMonthCount,
-    dailyAvg,
-    currentWeek
+    lastUpdate
   }
 })
 
-const getWeekNumber = (d) => {
-  const year = d.getFullYear()
-  const oneJan = new Date(year, 0, 1)
-  const weekNum = Math.ceil((((d - oneJan) / 86400000) + oneJan.getDay() + 1) / 7)
-  return `${year}-W${String(weekNum).padStart(2, '0')}`
-}
+const weekRangeText = computed(() => {
+  const { start, end } = getWeekRange(new Date())
+  const fmt = (d) => `${d.getMonth() + 1}月${d.getDate()}日`
+  return `${fmt(start)} - ${fmt(end)}`
+})
+
+const monthRangeText = computed(() => {
+  const now = new Date()
+  return `${now.getFullYear()}年${now.getMonth() + 1}月`
+})
 
 const fetchData = async () => {
   loading.value = true
@@ -223,11 +235,12 @@ const handleResize = () => {
 const updateCharts = () => {
   if (!weeklyInstance || !monthlyInstance) return
 
-  // Weekly trend
+  // Weekly trend - 按 account_date 的自然周分组
   const weeklyMap = {}
   accountList.value.forEach(a => {
-    if (!weeklyMap[a.record_week]) weeklyMap[a.record_week] = 0
-    weeklyMap[a.record_week]++
+    const weekKey = getWeekKey(a.account_date)
+    if (!weeklyMap[weekKey]) weeklyMap[weekKey] = 0
+    weeklyMap[weekKey]++
   })
   const sortedWeeks = Object.keys(weeklyMap).sort()
 
@@ -252,7 +265,7 @@ const updateCharts = () => {
     }]
   }, true)
 
-  // Monthly trend
+  // Monthly trend - 按 account_date 的月份分组
   const monthlyMap = {}
   accountList.value.forEach(a => {
     const d = new Date(a.account_date)
@@ -296,12 +309,14 @@ const memberRanking = computed(() => {
 })
 
 const groupStats = computed(() => {
-  const currentWeek = latestWeek.value
-  if (!currentWeek) return []
+  const now = new Date()
+  const { start: weekStart, end: weekEnd } = getWeekRange(now)
 
-  const parts = currentWeek.split('-W')
-  const y = parseInt(parts[0]), w = parseInt(parts[1])
-  const prevWeek = w > 1 ? `${y}-W${String(w - 1).padStart(2, '0')}` : `${y - 1}-W52`
+  const prevWeekStart = new Date(weekStart)
+  prevWeekStart.setDate(weekStart.getDate() - 7)
+  const prevWeekEnd = new Date(prevWeekStart)
+  prevWeekEnd.setDate(prevWeekStart.getDate() + 6)
+  prevWeekEnd.setHours(23, 59, 59, 999)
 
   const groupMap = {}
   accountList.value.forEach(a => {
@@ -309,10 +324,11 @@ const groupStats = computed(() => {
     if (!groupMap[g]) {
       groupMap[g] = { group_name: g, thisWeekCount: 0, prevWeekCount: 0 }
     }
-    if (a.record_week === currentWeek) {
+    const d = new Date(a.account_date)
+    if (d >= weekStart && d <= weekEnd) {
       groupMap[g].thisWeekCount++
     }
-    if (a.record_week === prevWeek) {
+    if (d >= prevWeekStart && d <= prevWeekEnd) {
       groupMap[g].prevWeekCount++
     }
   })
@@ -412,7 +428,7 @@ onBeforeUnmount(() => {
   display: flex; gap: 12px; margin-bottom: 20px; align-items: center;
 }
 .kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
   margin-bottom: 24px;
 }
 .kpi-card {
@@ -432,9 +448,6 @@ onBeforeUnmount(() => {
 }
 .kpi-card.accent::before {
   background: linear-gradient(90deg, #F59E0B, #FB923C);
-}
-.kpi-card.info::before {
-  background: linear-gradient(90deg, #10B981, #34D399);
 }
 .kpi-label { font-size: 13px; color: #6B7280; margin-bottom: 8px; }
 .kpi-value {
