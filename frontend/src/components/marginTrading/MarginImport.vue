@@ -556,44 +556,75 @@ const readExcel = async (file, dataType) => {
             return
           }
 
-          // Excel格式：第1行=标题，第2行=一级表头，第3行=二级表头，第4行起=数据
-          // 注意：不同版本的开户明细Excel列结构不同
-          // 旧版：[行号, 机构编码, 机构名称, 客户代码, 开发人员, 服务人员, 资金账号, 开户日期, ...]
-          // 新版：[行号, 日期范围, 机构编码, 机构名称, 客户代码, 员工姓名, 0, empty, empty, 开户日期]
+          // 读取两级表头
+          const headers1 = rawData[1] || []
+          const headers2 = rawData[2] || []
+
+          // 根据表头名称自动匹配列索引
+          const findCol = (keywords) => {
+            for (let idx = 0; idx < headers1.length; idx++) {
+              const h1 = normalizeColName(String(headers1[idx] || ''))
+              const h2 = normalizeColName(String(headers2[idx] || ''))
+              for (const kw of keywords) {
+                if (h1.includes(kw) || h2.includes(kw)) return idx
+              }
+            }
+            return -1
+          }
+
+          const groupNameCol = findCol(['机构名称', '营业部简称', '营业部名称'])
+          const devMemberCol = findCol(['开发人员', '开发关系'])
+          const svcMemberCol = findCol(['服务人员', '服务关系'])
+          const accountDateCol = findCol(['开户日期'])
+          const customerCodeCol = findCol(['客户代码', '客户姓名', '客户名称'])
+
+          console.log(`[DEBUG] new_account columns detected: group=${groupNameCol}, dev=${devMemberCol}, svc=${svcMemberCol}, date=${accountDateCol}, customer=${customerCodeCol}`)
+
+          if (groupNameCol === -1 || accountDateCol === -1) {
+            ElMessage.error('无法识别Excel表头，请确认文件格式正确')
+            resolve([])
+            return
+          }
+
           const result = []
           let skippedEmptyDate = 0
 
-          // 检测文件格式：检查第2行(index 1)是机构编码还是日期范围
-          const isNewFormat = rawData.length > 3 && String(rawData[3][1] || '').includes('-')
-          console.log(`[DEBUG] new_account format detected: ${isNewFormat ? 'new' : 'old'}`)
-
+          // 从第4行开始读取数据
           for (let i = 3; i < rawData.length; i++) {
             const row = rawData[i]
             if (!row || row.length === 0) continue
 
-            // 根据文件格式选择正确的列索引
-            const groupNameCol = isNewFormat ? 3 : 2
-            const customerCodeCol = isNewFormat ? 4 : 3
-            const memberNameCol = isNewFormat ? 5 : 4
-            const accountDateCol = isNewFormat ? 9 : 7
-
             const groupName = String(row[groupNameCol] || '').trim()
-            const customerCode = String(row[customerCodeCol] || '').trim()
-            const memberName = String(row[memberNameCol] || '').trim()
             const accountDate = String(row[accountDateCol] || '').trim()
 
-            if (!groupName || !customerCode) continue
-            if (groupName.includes('合计') || groupName.includes('查询')) continue
+            // 跳过无效行
+            if (!groupName || !accountDate) continue
+            if (groupName.includes('合计') || groupName.includes('查询') || groupName.includes('总计')) continue
 
             // 开户日期为空则跳过并记录
-            if (!accountDate) {
+            if (!accountDate || accountDate === 'nan') {
               skippedEmptyDate++
               continue
             }
 
+            // 开发人员(E列)优先，为空则抓服务人员(F列)
+            let memberName = ''
+            if (devMemberCol !== -1) {
+              memberName = String(row[devMemberCol] || '').trim()
+            }
+            if (!memberName && svcMemberCol !== -1) {
+              memberName = String(row[svcMemberCol] || '').trim()
+            }
+            if (!memberName) continue
+
+            // 客户代码
+            let customerCode = ''
+            if (customerCodeCol !== -1) {
+              customerCode = String(row[customerCodeCol] || '').trim()
+            }
+
             // 营业部名称映射
             const mappedGroupName = groupNameMapping[groupName] || groupName
-            if (!memberName) continue
 
             // 开户日期格式转换：20260325 -> 2026-03-25
             let formattedDate = accountDate
