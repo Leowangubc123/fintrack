@@ -563,11 +563,16 @@ const readExcel = async (file, dataType) => {
             const row = rawData[i]
             if (!row || row.length === 0) continue
 
-            const groupName = String(row[2] || '').trim() // 机构名称
-            const customerCode = String(row[3] || '').trim() // 客户代码
-            const devMember = String(row[4] || '').trim() // 开发人员
-            const svcMember = String(row[5] || '').trim() // 服务人员
-            const accountDate = String(row[7] || '').trim() // 开户日期
+            // 调试：打印每一行的原始数据
+            if (i <= 5) {
+              console.log(`[DEBUG] Row ${i}:`, row)
+            }
+
+            const groupName = String(row[2] || '').trim() // 机构名称 (C列/index 2)
+            const customerCode = String(row[3] || '').trim() // 客户代码 (D列/index 3)
+            const devMember = String(row[4] || '').trim() // 开发人员 (E列/index 4)
+            const svcMember = String(row[5] || '').trim() // 服务人员 (F列/index 5)
+            const accountDate = String(row[7] || '').trim() // 开户日期 (H列/index 7)
 
             if (!groupName || !customerCode) continue
             if (groupName.includes('合计') || groupName.includes('查询表')) continue
@@ -580,6 +585,11 @@ const readExcel = async (file, dataType) => {
 
             // 营业部名称映射
             const mappedGroupName = groupNameMapping[groupName] || groupName
+
+            // 调试：打印解析后的数据
+            if (i <= 5) {
+              console.log(`[DEBUG] Parsed: groupName="${groupName}", mapped="${mappedGroupName}", member="${devMember || svcMember}", date="${accountDate}"`)
+            }
 
             // 开发人员优先，如果为空则使用服务人员
             const memberName = devMember || svcMember
