@@ -162,6 +162,9 @@ def import_data(
     fail_count = 0
     errors = []
 
+    # 开户数据解析辅助（提前导入避免循环内重复导入）
+    from datetime import datetime as _dt
+
     # 1. 删除该类型当周的历史记录（全量覆盖）
     if data_type == 'member_balance':
         db.query(MarginBalanceMember).filter(
@@ -176,9 +179,20 @@ def import_data(
             MarginIncome.record_week == record_week
         ).delete()
     elif data_type == 'new_account':
-        db.query(MarginNewAccount).filter(
-            MarginNewAccount.record_week == record_week
-        ).delete()
+        # 开户数据为累计数据：先收集所有数据中的年份，删除这些年份的全部历史记录
+        years_to_clear = set()
+        for item in request.data:
+            account_date_str = item.get('account_date') or item.get('开户日期', '')
+            try:
+                if isinstance(account_date_str, str) and account_date_str:
+                    d = _dt.strptime(account_date_str, '%Y-%m-%d').date()
+                    years_to_clear.add(d.year)
+            except (ValueError, TypeError):
+                pass
+        for year in years_to_clear:
+            db.query(MarginNewAccount).filter(
+                extract('year', MarginNewAccount.account_date) == year
+            ).delete()
 
     # 2. 插入新数据
     for item in request.data:
