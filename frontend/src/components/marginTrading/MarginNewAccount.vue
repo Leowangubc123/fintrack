@@ -158,18 +158,27 @@ const getWeekKey = (dateStr) => {
   return `${year}-W${String(weekNum).padStart(2, '0')}`
 }
 
+// 获取数据中最新的日期
+const latestDate = computed(() => {
+  const dates = accountList.value.map(a => new Date(a.account_date))
+  return dates.length > 0 ? new Date(Math.max(...dates)) : null
+})
+
 const stats = computed(() => {
   const total = accountList.value.length
-  const now = new Date()
 
-  // 本周范围（周一至周日）
-  const { start: weekStart, end: weekEnd } = getWeekRange(now)
+  if (!latestDate.value) {
+    return { total: 0, thisWeek: 0, thisMonth: 0, lastUpdate: '-' }
+  }
 
-  // 本月范围
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth()
-  const monthStart = new Date(currentYear, currentMonth, 1)
-  const monthEnd = new Date(currentYear, currentMonth + 1, 0)
+  // 本周范围基于数据最新日期（周一至周日）
+  const { start: weekStart, end: weekEnd } = getWeekRange(latestDate.value)
+
+  // 本月范围基于数据最新日期
+  const latestYear = latestDate.value.getFullYear()
+  const latestMonth = latestDate.value.getMonth()
+  const monthStart = new Date(latestYear, latestMonth, 1)
+  const monthEnd = new Date(latestYear, latestMonth + 1, 0)
   monthEnd.setHours(23, 59, 59, 999)
 
   const thisWeek = accountList.value.filter(a => {
@@ -182,11 +191,7 @@ const stats = computed(() => {
     return d >= monthStart && d <= monthEnd
   }).length
 
-  // 最新更新日期（数据中最新的 account_date）
-  const dates = accountList.value.map(a => new Date(a.account_date))
-  const lastUpdate = dates.length > 0
-    ? new Date(Math.max(...dates)).toLocaleDateString('zh-CN')
-    : '-'
+  const lastUpdate = latestDate.value.toLocaleDateString('zh-CN')
 
   return {
     total,
@@ -197,14 +202,15 @@ const stats = computed(() => {
 })
 
 const weekRangeText = computed(() => {
-  const { start, end } = getWeekRange(new Date())
+  if (!latestDate.value) return '-'
+  const { start, end } = getWeekRange(latestDate.value)
   const fmt = (d) => `${d.getMonth() + 1}月${d.getDate()}日`
   return `${fmt(start)} - ${fmt(end)}`
 })
 
 const monthRangeText = computed(() => {
-  const now = new Date()
-  return `${now.getFullYear()}年${now.getMonth() + 1}月`
+  if (!latestDate.value) return '-'
+  return `${latestDate.value.getFullYear()}年${latestDate.value.getMonth() + 1}月`
 })
 
 const fetchData = async () => {
@@ -309,14 +315,14 @@ const memberRanking = computed(() => {
 })
 
 const groupStats = computed(() => {
-  const now = new Date()
-  const { start: weekStart, end: weekEnd } = getWeekRange(now)
+  if (!latestDate.value) return []
 
-  const prevWeekStart = new Date(weekStart)
-  prevWeekStart.setDate(weekStart.getDate() - 7)
-  const prevWeekEnd = new Date(prevWeekStart)
-  prevWeekEnd.setDate(prevWeekStart.getDate() + 6)
-  prevWeekEnd.setHours(23, 59, 59, 999)
+  // 本周范围基于数据最新日期
+  const { start: weekStart, end: weekEnd } = getWeekRange(latestDate.value)
+
+  const prevWeekDate = new Date(weekStart)
+  prevWeekDate.setDate(prevWeekDate.getDate() - 1)
+  const { start: prevWeekStart, end: prevWeekEnd } = getWeekRange(prevWeekDate)
 
   const groupMap = {}
   accountList.value.forEach(a => {
