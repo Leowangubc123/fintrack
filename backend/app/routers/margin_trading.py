@@ -162,9 +162,6 @@ def import_data(
     fail_count = 0
     errors = []
 
-    # 开户数据解析辅助（提前导入避免循环内重复导入）
-    from datetime import datetime as _dt
-
     # 1. 删除该类型当周的历史记录（全量覆盖）
     if data_type == 'member_balance':
         db.query(MarginBalanceMember).filter(
@@ -179,20 +176,10 @@ def import_data(
             MarginIncome.record_week == record_week
         ).delete()
     elif data_type == 'new_account':
-        # 开户数据为累计数据：先收集所有数据中的年份，删除这些年份的全部历史记录
-        years_to_clear = set()
-        for item in request.data:
-            account_date_str = item.get('account_date') or item.get('开户日期', '')
-            try:
-                if isinstance(account_date_str, str) and account_date_str:
-                    d = _dt.strptime(account_date_str, '%Y-%m-%d').date()
-                    years_to_clear.add(d.year)
-            except (ValueError, TypeError):
-                pass
-        for year in years_to_clear:
-            db.query(MarginNewAccount).filter(
-                extract('year', MarginNewAccount.account_date) == year
-            ).delete()
+        # 只删除当前导入周的已有数据，保留其他周的数据用于计算增量
+        db.query(MarginNewAccount).filter(
+            MarginNewAccount.record_week == record_week
+        ).delete()
 
     # 2. 插入新数据
     for item in request.data:
@@ -502,17 +489,24 @@ def get_new_accounts(
     group_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取新开户列表（使用原生SQL避免选择不存在的scope列）"""
+    """获取新开户列表（按客户去重，保留最新record_week的记录）"""
     sql = """
-        SELECT
-            mna.id, mna.member_id, mna.group_id,
-            mna.customer_name, mna.asset_amount, mna.account_date,
-            mna.record_week,
-            m.name as member_name, g.name as group_name
-        FROM margin_new_accounts mna
-        JOIN (SELECT id, name FROM members) m ON mna.member_id = m.id
-        JOIN (SELECT id, name FROM groups) g ON mna.group_id = g.id
-        WHERE 1=1
+        SELECT id, member_id, group_id, customer_name, asset_amount, account_date, record_week,
+               member_name, group_name
+        FROM (
+            SELECT
+                mna.id, mna.member_id, mna.group_id,
+                mna.customer_name, mna.asset_amount, mna.account_date,
+                mna.record_week,
+                m.name as member_name, g.name as group_name,
+                ROW_NUMBER() OVER (
+                    PARTITION BY mna.customer_name, mna.member_id, mna.group_id, mna.account_date
+                    ORDER BY mna.record_week DESC
+                ) as rn
+            FROM margin_new_accounts mna
+            JOIN (SELECT id, name FROM members) m ON mna.member_id = m.id
+            JOIN (SELECT id, name FROM groups) g ON mna.group_id = g.id
+            WHERE 1=1
     """
     params = {}
     if year:
@@ -524,7 +518,11 @@ def get_new_accounts(
     if group_id:
         sql += " AND mna.group_id = :group_id"
         params["group_id"] = group_id
-    sql += " ORDER BY mna.account_date DESC"
+    sql += """
+        ) sub
+        WHERE rn = 1
+        ORDER BY account_date DESC
+    """
 
     rows = db.execute(text(sql), params).fetchall()
 
@@ -593,10 +591,14 @@ def get_stats(
         spot_prev = sum(float(g.spot_balance) for g in prev_groups)
         daily_prev = sum(float(g.daily_balance) for g in prev_groups)
 
-    # 今年开户数量（按 account_date 统计）
-    new_account_count = db.query(MarginNewAccount).filter(
-        extract('year', MarginNewAccount.account_date) == year
-    ).count()
+    # 今年开户数量（按 account_date 统计，去重）
+    new_account_count = db.execute(text("""
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE EXTRACT(year FROM account_date) = :year
+        ) sub
+    """), {"year": year}).scalar() or 0
 
     # 今年息费收入累计
     income_records = db.query(MarginIncome).filter(
@@ -608,7 +610,7 @@ def get_stats(
     spot_change = spot_total - spot_prev
     daily_change = daily_total - daily_prev
 
-    # 开户周环比（按 account_date 所在自然周统计）
+    # 开户周环比（按 account_date 所在自然周统计，去重）
     from datetime import timedelta
     today = date.today()
     # 本周一和本周日
@@ -618,16 +620,26 @@ def get_stats(
     prev_week_start = week_start - timedelta(days=7)
     prev_week_end = prev_week_start + timedelta(days=6)
 
-    week_accounts = db.query(MarginNewAccount).filter(
-        extract('year', MarginNewAccount.account_date) == year,
-        MarginNewAccount.account_date >= week_start,
-        MarginNewAccount.account_date <= week_end
-    ).count()
-    prev_week_accounts = db.query(MarginNewAccount).filter(
-        extract('year', MarginNewAccount.account_date) == year,
-        MarginNewAccount.account_date >= prev_week_start,
-        MarginNewAccount.account_date <= prev_week_end
-    ).count()
+    week_accounts = db.execute(text("""
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE EXTRACT(year FROM account_date) = :year
+              AND account_date >= :week_start
+              AND account_date <= :week_end
+        ) sub
+    """), {"year": year, "week_start": week_start, "week_end": week_end}).scalar() or 0
+
+    prev_week_accounts = db.execute(text("""
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE EXTRACT(year FROM account_date) = :year
+              AND account_date >= :prev_week_start
+              AND account_date <= :prev_week_end
+        ) sub
+    """), {"year": year, "prev_week_start": prev_week_start, "prev_week_end": prev_week_end}).scalar() or 0
+
     account_change = week_accounts - prev_week_accounts
 
     # 息费收入周环比（按 record_week 统计，因为收入是周度汇总数据）
@@ -678,13 +690,16 @@ def get_stats(
     group_order = {'上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7}
     income_distribution.sort(key=lambda x: group_order.get(x['group_name'], 99))
 
-    # 周度开户趋势（按 account_date 的自然周统计，ISO 周格式）
+    # 周度开户趋势（按 account_date 的自然周统计，去重）
     weekly_trend_sql = text("""
         SELECT
             TO_CHAR(account_date, 'YYYY') || '-W' || LPAD(TO_CHAR(account_date, 'IW'), 2, '0') as week,
             COUNT(*) as count
-        FROM margin_new_accounts
-        WHERE EXTRACT(year FROM account_date) = :year
+        FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE EXTRACT(year FROM account_date) = :year
+        ) sub
         GROUP BY TO_CHAR(account_date, 'YYYY') || '-W' || LPAD(TO_CHAR(account_date, 'IW'), 2, '0')
         ORDER BY week
     """)
@@ -694,17 +709,21 @@ def get_stats(
         for r in weekly_trend_rows
     ]
 
-    # 月度开户趋势（按 account_date 的月份统计）
-    month_expr = extract('month', MarginNewAccount.account_date).label("month")
-    monthly_trend = db.query(
-        month_expr,
-        func.count(MarginNewAccount.id).label("count")
-    ).filter(
-        extract('year', MarginNewAccount.account_date) == year
-    ).group_by(month_expr).order_by(month_expr).all()
+    # 月度开户趋势（按 account_date 的月份统计，去重）
+    monthly_trend_sql = text("""
+        SELECT EXTRACT(month FROM account_date) as month, COUNT(*) as count
+        FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE EXTRACT(year FROM account_date) = :year
+        ) sub
+        GROUP BY EXTRACT(month FROM account_date)
+        ORDER BY month
+    """)
+    monthly_trend_rows = db.execute(monthly_trend_sql, {"year": year}).fetchall()
     monthly_account_trend = [
         {"month": int(r.month), "count": r.count}
-        for r in monthly_trend
+        for r in monthly_trend_rows
     ]
 
     # 最近更新时间（从余额表和开户表取最新）
@@ -783,11 +802,17 @@ def get_targets(
         income_actual[r.group_id] += float(r.income_amount)
 
     account_actual = defaultdict(int)
-    account_records = db.query(MarginNewAccount).filter(
-        extract('year', MarginNewAccount.account_date) == year
-    ).all()
-    for r in account_records:
-        account_actual[r.group_id] += 1
+    account_rows = db.execute(text("""
+        SELECT group_id, COUNT(*) as cnt
+        FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE EXTRACT(year FROM account_date) = :year
+        ) sub
+        GROUP BY group_id
+    """), {"year": year}).fetchall()
+    for r in account_rows:
+        account_actual[r.group_id] = r.cnt
 
     result = []
     for g in groups:
@@ -854,10 +879,14 @@ def create_or_update_target(
     ).all()
     income_a = sum(float(r.income_amount) for r in income_actual)
 
-    account_actual = db.query(MarginNewAccount).filter(
-        MarginNewAccount.group_id == request.group_id,
-        extract('year', MarginNewAccount.account_date) == request.year
-    ).count()
+    account_actual = db.execute(text("""
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT customer_name, member_id, group_id, account_date
+            FROM margin_new_accounts
+            WHERE group_id = :group_id
+              AND EXTRACT(year FROM account_date) = :year
+        ) sub
+    """), {"group_id": request.group_id, "year": request.year}).scalar() or 0
 
     income_t = float(target.income_target)
     account_t = target.account_target
