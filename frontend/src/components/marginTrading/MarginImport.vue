@@ -557,25 +557,33 @@ const readExcel = async (file, dataType) => {
           }
 
           // Excel格式：第1行=标题，第2行=一级表头，第3行=二级表头，第4行起=数据
+          // 注意：不同版本的开户明细Excel列结构不同
+          // 旧版：[行号, 机构编码, 机构名称, 客户代码, 开发人员, 服务人员, 资金账号, 开户日期, ...]
+          // 新版：[行号, 日期范围, 机构编码, 机构名称, 客户代码, 员工姓名, 0, empty, empty, 开户日期]
           const result = []
           let skippedEmptyDate = 0
+
+          // 检测文件格式：检查第2行(index 1)是机构编码还是日期范围
+          const isNewFormat = rawData.length > 3 && String(rawData[3][1] || '').includes('-')
+          console.log(`[DEBUG] new_account format detected: ${isNewFormat ? 'new' : 'old'}`)
+
           for (let i = 3; i < rawData.length; i++) {
             const row = rawData[i]
             if (!row || row.length === 0) continue
 
-            // 调试：打印每一行的原始数据
-            if (i <= 5) {
-              console.log(`[DEBUG] Row ${i}:`, row)
-            }
+            // 根据文件格式选择正确的列索引
+            const groupNameCol = isNewFormat ? 3 : 2
+            const customerCodeCol = isNewFormat ? 4 : 3
+            const memberNameCol = isNewFormat ? 5 : 4
+            const accountDateCol = isNewFormat ? 9 : 7
 
-            const groupName = String(row[2] || '').trim() // 机构名称 (C列/index 2)
-            const customerCode = String(row[3] || '').trim() // 客户代码 (D列/index 3)
-            const devMember = String(row[4] || '').trim() // 开发人员 (E列/index 4)
-            const svcMember = String(row[5] || '').trim() // 服务人员 (F列/index 5)
-            const accountDate = String(row[7] || '').trim() // 开户日期 (H列/index 7)
+            const groupName = String(row[groupNameCol] || '').trim()
+            const customerCode = String(row[customerCodeCol] || '').trim()
+            const memberName = String(row[memberNameCol] || '').trim()
+            const accountDate = String(row[accountDateCol] || '').trim()
 
             if (!groupName || !customerCode) continue
-            if (groupName.includes('合计') || groupName.includes('查询表')) continue
+            if (groupName.includes('合计') || groupName.includes('查询')) continue
 
             // 开户日期为空则跳过并记录
             if (!accountDate) {
@@ -585,14 +593,6 @@ const readExcel = async (file, dataType) => {
 
             // 营业部名称映射
             const mappedGroupName = groupNameMapping[groupName] || groupName
-
-            // 调试：打印解析后的数据
-            if (i <= 5) {
-              console.log(`[DEBUG] Parsed: groupName="${groupName}", mapped="${mappedGroupName}", member="${devMember || svcMember}", date="${accountDate}"`)
-            }
-
-            // 开发人员优先，如果为空则使用服务人员
-            const memberName = devMember || svcMember
             if (!memberName) continue
 
             // 开户日期格式转换：20260325 -> 2026-03-25
@@ -606,7 +606,7 @@ const readExcel = async (file, dataType) => {
               member_name: memberName,
               customer_name: customerCode,
               account_date: formattedDate,
-              asset_amount: 0 // 该报表无开户资产列
+              asset_amount: 0
             })
           }
 
