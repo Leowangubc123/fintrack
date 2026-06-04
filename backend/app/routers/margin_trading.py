@@ -456,29 +456,47 @@ def get_income(
     year: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取息费收入列表"""
-    query = db.query(
-        MarginIncome,
-        Group.name.label("group_name")
-    ).join(Group, MarginIncome.group_id == Group.id)
-
+    """获取息费收入列表（按营业部去重，保留最新record_week的记录）"""
+    sql = """
+        SELECT id, group_id, group_name, income_amount, record_week, record_date
+        FROM (
+            SELECT
+                mi.id, mi.group_id,
+                mi.income_amount, mi.record_week, mi.record_date,
+                g.name as group_name,
+                ROW_NUMBER() OVER (
+                    PARTITION BY mi.group_id
+                    ORDER BY mi.record_week DESC
+                ) as rn
+            FROM margin_income mi
+            JOIN (SELECT id, name FROM groups) g ON mi.group_id = g.id
+            WHERE 1=1
+    """
+    params = {}
     if record_week:
-        query = query.filter(MarginIncome.record_week == record_week)
+        sql += " AND mi.record_week = :record_week"
+        params["record_week"] = record_week
     if year:
-        query = query.filter(extract('year', MarginIncome.record_date) == year)
+        sql += " AND EXTRACT(year FROM mi.record_date) = :year"
+        params["year"] = year
+    sql += """
+        ) sub
+        WHERE rn = 1
+        ORDER BY income_amount DESC
+    """
 
-    results = query.order_by(MarginIncome.income_amount.desc()).all()
+    rows = db.execute(text(sql), params).fetchall()
 
     return [
         IncomeResponse(
-            id=r.MarginIncome.id,
-            group_id=r.MarginIncome.group_id,
-            group_name=r.group_name,
-            income_amount=float(r.MarginIncome.income_amount),
-            record_week=r.MarginIncome.record_week,
-            record_date=r.MarginIncome.record_date
+            id=row.id,
+            group_id=row.group_id,
+            group_name=row.group_name,
+            income_amount=float(row.income_amount),
+            record_week=row.record_week,
+            record_date=row.record_date
         )
-        for r in results
+        for row in rows
     ]
 
 
@@ -600,11 +618,16 @@ def get_stats(
         ) sub
     """), {"year": year}).scalar() or 0
 
-    # 今年息费收入累计
-    income_records = db.query(MarginIncome).filter(
-        extract('year', MarginIncome.record_date) == year
-    ).all()
-    income_total = sum(float(r.income_amount) for r in income_records)
+    # 今年息费收入累计（按营业部去重，保留最新record_week）
+    income_total_row = db.execute(text("""
+        SELECT SUM(income_amount) as total FROM (
+            SELECT DISTINCT ON (group_id) income_amount
+            FROM margin_income
+            WHERE EXTRACT(year FROM record_date) = :year
+            ORDER BY group_id, record_week DESC
+        ) sub
+    """), {"year": year}).fetchone()
+    income_total = float(income_total_row.total) if income_total_row and income_total_row.total else 0.0
 
     # 计算环比变化
     spot_change = spot_total - spot_prev
@@ -645,14 +668,26 @@ def get_stats(
     # 息费收入周环比（按 record_week 统计，因为收入是周度汇总数据）
     income_change = 0.0
     if latest_week:
-        latest_income = db.query(MarginIncome).filter(
-            MarginIncome.record_week == latest_week
-        ).all()
-        income_latest = sum(float(r.income_amount) for r in latest_income)
-        prev_income = db.query(MarginIncome).filter(
-            MarginIncome.record_week == prev_week
-        ).all() if prev_week else []
-        income_prev = sum(float(r.income_amount) for r in prev_income)
+        latest_income_row = db.execute(text("""
+            SELECT SUM(income_amount) as total FROM (
+                SELECT DISTINCT ON (group_id) income_amount
+                FROM margin_income
+                WHERE record_week = :record_week
+                ORDER BY group_id, record_week DESC
+            ) sub
+        """), {"record_week": latest_week}).fetchone()
+        income_latest = float(latest_income_row.total) if latest_income_row and latest_income_row.total else 0.0
+
+        prev_income_row = db.execute(text("""
+            SELECT SUM(income_amount) as total FROM (
+                SELECT DISTINCT ON (group_id) income_amount
+                FROM margin_income
+                WHERE record_week = :record_week
+                ORDER BY group_id, record_week DESC
+            ) sub
+        """), {"record_week": prev_week}).fetchone() if prev_week else None
+        income_prev = float(prev_income_row.total) if prev_income_row and prev_income_row.total else 0.0
+
         income_change = income_latest - income_prev
 
     # 营业部分布（时点余额）
@@ -673,15 +708,23 @@ def get_stats(
         group_order = {'上一': 1, '上二': 2, '上三': 3, '上四': 4, '上五': 5, '上六': 6, '上海分公司': 7}
         group_distribution.sort(key=lambda x: group_order.get(x['group_name'], 99))
 
-    # 息费收入分布
+    # 息费收入分布（按营业部去重，保留最新record_week）
     income_distribution = []
-    income_by_group = db.query(
-        MarginIncome.group_id,
-        Group.name.label("group_name"),
-        func.sum(MarginIncome.income_amount).label("total_income")
-    ).join(Group).filter(
-        extract('year', MarginIncome.record_date) == year
-    ).group_by(MarginIncome.group_id, Group.name).order_by(func.sum(MarginIncome.income_amount).desc()).all()
+    income_by_group = db.execute(text("""
+        SELECT
+            g.name as group_name,
+            SUM(income_amount) as total_income
+        FROM (
+            SELECT DISTINCT ON (group_id)
+                group_id, income_amount
+            FROM margin_income
+            WHERE EXTRACT(year FROM record_date) = :year
+            ORDER BY group_id, record_week DESC
+        ) sub
+        JOIN (SELECT id, name FROM groups) g ON sub.group_id = g.id
+        GROUP BY g.name
+        ORDER BY SUM(income_amount) DESC
+    """), {"year": year}).fetchall()
     income_distribution = [
         {"group_name": r.group_name, "income": float(r.total_income)}
         for r in income_by_group
@@ -795,11 +838,18 @@ def get_targets(
 
     # 计算年度实际值
     income_actual = defaultdict(float)
-    income_records = db.query(MarginIncome).filter(
-        extract('year', MarginIncome.record_date) == year
-    ).all()
-    for r in income_records:
-        income_actual[r.group_id] += float(r.income_amount)
+    income_rows = db.execute(text("""
+        SELECT group_id, income_amount
+        FROM (
+            SELECT DISTINCT ON (group_id)
+                group_id, income_amount
+            FROM margin_income
+            WHERE EXTRACT(year FROM record_date) = :year
+            ORDER BY group_id, record_week DESC
+        ) sub
+    """), {"year": year}).fetchall()
+    for r in income_rows:
+        income_actual[r.group_id] = float(r.income_amount)
 
     account_actual = defaultdict(int)
     account_rows = db.execute(text("""
@@ -873,11 +923,14 @@ def create_or_update_target(
     db.refresh(target)
 
     # 计算完成率
-    income_actual = db.query(MarginIncome).filter(
-        MarginIncome.group_id == request.group_id,
-        extract('year', MarginIncome.record_date) == request.year
-    ).all()
-    income_a = sum(float(r.income_amount) for r in income_actual)
+    income_actual_row = db.execute(text("""
+        SELECT income_amount FROM margin_income
+        WHERE group_id = :group_id
+          AND EXTRACT(year FROM record_date) = :year
+        ORDER BY record_week DESC
+        LIMIT 1
+    """), {"group_id": request.group_id, "year": request.year}).fetchone()
+    income_a = float(income_actual_row.income_amount) if income_actual_row and income_actual_row.income_amount else 0.0
 
     account_actual = db.execute(text("""
         SELECT COUNT(*) FROM (
