@@ -110,9 +110,11 @@ const tableData = computed(() => {
     const prev = prevWeekData.value[item.group_id]
     const week_change = prev && prev.income_amount > 0
       ? ((item.income_amount - prev.income_amount) / prev.income_amount * 100) : 0
-    const year_total = yearIncomeData.value
+    // 息费收入是累计数据：取该营业部最新 record_week 的累计值
+    const groupRecords = yearIncomeData.value
       .filter(y => y.group_id === item.group_id)
-      .reduce((sum, y) => sum + y.income_amount, 0)
+      .sort((a, b) => b.record_week.localeCompare(a.record_week))
+    const year_total = groupRecords[0]?.income_amount || 0
     const percentage = totalIncome.value > 0 ? ((item.income_amount / totalIncome.value) * 100).toFixed(1) : 0
     return { ...item, week_change, year_total, percentage }
   })
@@ -122,12 +124,9 @@ const tableData = computed(() => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const [weekRes, yearRes] = await Promise.all([
-      marginTradingApi.getIncome({ year: selectedYear.value }),
-      marginTradingApi.getIncome({ year: selectedYear.value })
-    ])
-    incomeData.value = weekRes
-    yearIncomeData.value = yearRes
+    const res = await marginTradingApi.getIncome({ year: selectedYear.value })
+    incomeData.value = res
+    yearIncomeData.value = res
     if (!recordWeek.value && weekOptions.value.length > 0) {
       recordWeek.value = weekOptions.value[0]
     }

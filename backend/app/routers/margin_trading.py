@@ -456,47 +456,30 @@ def get_income(
     year: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取息费收入列表（按营业部去重，保留最新record_week的记录）"""
-    sql = """
-        SELECT id, group_id, group_name, income_amount, record_week, record_date
-        FROM (
-            SELECT
-                mi.id, mi.group_id,
-                mi.income_amount, mi.record_week, mi.record_date,
-                g.name as group_name,
-                ROW_NUMBER() OVER (
-                    PARTITION BY mi.group_id
-                    ORDER BY mi.record_week DESC
-                ) as rn
-            FROM margin_income mi
-            JOIN (SELECT id, name FROM groups) g ON mi.group_id = g.id
-            WHERE 1=1
-    """
-    params = {}
-    if record_week:
-        sql += " AND mi.record_week = :record_week"
-        params["record_week"] = record_week
-    if year:
-        sql += " AND EXTRACT(year FROM mi.record_date) = :year"
-        params["year"] = year
-    sql += """
-        ) sub
-        WHERE rn = 1
-        ORDER BY income_amount DESC
-    """
+    """获取息费收入列表（返回所有周的原始数据，用于周度筛选和趋势图展示）"""
+    query = db.query(
+        MarginIncome,
+        Group.name.label("group_name")
+    ).join(Group, MarginIncome.group_id == Group.id)
 
-    rows = db.execute(text(sql), params).fetchall()
+    if record_week:
+        query = query.filter(MarginIncome.record_week == record_week)
+    if year:
+        # 按 record_week 年份前缀匹配，避免 record_date 与 record_week 跨年不一致问题
+        query = query.filter(MarginIncome.record_week.like(f"{year}-W%"))
+
+    results = query.order_by(MarginIncome.record_week.desc()).all()
 
     return [
         IncomeResponse(
-            id=row.id,
-            group_id=row.group_id,
-            group_name=row.group_name,
-            income_amount=float(row.income_amount),
-            record_week=row.record_week,
-            record_date=row.record_date
+            id=r.MarginIncome.id,
+            group_id=r.MarginIncome.group_id,
+            group_name=r.group_name,
+            income_amount=float(r.MarginIncome.income_amount),
+            record_week=r.MarginIncome.record_week,
+            record_date=r.MarginIncome.record_date
         )
-        for row in rows
+        for r in results
     ]
 
 
