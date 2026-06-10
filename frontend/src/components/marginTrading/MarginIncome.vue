@@ -185,21 +185,17 @@ const updateCharts = () => {
     }]
   }, true)
 
-  // Trend chart - weekly cumulative
+  // Trend chart - 累计息费收入折线图
+  // 息费收入是累计数据：每周上传的 Excel 已包含从年初到该周的累计值
   const weeklyData = {}
   yearIncomeData.value.forEach(item => {
     if (!weeklyData[item.record_week]) weeklyData[item.record_week] = 0
     weeklyData[item.record_week] += item.income_amount
   })
   const sortedWeeks = Object.keys(weeklyData).sort()
-  let cumulative = 0
-  const cumulativeData = sortedWeeks.map(w => {
-    cumulative += weeklyData[w]
-    return cumulative
-  })
 
   trendInstance.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', formatter: '{b}: {c}万' },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
     xAxis: {
       type: 'category',
@@ -213,21 +209,14 @@ const updateCharts = () => {
       splitLine: { lineStyle: { color: '#F3F4F6' } },
       axisLabel: { color: '#374151', fontSize: 10 }
     },
-    series: [
-      {
-        name: '周收入', type: 'bar',
-        data: sortedWeeks.map(w => weeklyData[w]),
-        itemStyle: { color: '#F59E0B', borderRadius: [4, 4, 0, 0] },
-        barWidth: '40%'
-      },
-      {
-        name: '累计收入', type: 'line',
-        data: cumulativeData,
-        smooth: true, symbol: 'circle', symbolSize: 6,
-        lineStyle: { color: '#EA580C', width: 3 },
-        itemStyle: { color: '#EA580C', borderWidth: 2, borderColor: '#fff' }
-      }
-    ]
+    series: [{
+      name: '累计收入', type: 'line',
+      data: sortedWeeks.map(w => weeklyData[w]),
+      smooth: true, symbol: 'circle', symbolSize: 6,
+      lineStyle: { color: '#EA580C', width: 3 },
+      itemStyle: { color: '#EA580C', borderWidth: 2, borderColor: '#fff' },
+      areaStyle: { color: 'rgba(234, 88, 12, 0.1)' }
+    }]
   }, true)
 }
 
