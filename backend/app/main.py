@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy import inspect, text
 from app.database import engine, Base
 from app.routers import groups, members, products, import_data, dashboard, analysis, private_fund, advisory, margin_trading
 
