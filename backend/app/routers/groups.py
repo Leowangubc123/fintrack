@@ -12,19 +12,23 @@ router = APIRouter(prefix="/api/groups", tags=["groups"])
 @router.get("", response_model=List[GroupResponse])
 def list_groups(db: Session = Depends(get_db)):
     """获取所有营业部列表"""
-    groups = db.query(Group).all()
-    result = []
-    for group in groups:
-        member_count = db.query(func.count(Member.id)).filter(Member.group_id == group.id).scalar()
-        group_data = GroupResponse(
+    results = db.query(
+        Group,
+        func.count(Member.id).label('member_count')
+    ).outerjoin(
+        Member, Member.group_id == Group.id
+    ).group_by(Group.id).all()
+
+    return [
+        GroupResponse(
             id=group.id,
             name=group.name,
             leader=group.leader,
             created_at=group.created_at,
-            member_count=member_count
+            member_count=count
         )
-        result.append(group_data)
-    return result
+        for group, count in results
+    ]
 
 
 @router.post("", response_model=GroupResponse)

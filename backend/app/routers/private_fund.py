@@ -317,39 +317,42 @@ def create_transaction(transaction: PrivateFundTransactionCreate, db: Session = 
 @router.get("/transactions/recent", response_model=List[PrivateFundTransactionResponse])
 def get_recent_transactions(limit: int = 10, db: Session = Depends(get_db)):
     """获取最近交易记录"""
-    transactions = db.query(PrivateFundTransaction).order_by(
+    rows = db.query(
+        PrivateFundTransaction,
+        PrivateFundProduct.name.label('product_name'),
+        Member.name.label('member_name'),
+        Member.group_id.label('group_id'),
+        Group.name.label('group_name')
+    ).join(
+        PrivateFundProduct, PrivateFundTransaction.product_id == PrivateFundProduct.id
+    ).join(
+        Member, PrivateFundTransaction.member_id == Member.id
+    ).join(
+        Group, Member.group_id == Group.id
+    ).order_by(
         PrivateFundTransaction.created_at.desc()
     ).limit(limit).all()
 
-    result = []
-    for t in transactions:
-        # 使用原生 SQL 避免选择不存在的 scope 列
-        member = db.execute(
-            text("SELECT id, name, group_id FROM members WHERE id = :id"),
-            {"id": t.member_id}
-        ).fetchone()
-        product = db.query(PrivateFundProduct).filter(PrivateFundProduct.id == t.product_id).first()
-        group = db.query(Group).filter(Group.id == member.group_id).first() if member else None
-
-        result.append(PrivateFundTransactionResponse(
-            id=t.id,
-            product_id=t.product_id,
-            member_id=t.member_id,
-            transaction_date=t.transaction_date,
-            amount=float(t.amount),
-            transaction_type=t.transaction_type,
-            remark=t.remark,
-            sales_coefficient=float(t.sales_coefficient) if t.sales_coefficient else None,
-            assessed_amount=float(t.assessed_amount) if t.assessed_amount else None,
-            product_name=product.name if product else '未知产品',
-            member_name=member.name if member else '未知人员',
-            group_id=member.group_id if member else None,
-            group_name=group.name if group else '未知营业部',
-            holding_coefficient=float(t.holding_coefficient) if t.holding_coefficient else 1.0,
-            created_at=t.created_at
-        ))
-
-    return result
+    return [
+        PrivateFundTransactionResponse(
+            id=t.PrivateFundTransaction.id,
+            product_id=t.PrivateFundTransaction.product_id,
+            member_id=t.PrivateFundTransaction.member_id,
+            transaction_date=t.PrivateFundTransaction.transaction_date,
+            amount=float(t.PrivateFundTransaction.amount),
+            transaction_type=t.PrivateFundTransaction.transaction_type,
+            remark=t.PrivateFundTransaction.remark,
+            sales_coefficient=float(t.PrivateFundTransaction.sales_coefficient) if t.PrivateFundTransaction.sales_coefficient else None,
+            assessed_amount=float(t.PrivateFundTransaction.assessed_amount) if t.PrivateFundTransaction.assessed_amount else None,
+            product_name=t.product_name or '未知产品',
+            member_name=t.member_name or '未知人员',
+            group_id=t.group_id,
+            group_name=t.group_name or '未知营业部',
+            holding_coefficient=float(t.PrivateFundTransaction.holding_coefficient) if t.PrivateFundTransaction.holding_coefficient else 1.0,
+            created_at=t.PrivateFundTransaction.created_at
+        )
+        for t in rows
+    ]
 
 
 @router.delete("/transactions/{transaction_id}")
@@ -460,11 +463,16 @@ def get_holding_stats_by_transactions(db: Session = Depends(get_db)):
 
     total_holding = sum(max(0, h) for h in product_holdings.values())
 
+    # 一次性预加载所有产品保有系数
+    product_ids = [pid for pid, holding in product_holdings.items() if holding > 0]
+    products = db.query(PrivateFundProduct).filter(PrivateFundProduct.id.in_(product_ids)).all() if product_ids else []
+    product_map = {p.id: p for p in products}
+
     # 计算加权平均保有系数
     total_weighted_coeff = 0
     for pid, holding in product_holdings.items():
         if holding > 0:
-            product = db.query(PrivateFundProduct).filter(PrivateFundProduct.id == pid).first()
+            product = product_map.get(pid)
             if product:
                 coeff = float(product.holding_coefficient) if product.holding_coefficient else 1.0
                 total_weighted_coeff += holding * coeff
@@ -488,22 +496,24 @@ def get_product_holdings(db: Session = Depends(get_db)):
     product_stats = {}
     for t in transactions:
         if t.product_id not in product_stats:
-            product_stats[t.product_id] = {
-                "holding": 0,
-                "product_name": None  # 稍后从数据库查询
-            }
+            product_stats[t.product_id] = 0
         if t.transaction_type == 'sale':
-            product_stats[t.product_id]["holding"] += float(t.amount)
+            product_stats[t.product_id] += float(t.amount)
         else:
-            product_stats[t.product_id]["holding"] -= float(t.amount)
+            product_stats[t.product_id] -= float(t.amount)
+
+    # 一次性预加载所有产品信息
+    product_ids = [pid for pid, holding in product_stats.items() if holding > 0]
+    products = db.query(PrivateFundProduct).filter(PrivateFundProduct.id.in_(product_ids)).all() if product_ids else []
+    product_map = {p.id: p for p in products}
 
     # 组装返回数据
     result = []
-    for pid, stats in product_stats.items():
-        if stats["holding"] > 0:
-            product = db.query(PrivateFundProduct).filter(PrivateFundProduct.id == pid).first()
+    for pid, holding in product_stats.items():
+        if holding > 0:
+            product = product_map.get(pid)
             if product:
-                holding = max(0, stats["holding"])
+                holding = max(0, holding)
                 coeff = float(product.holding_coefficient) if product.holding_coefficient else 1.0
                 result.append({
                     "product_id": pid,

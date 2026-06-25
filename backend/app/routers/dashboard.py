@@ -81,23 +81,40 @@ def get_active_products_summary(db: Session = Depends(get_db)):
         Product.is_archived == False
     ).order_by(Product.start_date.desc()).all()
 
-    result = []
-    for product in products:
-        # 计算产品总销售额
-        total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-            SalesRecord.product_id == product.id
-        ).scalar() or 0
+    product_ids = [p.id for p in products]
 
-        # 各营业部完成情况
-        group_stats = db.query(
+    # 一次性查询所有产品的销售额和分配人数
+    sales_summary = {}
+    if product_ids:
+        sales_rows = db.query(
+            SalesRecord.product_id,
+            func.sum(SalesRecord.amount).label('total_sales'),
+            func.count(SalesRecord.member_id.distinct()).label('assigned_count')
+        ).filter(
+            SalesRecord.product_id.in_(product_ids)
+        ).group_by(SalesRecord.product_id).all()
+        sales_summary = {r.product_id: r for r in sales_rows}
+
+    # 一次性查询所有产品的营业部销售分布
+    group_stats_map = {}
+    if product_ids:
+        group_rows = db.query(
+            SalesRecord.product_id,
             Group.name,
             func.sum(SalesRecord.amount).label('sales')
         ).join(
-            SalesRecord, SalesRecord.group_id == Group.id
+            Group, SalesRecord.group_id == Group.id
         ).filter(
-            SalesRecord.product_id == product.id
-        ).group_by(Group.id).all()
+            SalesRecord.product_id.in_(product_ids)
+        ).group_by(SalesRecord.product_id, Group.id).all()
+        for pid, gname, sales in group_rows:
+            group_stats_map.setdefault(pid, []).append({"name": gname, "sales": float(sales)})
 
+    result = []
+    for product in products:
+        sales_row = sales_summary.get(product.id)
+        total_sales = float(sales_row.total_sales) if sales_row else 0
+        assigned_count = sales_row.assigned_count if sales_row else 0
         days_left = (product.end_date - today).days
 
         result.append({
@@ -106,11 +123,11 @@ def get_active_products_summary(db: Session = Depends(get_db)):
             "code": product.code,
             "type": product.type,
             "target": float(product.total_target),
-            "sales": float(total_sales),
-            "completion_rate": round(float(total_sales) / float(product.total_target) * 100, 1) if product.total_target > 0 else 0,
+            "sales": total_sales,
+            "completion_rate": round(total_sales / float(product.total_target) * 100, 1) if product.total_target > 0 else 0,
             "days_left": days_left,
             "start_date": product.start_date.isoformat() if product.start_date else None,
-            "group_stats": [{"name": g.name, "sales": float(g.sales)} for g in group_stats]
+            "group_stats": group_stats_map.get(product.id, [])
         })
 
     return result
@@ -122,44 +139,45 @@ def get_groups_ranking(product_id: int = None, db: Session = Depends(get_db)):
     from app.models import ProductTarget
 
     groups = db.query(Group).all()
+    group_ids = [g.id for g in groups]
+
+    # 一次性查询所有营业部目标
+    target_rows = db.query(
+        ProductTarget.group_id,
+        func.sum(ProductTarget.target_amount).label('target')
+    ).filter(
+        ProductTarget.member_id == None,
+        ProductTarget.group_id.in_(group_ids)
+    )
+    if product_id:
+        target_rows = target_rows.filter(ProductTarget.product_id == product_id)
+    target_rows = target_rows.group_by(ProductTarget.group_id).all()
+    target_map = {r.group_id: float(r.target) for r in target_rows}
+
+    # 一次性查询所有营业部销量
+    sales_rows = db.query(
+        SalesRecord.group_id,
+        func.sum(SalesRecord.amount).label('sales')
+    ).filter(
+        SalesRecord.group_id.in_(group_ids)
+    )
+    if product_id:
+        sales_rows = sales_rows.filter(SalesRecord.product_id == product_id)
+    sales_rows = sales_rows.group_by(SalesRecord.group_id).all()
+    sales_map = {r.group_id: float(r.sales) for r in sales_rows}
+
     result = []
-
     for group in groups:
-        if product_id:
-            # 按特定产品统计
-            # 从 ProductTarget 获取该营业部在该产品上的目标
-            target = db.query(func.sum(ProductTarget.target_amount)).filter(
-                ProductTarget.product_id == product_id,
-                ProductTarget.group_id == group.id,
-                ProductTarget.member_id == None  # 只取营业部级别的目标
-            ).scalar() or 0
-
-            # 获取该营业部在该产品上的实际销量
-            sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.product_id == product_id,
-                SalesRecord.group_id == group.id
-            ).scalar() or 0
-            completion_rate = (float(sales) / float(target) * 100) if target > 0 else 0
-        else:
-            # 全部产品：统计所有有目标分配的产品
-            # 获取该营业部的总目标
-            target = db.query(func.sum(ProductTarget.target_amount)).filter(
-                ProductTarget.group_id == group.id,
-                ProductTarget.member_id == None
-            ).scalar() or 0
-
-            # 获取该营业部的总销量
-            sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.group_id == group.id
-            ).scalar() or 0
-            completion_rate = (float(sales) / float(target) * 100) if target > 0 else 0
+        target = target_map.get(group.id, 0)
+        sales = sales_map.get(group.id, 0)
+        completion_rate = (sales / target * 100) if target > 0 else 0
 
         result.append({
             "id": group.id,
             "name": group.name,
             "leader": group.leader,
-            "target": float(target),
-            "sales": float(sales),
+            "target": target,
+            "sales": sales,
             "completion_rate": round(completion_rate, 1)
         })
 
@@ -182,49 +200,66 @@ def get_sales_matrix(db: Session = Depends(get_db)):
 
     # 获取所有营业部
     groups = db.query(Group).all()
+    group_ids = [g.id for g in groups]
+    product_ids = [p.id for p in products]
 
-    # 构建矩阵
+    # 一次性查询所有营业部-产品销量矩阵
+    sales_matrix = {}
+    if product_ids and group_ids:
+        sales_rows = db.query(
+            SalesRecord.group_id,
+            SalesRecord.product_id,
+            func.sum(SalesRecord.amount).label('sales')
+        ).filter(
+            SalesRecord.group_id.in_(group_ids),
+            SalesRecord.product_id.in_(product_ids)
+        ).group_by(SalesRecord.group_id, SalesRecord.product_id).all()
+        for r in sales_rows:
+            sales_matrix[(r.group_id, r.product_id)] = float(r.sales)
+
+    # 一次性查询所有营业部-产品目标矩阵
+    target_matrix = {}
+    if product_ids and group_ids:
+        target_rows = db.query(
+            ProductTarget.group_id,
+            ProductTarget.product_id,
+            func.sum(ProductTarget.target_amount).label('target')
+        ).filter(
+            ProductTarget.group_id.in_(group_ids),
+            ProductTarget.product_id.in_(product_ids),
+            ProductTarget.member_id == None
+        ).group_by(ProductTarget.group_id, ProductTarget.product_id).all()
+        for r in target_rows:
+            target_matrix[(r.group_id, r.product_id)] = float(r.target)
+
+    # 组装矩阵
     matrix_amount = []
     matrix_rate = []
-
-    # 同时构建 sales_data 和 target_data 供前端使用
     sales_data = []
     target_data = []
 
     for group in groups:
         amount_row = []
         rate_row = []
-
         for product in products:
-            # 该营业部该产品的实际总销量
-            sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.group_id == group.id,
-                SalesRecord.product_id == product.id
-            ).scalar() or 0
+            sales = sales_matrix.get((group.id, product.id), 0)
+            target = target_matrix.get((group.id, product.id), 0)
 
-            # 该营业部该产品被分配的任务数（目标）
-            target = db.query(func.sum(ProductTarget.target_amount)).filter(
-                ProductTarget.group_id == group.id,
-                ProductTarget.product_id == product.id,
-                ProductTarget.member_id == None  # 只取营业部级别的目标
-            ).scalar() or 0
+            amount_row.append(sales)
+            rate_row.append(round(sales / target * 100, 1) if target > 0 else 0)
 
-            amount_row.append(float(sales))
-            rate_row.append(round(float(sales) / float(target) * 100, 1) if target > 0 else 0)
-
-            # 添加到 sales_data 和 target_data（使用 group_id 作为 key）
             if sales > 0:
                 sales_data.append({
                     'group_id': group.id,
                     'product_id': product.id,
-                    'amount': float(sales)
+                    'amount': sales
                 })
 
             if target > 0:
                 target_data.append({
                     'group_id': group.id,
                     'product_id': product.id,
-                    'target_amount': float(target)
+                    'target_amount': target
                 })
 
         matrix_amount.append(amount_row)
@@ -238,7 +273,6 @@ def get_sales_matrix(db: Session = Depends(get_db)):
         "sales_data": sales_data,
         "target_data": target_data
     }
-
 
 @router.get("/large-orders")
 def get_large_orders(min_amount: float = 50, db: Session = Depends(get_db)):

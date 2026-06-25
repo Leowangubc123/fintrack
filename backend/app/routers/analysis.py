@@ -150,41 +150,44 @@ def get_group_comparison(
         start_date = today.replace(month=1, day=1)
 
     groups = db.query(Group).all()
+    group_ids = [g.id for g in groups]
+
     # 使用原生 SQL 避免选择不存在的 scope 列
     member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
     members = [{"id": row.id, "name": row.name, "group_id": row.group_id} for row in member_rows]
+    member_count_by_group = {}
+    for m in members:
+        member_count_by_group[m['group_id']] = member_count_by_group.get(m['group_id'], 0) + 1
 
-    # 获取所有有目标分配的产品ID（不限制在售状态）
-    product_ids_with_target = db.query(ProductTarget.product_id).filter(
-        ProductTarget.member_id == None
-    ).distinct().subquery()
+    # 一次性查询所有营业部目标
+    target_rows = db.query(
+        ProductTarget.group_id,
+        func.sum(ProductTarget.target_amount).label('target')
+    ).filter(
+        ProductTarget.member_id == None,
+        ProductTarget.group_id.in_(group_ids)
+    ).group_by(ProductTarget.group_id).all()
+    target_map = {r.group_id: float(r.target) for r in target_rows}
+
+    # 一次性查询所有营业部销量
+    sales_rows = db.query(
+        Member.group_id,
+        func.sum(SalesRecord.amount).label('sales')
+    ).join(
+        SalesRecord, Member.id == SalesRecord.member_id
+    ).filter(
+        Member.group_id.in_(group_ids),
+        SalesRecord.sale_date >= start_date
+    ).group_by(Member.group_id).all()
+    sales_map = {r.group_id: float(r.sales) for r in sales_rows}
 
     result = []
     for group in groups:
-        # 该营业部的成员
-        group_members = [m for m in members if m['group_id'] == group.id]
-        member_ids = [m['id'] for m in group_members]
-
-        # 该营业部在有目标分配的产品上的总目标
-        target = db.query(func.sum(ProductTarget.target_amount)).filter(
-            ProductTarget.group_id == group.id,
-            ProductTarget.member_id == None
-        ).scalar() or 0
-
-        # 该营业部成员的总销量（通过 member_id 查询，避免 group_id 不一致问题）
-        total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-            SalesRecord.member_id.in_(member_ids),
-            SalesRecord.sale_date >= start_date
-        ).scalar() or 0 if member_ids else 0
-
-        # 完成率
-        if target > 0:
-            completion_rate = (float(total_sales) / float(target) * 100)
-        else:
-            completion_rate = 0
-
-        # 人均销售额
-        per_capita = float(total_sales) / len(group_members) if group_members else 0
+        target = target_map.get(group.id, 0)
+        sales = sales_map.get(group.id, 0)
+        completion_rate = (sales / target * 100) if target > 0 else 0
+        member_count = member_count_by_group.get(group.id, 0)
+        per_capita = sales / member_count if member_count > 0 else 0
 
         # 计算与上月对比的趋势
         if time_range == "month":
@@ -197,9 +200,9 @@ def get_group_comparison(
             ).scalar() or 0
 
             if last_month_sales > 0:
-                trend = round((float(total_sales) - float(last_month_sales)) / float(last_month_sales) * 100, 1)
+                trend = round((sales - float(last_month_sales)) / float(last_month_sales) * 100, 1)
             else:
-                trend = 100 if total_sales > 0 else 0
+                trend = 100 if sales > 0 else 0
         else:
             trend = 0
 
@@ -207,9 +210,9 @@ def get_group_comparison(
             "id": group.id,
             "name": group.name,
             "leader": group.leader,
-            "member_count": len(group_members),
-            "target": float(target),
-            "sales": float(total_sales),
+            "member_count": member_count,
+            "target": target,
+            "sales": sales,
             "completion_rate": round(completion_rate, 1),
             "per_capita": round(per_capita, 1),
             "trend": trend
@@ -282,8 +285,6 @@ def get_group_members_detail(
     db: Session = Depends(get_db)
 ):
     """获取营业部成员明细"""
-    from sqlalchemy import extract
-
     today = date.today()
 
     # 根据时间范围确定起始日期
@@ -304,34 +305,41 @@ def get_group_members_detail(
         text("SELECT id, name, group_id FROM members WHERE group_id = :group_id"),
         {"group_id": group_id}
     ).fetchall()
+    member_ids = [m.id for m in members]
+
+    # 一次性查询所有成员销售额
+    sales_rows = db.query(
+        SalesRecord.member_id,
+        func.sum(SalesRecord.amount).label('total_sales'),
+        func.count(SalesRecord.id).label('record_count')
+    ).filter(
+        SalesRecord.member_id.in_(member_ids),
+        SalesRecord.sale_date >= start_date
+    ).group_by(SalesRecord.member_id).all()
+    sales_map = {r.member_id: r for r in sales_rows}
+
+    # 一次性查询所有成员目标
+    target_rows = db.query(
+        ProductTarget.member_id,
+        func.sum(ProductTarget.target_amount).label('target')
+    ).filter(
+        ProductTarget.member_id.in_(member_ids)
+    ).group_by(ProductTarget.member_id).all()
+    target_map = {r.member_id: float(r.target) for r in target_rows}
 
     result = []
     for member in members:
-        # 该成员在指定时间范围内的销售额
-        total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-            SalesRecord.member_id == member.id,
-            SalesRecord.sale_date >= start_date
-        ).scalar() or 0
-
-        # 该成员的目标
-        target = db.query(func.sum(ProductTarget.target_amount)).filter(
-            ProductTarget.member_id == member.id
-        ).scalar() or 0
-
-        # 完成率
-        completion_rate = (float(total_sales) / float(target) * 100) if target > 0 else 0
-
-        # 销售记录数
-        record_count = db.query(SalesRecord).filter(
-            SalesRecord.member_id == member.id,
-            SalesRecord.sale_date >= start_date
-        ).count()
+        row = sales_map.get(member.id)
+        total_sales = float(row.total_sales) if row else 0
+        record_count = row.record_count if row else 0
+        target = target_map.get(member.id, 0)
+        completion_rate = (total_sales / target * 100) if target > 0 else 0
 
         result.append({
             "id": member.id,
             "name": member.name,
-            "target": float(target),
-            "sales": float(total_sales),
+            "target": target,
+            "sales": total_sales,
             "completion_rate": round(completion_rate, 1),
             "record_count": record_count
         })
@@ -602,9 +610,11 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
     """获取产品矩阵数据"""
     # 获取所有产品（包括已结束的，以便统计历史数据）
     products = db.query(Product).all()
+    product_ids = [p.id for p in products]
 
     # 获取所有营业部和成员（使用原生 SQL 避免选择不存在的 scope 列）
     groups = db.query(Group).all()
+    group_ids = [g.id for g in groups]
     members = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
 
     # 获取所有销售记录统计（成员级别）
@@ -638,40 +648,37 @@ def get_analysis_matrix(db: Session = Depends(get_db)):
         })
 
     # 构建营业部级别销售数据（汇总该营业部所有成员的销量）
-    group_sales_data = []
-    for group in groups:
-        group_member_ids = [m.id for m in members if m.group_id == group.id]
-        for product in products:
-            # 汇总该营业部所有成员在该产品上的销量
-            total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-                SalesRecord.member_id.in_(group_member_ids),
-                SalesRecord.product_id == product.id
-            ).scalar() or 0
+    group_sales_rows = db.query(
+        Member.group_id,
+        SalesRecord.product_id,
+        func.sum(SalesRecord.amount).label('sales')
+    ).join(
+        SalesRecord, Member.id == SalesRecord.member_id
+    ).filter(
+        Member.group_id.in_(group_ids),
+        SalesRecord.product_id.in_(product_ids)
+    ).group_by(Member.group_id, SalesRecord.product_id).all()
 
-            if total_sales > 0:
-                group_sales_data.append({
-                    "group_id": group.id,
-                    "product_id": product.id,
-                    "amount": float(total_sales)
-                })
+    group_sales_data = [
+        {"group_id": r.group_id, "product_id": r.product_id, "amount": float(r.sales)}
+        for r in group_sales_rows if r.sales > 0
+    ]
 
     # 构建营业部级别任务目标数据（取营业部层面的任务分配）
-    group_target_data = []
-    for group in groups:
-        for product in products:
-            # 获取该营业部在该产品上的营业部级别任务目标（member_id IS NULL）
-            total_target = db.query(func.sum(ProductTarget.target_amount)).filter(
-                ProductTarget.group_id == group.id,
-                ProductTarget.product_id == product.id,
-                ProductTarget.member_id == None  # 只取营业部级别的任务
-            ).scalar() or 0
+    group_target_rows = db.query(
+        ProductTarget.group_id,
+        ProductTarget.product_id,
+        func.sum(ProductTarget.target_amount).label('target')
+    ).filter(
+        ProductTarget.group_id.in_(group_ids),
+        ProductTarget.product_id.in_(product_ids),
+        ProductTarget.member_id == None
+    ).group_by(ProductTarget.group_id, ProductTarget.product_id).all()
 
-            if total_target > 0:
-                group_target_data.append({
-                    "group_id": group.id,
-                    "product_id": product.id,
-                    "target_amount": float(total_target)
-                })
+    group_target_data = [
+        {"group_id": r.group_id, "product_id": r.product_id, "target_amount": float(r.target)}
+        for r in group_target_rows if r.target > 0
+    ]
 
     # 按募集期开始日期排序（较早的排在前面）
     sorted_products = sorted(products, key=lambda p: p.start_date or date.min)

@@ -64,18 +64,25 @@ def list_products(
 
     products = query.order_by(Product.created_at.desc()).all()
 
+    # 一次性查询所有产品的销售额和分配人数
+    product_ids = [p.id for p in products]
+    sales_summary = {}
+    if product_ids:
+        sales_rows = db.query(
+            SalesRecord.product_id,
+            func.sum(SalesRecord.amount).label('total_sales'),
+            func.count(SalesRecord.member_id.distinct()).label('assigned_count')
+        ).filter(
+            SalesRecord.product_id.in_(product_ids)
+        ).group_by(SalesRecord.product_id).all()
+        sales_summary = {r.product_id: r for r in sales_rows}
+
     # 计算每个产品的销售总额和分配人数
     result = []
     for product in products:
-        # 计算已募集金额
-        total_sales = db.query(func.sum(SalesRecord.amount)).filter(
-            SalesRecord.product_id == product.id
-        ).scalar() or 0
-
-        # 计算已分配人数（有销售记录的不同成员数）
-        assigned_count = db.query(SalesRecord.member_id).filter(
-            SalesRecord.product_id == product.id
-        ).distinct().count()
+        row = sales_summary.get(product.id)
+        total_sales = float(row.total_sales) if row else 0
+        assigned_count = row.assigned_count if row else 0
 
         # 构建响应数据
         product_dict = {
@@ -92,7 +99,7 @@ def list_products(
             "status": product.status,
             "is_archived": product.is_archived,
             "created_at": product.created_at,
-            "raised_amount": float(total_sales),
+            "raised_amount": total_sales,
             "assigned_count": assigned_count
         }
         result.append(product_dict)
