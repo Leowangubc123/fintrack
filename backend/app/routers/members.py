@@ -32,32 +32,44 @@ def list_members(group_id: int = None, scope: str = None, db: Session = Depends(
     """获取成员列表，可按营业部和功能模块筛选"""
     has_scope = _has_scope_column(db)
     if has_scope:
-        sql = "SELECT id, name, phone, group_id, COALESCE(scope, 'public_fund,private_fund,advisory,margin_trading') as scope FROM members"
+        sql = """
+            SELECT m.id, m.name, m.phone, m.group_id,
+                   COALESCE(m.scope, 'public_fund,private_fund,advisory,margin_trading') as scope,
+                   g.name as group_name
+            FROM members m
+            LEFT JOIN groups g ON m.group_id = g.id
+        """
     else:
-        sql = "SELECT id, name, phone, group_id, 'public_fund,private_fund,advisory,margin_trading' as scope FROM members"
+        sql = """
+            SELECT m.id, m.name, m.phone, m.group_id,
+                   'public_fund,private_fund,advisory,margin_trading' as scope,
+                   g.name as group_name
+            FROM members m
+            LEFT JOIN groups g ON m.group_id = g.id
+        """
     conditions = []
     params = {}
     if group_id:
-        conditions.append("group_id = :group_id")
+        conditions.append("m.group_id = :group_id")
         params['group_id'] = group_id
     if scope and has_scope:
-        conditions.append("scope LIKE :scope_pattern")
+        conditions.append("m.scope LIKE :scope_pattern")
         params['scope_pattern'] = f"%{scope}%"
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY m.id"
     result_rows = db.execute(text(sql), params).fetchall()
-    result = []
-    for row in result_rows:
-        group = db.query(Group).filter(Group.id == row.group_id).first()
-        result.append(MemberResponse(
+    return [
+        MemberResponse(
             id=row.id,
             name=row.name,
             phone=row.phone,
             group_id=row.group_id,
             scope=row.scope,
-            group_name=group.name if group else None
-        ))
-    return result
+            group_name=row.group_name
+        )
+        for row in result_rows
+    ]
 
 
 @router.post("", response_model=MemberResponse)

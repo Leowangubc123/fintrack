@@ -402,34 +402,43 @@ def get_annual_sales(year: Optional[int] = None, db: Session = Depends(get_db)):
     if not year:
         year = date.today().year
 
-    transactions = db.query(PrivateFundTransaction).filter(
+    rows = db.query(
+        PrivateFundTransaction.id,
+        PrivateFundTransaction.transaction_date,
+        PrivateFundTransaction.amount,
+        PrivateFundTransaction.assessed_amount,
+        PrivateFundTransaction.sales_coefficient,
+        PrivateFundProduct.name.label('product_name'),
+        PrivateFundProduct.strategy_type,
+        Member.name.label('member_name'),
+        Group.name.label('group_name')
+    ).join(
+        PrivateFundProduct, PrivateFundTransaction.product_id == PrivateFundProduct.id
+    ).join(
+        Member, PrivateFundTransaction.member_id == Member.id
+    ).join(
+        Group, Member.group_id == Group.id
+    ).filter(
         extract('year', PrivateFundTransaction.transaction_date) == year,
         PrivateFundTransaction.transaction_type == 'sale'
+    ).order_by(
+        PrivateFundTransaction.transaction_date.desc()
     ).all()
 
-    result = []
-    for t in transactions:
-        # 使用原生 SQL 避免选择不存在的 scope 列
-        member = db.execute(
-            text("SELECT id, name, group_id FROM members WHERE id = :id"),
-            {"id": t.member_id}
-        ).fetchone()
-        product = db.query(PrivateFundProduct).filter(PrivateFundProduct.id == t.product_id).first()
-        group = db.query(Group).filter(Group.id == member.group_id).first() if member else None
-
-        result.append({
+    return [
+        {
             "id": t.id,
             "transaction_date": t.transaction_date.isoformat(),
-            "product_name": product.name if product else '未知产品',
-            "strategy_type": product.strategy_type if product else '',
-            "member_name": member.name if member else '未知人员',
-            "group_name": group.name if group else '未知营业部',
+            "product_name": t.product_name or '未知产品',
+            "strategy_type": t.strategy_type or '',
+            "member_name": t.member_name or '未知人员',
+            "group_name": t.group_name or '未知营业部',
             "amount": float(t.amount),
             "assessed_amount": float(t.assessed_amount) if t.assessed_amount else None,
             "sales_coefficient": float(t.sales_coefficient) if t.sales_coefficient else None
-        })
-
-    return result
+        }
+        for t in rows
+    ]
 
 
 # ============== 保有统计API（基于交易计算 - 旧版）=============
