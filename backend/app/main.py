@@ -1,3 +1,5 @@
+import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -7,6 +9,15 @@ from app.database import engine, Base
 from app.routers import groups, members, products, import_data, dashboard, analysis, private_fund, advisory, margin_trading
 
 app = FastAPI(title="FinTrack API", version="1.0.0")
+
+# 请求耗时日志中间件
+@app.middleware("http")
+async def log_request_time(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+    print(f"[TIMING] {request.method} {request.url.path}{'?' + str(request.query_params) if request.query_params else ''} -> {response.status_code} in {duration:.3f}s")
+    return response
 
 # CORS配置 - 必须在其他中间件之前
 app.add_middleware(
