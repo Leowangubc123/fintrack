@@ -18,5 +18,5 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 启动时替换 PORT（Railway 动态分配）
-CMD sh -c "sed -i 's/listen 80/listen '${PORT:-80}'/g' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+# 启动时替换 PORT 和 DNS resolver（Railway 动态分配）
+CMD ["sh","-c","DNS_SERVER=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf); sed -i 's/listen 80/listen '${PORT:-80}'/g' /etc/nginx/conf.d/default.conf; sed -i 's/__DNS_SERVER__/'$DNS_SERVER'/g' /etc/nginx/conf.d/default.conf; nginx -g 'daemon off;'"]
