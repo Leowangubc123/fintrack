@@ -28,7 +28,16 @@ class ImportExecuteRequest(BaseModel):
 router = APIRouter(prefix="/api/import", tags=["import"])
 
 
-def parse_excel(content: bytes, filename: str) -> pd.DataFrame:
+def normalize_name(name: str) -> str:
+    """标准化姓名：去除所有空白字符和常见不可见字符"""
+    if not name:
+        return ''
+    # 去除空格、制表符、换行、全角空格、零宽字符等
+    name = str(name).strip()
+    for ch in [' ', '\t', '\n', '\r', '　', '​', '‌', '‍', '﻿']:
+        name = name.replace(ch, '')
+    return name
+
     """解析Excel文件"""
     try:
         if filename.endswith('.csv'):
@@ -177,8 +186,8 @@ async def execute_import(
     for m in members:
         # 原始名称
         member_name_map[m['name']] = m
-        # 去除空格后的名称（用于匹配Excel中姓名中间有空格的情况）
-        normalized_name = m['name'].replace(' ', '').replace('\u3000', '').strip()
+        # 标准化后的名称（去除空格、制表符、换行、全角空格、零宽字符等）
+        normalized_name = normalize_name(m['name'])
         if normalized_name != m['name']:
             member_name_map[normalized_name] = m
     group_name_map = {g.name: g for g in groups}
@@ -196,9 +205,8 @@ async def execute_import(
                 fail_count += 1
                 continue
 
-            # 查找成员（支持带空格和不带空格的匹配，以及别名映射）
-            # 先尝试原始名称，再尝试去除空格后的名称，最后尝试别名映射
-            normalized_member_name = member_name.replace(' ', '').replace('\u3000', '').strip()
+            # 查找成员（支持带空格/不可见字符的匹配以及别名映射）
+            normalized_member_name = normalize_name(member_name)
             # 检查是否有别名映射
             aliased_name = name_aliases.get(member_name) or name_aliases.get(normalized_member_name)
             member = member_name_map.get(member_name) or member_name_map.get(normalized_member_name) or (member_name_map.get(aliased_name) if aliased_name else None)
@@ -206,7 +214,8 @@ async def execute_import(
                 # 记录更详细的错误信息，帮助诊断字符编码问题
                 error_msg = f"成员'{member_name}'不存在"
                 print(f"[IMPORT ERROR] Row {idx + 1}: {error_msg}")
-                print(f"[IMPORT DEBUG] Available members: {list(member_name_map.keys())[:10]}...")
+                print(f"[IMPORT DEBUG] normalized='{normalized_member_name}' repr={repr(member_name)}")
+                print(f"[IMPORT DEBUG] Available members (first 20): {list(member_name_map.keys())[:20]}...")
                 errors.append({"row": idx + 1, "error": error_msg, "member_name": member_name})
                 fail_count += 1
                 continue
