@@ -38,6 +38,8 @@ def normalize_name(name: str) -> str:
         name = name.replace(ch, '')
     return name
 
+
+def parse_excel(content: bytes, filename: str) -> pd.DataFrame:
     """解析Excel文件"""
     try:
         if filename.endswith('.csv'):
