@@ -279,7 +279,7 @@ async def execute_import(
             # 创建销售记录
             sales_record = SalesRecord(
                 product_id=product_id,
-                member_id=member.id,
+                member_id=member['id'],
                 group_id=group_id,
                 amount=amount,
                 sale_date=sale_date,
