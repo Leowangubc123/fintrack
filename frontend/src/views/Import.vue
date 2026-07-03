@@ -205,7 +205,21 @@
 
         <!-- 步骤5: 完成导入 -->
         <div v-if="currentStep === 4" class="wizard-step-content active">
-          <div class="success-check">
+          <div v-if="importResult && importResult.failed > 0" class="success-check" style="text-align: left;">
+            <div class="success-icon" style="background: #F59E0B;">!</div>
+            <div class="success-title" style="color: #92400E;">导入完成，但有失败记录</div>
+            <div class="success-desc">
+              成功 {{ importResult.success }} 条，失败 {{ importResult.failed }} 条
+            </div>
+            <div v-if="importResult.errors && importResult.errors.length" class="error-list" style="max-height: 300px; overflow-y: auto; margin: 16px 0; text-align: left;">
+              <div v-for="(err, idx) in importResult.errors" :key="idx" class="error-item" style="padding: 8px 12px; margin-bottom: 8px; background: #FEF3C7; border-radius: 8px; color: #92400E; font-size: 13px;">
+                <strong>第 {{ err.row }} 行：</strong>{{ err.error }}
+                <span v-if="err.member_name" style="color: #78350F;">（{{ err.member_name }}）</span>
+              </div>
+            </div>
+            <el-button type="primary" @click="resetWizard">完成</el-button>
+          </div>
+          <div v-else class="success-check">
             <div class="success-icon">✓</div>
             <div class="success-title">导入成功！</div>
             <div class="success-desc">
@@ -250,6 +264,7 @@ const uploadFileRaw = ref(null)
 const uploading = ref(false)
 const importing = ref(false)
 const previewData = ref([])
+const importResult = ref(null)
 
 // 预览数据汇总统计
 const previewTotalAmount = computed(() => {
@@ -470,8 +485,14 @@ async function executeImport() {
       product_id: selectedProduct.value,
       records: records
     })
-    ElMessage.success(`导入成功！成功${res.success}条，失败${res.failed}条`)
-    nextStep()
+
+    if (res.failed > 0) {
+      ElMessage.warning(`导入完成：成功${res.success}条，失败${res.failed}条`)
+      importResult.value = res
+    } else {
+      ElMessage.success(`导入成功！成功${res.success}条`)
+      nextStep()
+    }
   } catch (error) {
     console.error('[DEBUG] Import error:', error)
     console.error('[DEBUG] Error response:', error.response)
@@ -489,6 +510,7 @@ function resetWizard() {
   previewData.value = []
   codeValidationResult.value = null
   rowFilterStats.value = { total: 0, valid: 0, skipped: 0 }
+  importResult.value = null
 }
 
 function nextStep() {
