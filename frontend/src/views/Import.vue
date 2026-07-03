@@ -135,7 +135,7 @@
               共 {{ rowFilterStats.total }} 行数据，
               其中 <strong>{{ rowFilterStats.valid }}</strong> 行有效，
               <strong>{{ rowFilterStats.skipped }}</strong> 行被过滤
-              （销售人员为空或委托数量为0）
+              （销售人员为空或委托数量无效）
             </div>
           </div>
 
@@ -425,8 +425,8 @@ async function uploadFile() {
       const status = getCellValue(row, ['委托状态', '状态'])
       const remark = [secName, status].filter(Boolean).join(' | ')
 
-      // 5. 过滤条件：销售人员为空或金额为0的跳过
-      if (!salesPerson || amount <= 0) {
+      // 5. 过滤条件：销售人员为空或金额无效（非数字）的跳过；允许负数参与计算
+      if (!salesPerson || isNaN(amount)) {
         skippedRows++
         return null
       }
