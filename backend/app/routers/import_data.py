@@ -223,16 +223,23 @@ async def execute_import(
                 continue
 
             # 确定营业部ID
-            group_id = member['group_id']
+            group_id = member.get('group_id')
             if group_name:
                 # 如果提供了营业部名称，验证是否匹配
                 group = group_name_map.get(group_name)
+                if not group:
+                    # 尝试标准化匹配
+                    normalized_group_name = normalize_name(group_name)
+                    group = group_name_map.get(normalized_group_name)
                 if group:
                     group_id = group.id
-                    # 验证成员是否属于该营业部
-                    if member['group_id'] != group_id:
-                        # 成员不属于该营业部，但不阻止导入
-                        pass
+
+            if not group_id:
+                error_msg = f"成员'{member_name}'未分配营业部"
+                print(f"[IMPORT ERROR] Row {idx + 1}: {error_msg}")
+                errors.append({"row": idx + 1, "error": error_msg, "member_name": member_name})
+                fail_count += 1
+                continue
 
             # 解析日期
             if isinstance(sale_date, str):
