@@ -434,7 +434,22 @@ async function uploadFile() {
       validRows++
 
       // 根据销售人员查找所属营业部
-      const member = existingMembers.value.find(m => m.name === salesPerson)
+      // 优先按 (姓名, 营业部) 匹配；同名多个且未提供营业部时，保持未匹配状态让后端判断
+      const groupCell = getCellValue(row, ['所属营业部', '营业部', '团队', '部门', '门店'])
+      let member = null
+      if (groupCell) {
+        member = existingMembers.value.find(m => {
+          if (m.name !== salesPerson) return false
+          const group = groups.value.find(g => g.id === m.group_id)
+          return group && group.name === groupCell
+        })
+      }
+      if (!member) {
+        const sameNameMembers = existingMembers.value.filter(m => m.name === salesPerson)
+        if (sameNameMembers.length === 1) {
+          member = sameNameMembers[0]
+        }
+      }
       const groupName = member ? (groups.value.find(g => g.id === member.group_id)?.name || '未知营业部') : '未匹配'
 
       return {

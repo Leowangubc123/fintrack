@@ -177,8 +177,10 @@ async def execute_import(
     member_rows = db.execute(text("SELECT id, name, group_id FROM members")).fetchall()
     members = [{'id': row.id, 'name': row.name, 'group_id': row.group_id} for row in member_rows]
     groups = db.query(Group).all()
-    # 创建名称映射，支持带空格和不带空格的匹配
-    member_name_map = {}
+    # 创建名称映射：优先按 (姓名, 营业部ID) 精确匹配，避免同名成员串营业部
+    # 同时保留仅按姓名的列表，用于唯一匹配或报错提示
+    member_name_group_map = {}
+    member_name_only_map = {}
     # 定义别名映射（Excel中的名称 -> 数据库中的真实姓名）
     # 用于处理Unicode字符编码问题，如"刘志页"映射到"刘志𬱖"
     name_aliases = {
@@ -186,12 +188,16 @@ async def execute_import(
         '刘志頔': '刘志𬱖',
     }
     for m in members:
-        # 原始名称
-        member_name_map[m['name']] = m
-        # 标准化后的名称（去除空格、制表符、换行、全角空格、零宽字符等）
+        # (姓名, 营业部ID) 索引
+        member_name_group_map[(m['name'], m['group_id'])] = m
         normalized_name = normalize_name(m['name'])
         if normalized_name != m['name']:
-            member_name_map[normalized_name] = m
+            member_name_group_map[(normalized_name, m['group_id'])] = m
+
+        # 仅按姓名的索引列表
+        member_name_only_map.setdefault(m['name'], []).append(m)
+        if normalized_name != m['name']:
+            member_name_only_map.setdefault(normalized_name, []).append(m)
     group_name_map = {g.name: g for g in groups}
 
     for idx, record in enumerate(records):
@@ -207,17 +213,64 @@ async def execute_import(
                 fail_count += 1
                 continue
 
-            # 查找成员（支持带空格/不可见字符的匹配以及别名映射）
+            # 查找成员：优先按 (姓名, 营业部) 精确匹配，避免同名成员串营业部
             normalized_member_name = normalize_name(member_name)
-            # 检查是否有别名映射
             aliased_name = name_aliases.get(member_name) or name_aliases.get(normalized_member_name)
-            member = member_name_map.get(member_name) or member_name_map.get(normalized_member_name) or (member_name_map.get(aliased_name) if aliased_name else None)
+
+            # 先根据提供的营业部名称解析 group_id
+            matched_group_id = None
+            if group_name:
+                group = group_name_map.get(group_name) or group_name_map.get(normalize_name(group_name))
+                if group:
+                    matched_group_id = group.id
+
+            member = None
+            # 1. 优先按 (姓名, 营业部ID) 匹配
+            if matched_group_id:
+                member = (
+                    member_name_group_map.get((member_name, matched_group_id)) or
+                    member_name_group_map.get((normalized_member_name, matched_group_id))
+                )
+                if not member and aliased_name:
+                    member = member_name_group_map.get((aliased_name, matched_group_id))
+
+            # 2. 如果按姓名+营业部没找到，再按姓名查找
+            if not member:
+                candidates = member_name_only_map.get(member_name) or member_name_only_map.get(normalized_member_name)
+                if aliased_name:
+                    aliased_candidates = member_name_only_map.get(aliased_name)
+                    if aliased_candidates:
+                        candidates = (candidates or []) + aliased_candidates
+
+                if candidates:
+                    # 去重
+                    seen = set()
+                    unique_candidates = []
+                    for c in candidates:
+                        if c['id'] not in seen:
+                            seen.add(c['id'])
+                            unique_candidates.append(c)
+
+                    if len(unique_candidates) == 1:
+                        member = unique_candidates[0]
+                    else:
+                        # 同名多成员且无法确定，失败并提示
+                        group_names = [
+                            getattr(group_name_map.get(gid), 'name', str(gid))
+                            for gid in {c['group_id'] for c in unique_candidates}
+                        ]
+                        error_msg = f"成员'{member_name}'存在多个（营业部：{', '.join(group_names)}），请补充营业部列或手动指定"
+                        print(f"[IMPORT ERROR] Row {idx + 1}: {error_msg}")
+                        errors.append({"row": idx + 1, "error": error_msg, "member_name": member_name})
+                        fail_count += 1
+                        continue
+
             if not member:
                 # 记录更详细的错误信息，帮助诊断字符编码问题
                 error_msg = f"成员'{member_name}'不存在"
                 print(f"[IMPORT ERROR] Row {idx + 1}: {error_msg}")
                 print(f"[IMPORT DEBUG] normalized='{normalized_member_name}' repr={repr(member_name)}")
-                print(f"[IMPORT DEBUG] Available members (first 20): {list(member_name_map.keys())[:20]}...")
+                print(f"[IMPORT DEBUG] Available members (first 20): {list(member_name_only_map.keys())[:20]}...")
                 errors.append({"row": idx + 1, "error": error_msg, "member_name": member_name})
                 fail_count += 1
                 continue
