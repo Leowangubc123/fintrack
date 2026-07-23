@@ -39,6 +39,30 @@ def normalize_name(name: str) -> str:
     return name
 
 
+# 营业部正式名称列表：Excel 单元格中包含该名称即视为匹配对应系统营业部
+GROUP_FORMAL_NAMES = [
+    '上海长宁区延安西路证券营业部',
+    '上海浦东新区民生路证券营业部',
+    '上海浦东新区金吉路证券营业部',
+    '上海静安区北苏州路证券营业部',
+    '上海黄浦区西藏中路证券营业部',
+    '上海浦东新区向城路证券营业部'
+]
+
+
+def match_group_name(group_name: str, group_name_map: dict) -> Optional[Group]:
+    """匹配营业部名称：优先包含匹配正式名称，否则严格匹配"""
+    if not group_name:
+        return None
+    group_name_str = str(group_name)
+    # 1. 包含匹配正式名称
+    for formal_name in GROUP_FORMAL_NAMES:
+        if formal_name in group_name_str:
+            return group_name_map.get(formal_name)
+    # 2. 回退到严格匹配和标准化匹配
+    return group_name_map.get(group_name) or group_name_map.get(normalize_name(group_name))
+
+
 def parse_excel(content: bytes, filename: str) -> pd.DataFrame:
     """解析Excel文件"""
     try:
@@ -220,7 +244,7 @@ async def execute_import(
             # 先根据提供的营业部名称解析 group_id
             matched_group_id = None
             if group_name:
-                group = group_name_map.get(group_name) or group_name_map.get(normalize_name(group_name))
+                group = match_group_name(group_name, group_name_map)
                 if group:
                     matched_group_id = group.id
 
@@ -278,12 +302,8 @@ async def execute_import(
             # 确定营业部ID
             group_id = member.get('group_id')
             if group_name:
-                # 如果提供了营业部名称，验证是否匹配
-                group = group_name_map.get(group_name)
-                if not group:
-                    # 尝试标准化匹配
-                    normalized_group_name = normalize_name(group_name)
-                    group = group_name_map.get(normalized_group_name)
+                # 如果提供了营业部名称，使用包含匹配验证
+                group = match_group_name(group_name, group_name_map)
                 if group:
                     group_id = group.id
 

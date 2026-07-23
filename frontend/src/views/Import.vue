@@ -363,6 +363,24 @@ function parseAmount(amountVal) {
   return num / 10000
 }
 
+// 营业部正式名称映射：Excel 中包含该正式名称即视为匹配对应系统营业部
+const GROUP_FORMAL_NAMES = [
+  '上海长宁区延安西路证券营业部',
+  '上海浦东新区民生路证券营业部',
+  '上海浦东新区金吉路证券营业部',
+  '上海静安区北苏州路证券营业部',
+  '上海黄浦区西藏中路证券营业部',
+  '上海浦东新区向城路证券营业部'
+]
+
+function matchGroupByCell(cellValue, groups) {
+  if (!cellValue) return null
+  const cellStr = String(cellValue)
+  const matchedFormal = GROUP_FORMAL_NAMES.find(name => cellStr.includes(name))
+  if (!matchedFormal) return null
+  return groups.find(g => g.name === matchedFormal) || null
+}
+
 async function uploadFile() {
   if (!uploadFileRaw.value) return
   uploading.value = true
@@ -435,13 +453,12 @@ async function uploadFile() {
 
       // 根据销售人员查找所属营业部
       // 优先按 (姓名, 营业部) 匹配；同名多个且未提供营业部时，保持未匹配状态让后端判断
-      const groupCell = getCellValue(row, ['所属营业部', '营业部', '团队', '部门', '门店'])
+      const groupCell = getCellValue(row, ['营业部名称', '所属营业部', '营业部', '团队', '部门', '门店'])
+      const matchedGroup = matchGroupByCell(groupCell, groups.value)
       let member = null
-      if (groupCell) {
+      if (matchedGroup) {
         member = existingMembers.value.find(m => {
-          if (m.name !== salesPerson) return false
-          const group = groups.value.find(g => g.id === m.group_id)
-          return group && group.name === groupCell
+          return m.name === salesPerson && m.group_id === matchedGroup.id
         })
       }
       if (!member) {
