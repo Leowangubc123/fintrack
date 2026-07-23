@@ -330,11 +330,21 @@ function handleFileChange(file) {
   uploadFileRaw.value = file.raw
 }
 
-// 获取单元格值（处理空值）
+// 获取单元格值（处理空值，兼容列名前后空格）
 function getCellValue(row, keys) {
+  // 构建标准化 key 的备用查找表（去除所有空白字符）
+  const normalizedRow = {}
+  for (const [k, v] of Object.entries(row)) {
+    normalizedRow[String(k).replace(/\s+/g, '')] = v
+  }
+
   for (const key of keys) {
     if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
       return String(row[key]).trim()
+    }
+    const normalizedKey = String(key).replace(/\s+/g, '')
+    if (normalizedRow[normalizedKey] !== undefined && normalizedRow[normalizedKey] !== null && String(normalizedRow[normalizedKey]).trim() !== '') {
+      return String(normalizedRow[normalizedKey]).trim()
     }
   }
   return ''
@@ -456,6 +466,15 @@ async function uploadFile() {
       // 优先按 (姓名, 营业部) 匹配；同名多个且未提供营业部时，保持未匹配状态让后端判断
       const groupCell = getCellValue(row, ['营业部名称', '所属营业部', '营业部', '团队', '部门', '门店'])
       const matchedGroup = matchGroupByCell(groupCell, groups.value)
+
+      // 调试日志：针对重名成员输出匹配细节
+      if (salesPerson === '王杰') {
+        console.log('[IMPORT DEBUG] 王杰 row keys:', Object.keys(row))
+        console.log('[IMPORT DEBUG] 王杰 groupCell:', JSON.stringify(groupCell))
+        console.log('[IMPORT DEBUG] 王杰 matchedGroup:', matchedGroup)
+        console.log('[IMPORT DEBUG] 王杰 existingMembers:', existingMembers.value.filter(m => m.name === '王杰'))
+      }
+
       let member = null
       if (matchedGroup) {
         member = existingMembers.value.find(m => {
