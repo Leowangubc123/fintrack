@@ -385,11 +385,15 @@ const GROUP_NAME_MAP = {
 
 function matchGroupByCell(cellValue, groups) {
   if (!cellValue) return null
-  const cellStr = String(cellValue)
+  const cellStr = String(cellValue).trim()
+  // 1. 正式名称包含匹配：如 "09上海浦东新区金吉路证券营业部" → 上三
   const matchedFormal = Object.keys(GROUP_NAME_MAP).find(name => cellStr.includes(name))
-  if (!matchedFormal) return null
-  const systemName = GROUP_NAME_MAP[matchedFormal]
-  return groups.find(g => g.name === systemName) || groups.find(g => g.name === matchedFormal) || null
+  if (matchedFormal) {
+    const systemName = GROUP_NAME_MAP[matchedFormal]
+    return groups.find(g => g.name === systemName) || groups.find(g => g.name === matchedFormal) || null
+  }
+  // 2. 系统名称/简称直接匹配：如 "上三"
+  return groups.find(g => g.name === cellStr) || null
 }
 
 async function uploadFile() {
