@@ -95,7 +95,7 @@ def get_active_products_summary(db: Session = Depends(get_db)):
         ).group_by(SalesRecord.product_id).all()
         sales_summary = {r.product_id: r for r in sales_rows}
 
-    # 一次性查询所有产品的营业部销售分布
+    # 一次性查询所有产品的营业部销售分布（按成员当前所属营业部统计）
     group_stats_map = {}
     if product_ids:
         group_rows = db.query(
@@ -103,7 +103,9 @@ def get_active_products_summary(db: Session = Depends(get_db)):
             Group.name,
             func.sum(SalesRecord.amount).label('sales')
         ).join(
-            Group, SalesRecord.group_id == Group.id
+            Member, SalesRecord.member_id == Member.id
+        ).join(
+            Group, Member.group_id == Group.id
         ).filter(
             SalesRecord.product_id.in_(product_ids)
         ).group_by(SalesRecord.product_id, Group.id).all()
@@ -154,16 +156,18 @@ def get_groups_ranking(product_id: int = None, db: Session = Depends(get_db)):
     target_rows = target_rows.group_by(ProductTarget.group_id).all()
     target_map = {r.group_id: float(r.target) for r in target_rows}
 
-    # 一次性查询所有营业部销量
+    # 一次性查询所有营业部销量（按成员当前所属营业部统计，与产品矩阵口径一致）
     sales_rows = db.query(
-        SalesRecord.group_id,
+        Member.group_id,
         func.sum(SalesRecord.amount).label('sales')
+    ).join(
+        SalesRecord, Member.id == SalesRecord.member_id
     ).filter(
-        SalesRecord.group_id.in_(group_ids)
+        Member.group_id.in_(group_ids)
     )
     if product_id:
         sales_rows = sales_rows.filter(SalesRecord.product_id == product_id)
-    sales_rows = sales_rows.group_by(SalesRecord.group_id).all()
+    sales_rows = sales_rows.group_by(Member.group_id).all()
     sales_map = {r.group_id: float(r.sales) for r in sales_rows}
 
     result = []
@@ -203,17 +207,19 @@ def get_sales_matrix(db: Session = Depends(get_db)):
     group_ids = [g.id for g in groups]
     product_ids = [p.id for p in products]
 
-    # 一次性查询所有营业部-产品销量矩阵
+    # 一次性查询所有营业部-产品销量矩阵（按成员当前所属营业部统计，与产品矩阵口径一致）
     sales_matrix = {}
     if product_ids and group_ids:
         sales_rows = db.query(
-            SalesRecord.group_id,
+            Member.group_id,
             SalesRecord.product_id,
             func.sum(SalesRecord.amount).label('sales')
+        ).join(
+            SalesRecord, Member.id == SalesRecord.member_id
         ).filter(
-            SalesRecord.group_id.in_(group_ids),
+            Member.group_id.in_(group_ids),
             SalesRecord.product_id.in_(product_ids)
-        ).group_by(SalesRecord.group_id, SalesRecord.product_id).all()
+        ).group_by(Member.group_id, SalesRecord.product_id).all()
         for r in sales_rows:
             sales_matrix[(r.group_id, r.product_id)] = float(r.sales)
 
