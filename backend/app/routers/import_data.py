@@ -39,26 +39,26 @@ def normalize_name(name: str) -> str:
     return name
 
 
-# 营业部正式名称列表：Excel 单元格中包含该名称即视为匹配对应系统营业部
-GROUP_FORMAL_NAMES = [
-    '上海长宁区延安西路证券营业部',
-    '上海浦东新区民生路证券营业部',
-    '上海浦东新区金吉路证券营业部',
-    '上海静安区北苏州路证券营业部',
-    '上海黄浦区西藏中路证券营业部',
-    '上海浦东新区向城路证券营业部'
-]
+# 营业部名称映射：Excel 单元格中的正式名称 -> 系统中的营业部名称
+GROUP_NAME_MAP = {
+    '上海长宁区延安西路证券营业部': '上一',
+    '上海浦东新区民生路证券营业部': '上二',
+    '上海浦东新区金吉路证券营业部': '上三',
+    '上海静安区北苏州路证券营业部': '上四',
+    '上海黄浦区西藏中路证券营业部': '上五',
+    '上海浦东新区向城路证券营业部': '上六'
+}
 
 
 def match_group_name(group_name: str, group_name_map: dict) -> Optional[Group]:
-    """匹配营业部名称：优先包含匹配正式名称，否则严格匹配"""
+    """匹配营业部名称：Excel 正式名称包含匹配 -> 系统名称匹配 -> 严格匹配"""
     if not group_name:
         return None
     group_name_str = str(group_name)
-    # 1. 包含匹配正式名称
-    for formal_name in GROUP_FORMAL_NAMES:
+    # 1. Excel 正式名称包含匹配，返回对应系统营业部名称的 group
+    for formal_name, system_name in GROUP_NAME_MAP.items():
         if formal_name in group_name_str:
-            return group_name_map.get(formal_name)
+            return group_name_map.get(system_name) or group_name_map.get(formal_name)
     # 2. 回退到严格匹配和标准化匹配
     return group_name_map.get(group_name) or group_name_map.get(normalize_name(group_name))
 

@@ -363,22 +363,23 @@ function parseAmount(amountVal) {
   return num / 10000
 }
 
-// 营业部正式名称映射：Excel 中包含该正式名称即视为匹配对应系统营业部
-const GROUP_FORMAL_NAMES = [
-  '上海长宁区延安西路证券营业部',
-  '上海浦东新区民生路证券营业部',
-  '上海浦东新区金吉路证券营业部',
-  '上海静安区北苏州路证券营业部',
-  '上海黄浦区西藏中路证券营业部',
-  '上海浦东新区向城路证券营业部'
-]
+// 营业部名称映射：Excel 单元格中的正式名称 -> 系统中的营业部名称
+const GROUP_NAME_MAP = {
+  '上海长宁区延安西路证券营业部': '上一',
+  '上海浦东新区民生路证券营业部': '上二',
+  '上海浦东新区金吉路证券营业部': '上三',
+  '上海静安区北苏州路证券营业部': '上四',
+  '上海黄浦区西藏中路证券营业部': '上五',
+  '上海浦东新区向城路证券营业部': '上六'
+}
 
 function matchGroupByCell(cellValue, groups) {
   if (!cellValue) return null
   const cellStr = String(cellValue)
-  const matchedFormal = GROUP_FORMAL_NAMES.find(name => cellStr.includes(name))
+  const matchedFormal = Object.keys(GROUP_NAME_MAP).find(name => cellStr.includes(name))
   if (!matchedFormal) return null
-  return groups.find(g => g.name === matchedFormal) || null
+  const systemName = GROUP_NAME_MAP[matchedFormal]
+  return groups.find(g => g.name === systemName) || groups.find(g => g.name === matchedFormal) || null
 }
 
 async function uploadFile() {
