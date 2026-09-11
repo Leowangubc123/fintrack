@@ -187,8 +187,36 @@
             <div class="selected-product-name">{{ selectedProductInfo.name }}</div>
             <div class="selected-product-code">{{ selectedProductInfo.issuer }} | {{ selectedProductInfo.code }}</div>
           </div>
+
+          <!-- 视图切换：人员汇总 / 明细 -->
+          <div class="preview-view-toggle">
+            <button
+              class="preview-view-btn"
+              :class="{ active: previewView === 'summary' }"
+              @click="previewView = 'summary'"
+            >人员汇总（{{ summaryData.length }}人）</button>
+            <button
+              class="preview-view-btn"
+              :class="{ active: previewView === 'detail' }"
+              @click="previewView = 'detail'"
+            >明细（{{ previewData.length }}条）</button>
+          </div>
+
           <div class="preview-table-container">
-            <el-table :data="previewData" height="350">
+            <el-table v-if="previewView === 'summary'" :data="summaryData" height="350">
+              <el-table-column type="index" label="排名" width="60" />
+              <el-table-column prop="销售人员" label="销售人员" />
+              <el-table-column prop="所属营业部" label="所属营业部" />
+              <el-table-column label="汇总销量（万元）" align="right">
+                <template #default="{ row }">
+                  <strong>{{ row['销售金额'] }}</strong>
+                </template>
+              </el-table-column>
+              <el-table-column prop="记录数" label="明细条数" width="100" align="center" />
+              <el-table-column label="最早交易日期" prop="最早日期" width="120" />
+              <el-table-column label="最晚交易日期" prop="最晚日期" width="120" />
+            </el-table>
+            <el-table v-else :data="previewData" height="350">
               <el-table-column type="index" label="序号" width="60" />
               <el-table-column prop="销售人员" label="销售人员" />
               <el-table-column prop="所属营业部" label="所属营业部" />
@@ -210,20 +238,27 @@
             <div class="success-title" style="color: #92400E;">导入完成，但有失败记录</div>
             <div class="success-desc">
               成功 {{ importResult.success }} 条，失败 {{ importResult.failed }} 条
+              <span v-if="importResult.errors && importResult.errors.length < importResult.failed" style="color: #B45309; font-size: 12px;">
+                （仅显示前 {{ importResult.errors.length }} 条失败原因）
+              </span>
             </div>
             <div v-if="importResult.errors && importResult.errors.length" class="error-list" style="max-height: 300px; overflow-y: auto; margin: 16px 0; text-align: left;">
               <div v-for="(err, idx) in importResult.errors" :key="idx" class="error-item" style="padding: 8px 12px; margin-bottom: 8px; background: #FEF3C7; border-radius: 8px; color: #92400E; font-size: 13px;">
-                <strong>第 {{ err.row }} 行：</strong>{{ err.error }}
-                <span v-if="err.member_name" style="color: #78350F;">（{{ err.member_name }}）</span>
+                <strong>第 {{ err.row }} 条明细：</strong>{{ err.error }}
+                <span v-if="err.member_name" style="color: #78350F;">（人员：{{ err.member_name }}）</span>
+                <div style="color: #B45309; font-size: 12px; margin-top: 2px;">可返回"数据预览"切换至明细视图，按此序号定位对应记录</div>
               </div>
             </div>
-            <el-button type="primary" @click="resetWizard">完成</el-button>
+            <div class="wizard-actions" style="justify-content: center;">
+              <el-button @click="prevStep">返回修改</el-button>
+              <el-button type="primary" @click="resetWizard">完成</el-button>
+            </div>
           </div>
           <div v-else class="success-check">
             <div class="success-icon">✓</div>
             <div class="success-title">导入成功！</div>
             <div class="success-desc">
-              成功导入 {{ previewData.length }} 条销售记录到产品 <strong v-if="selectedProductInfo">{{ selectedProductInfo.name }} ({{ selectedProductInfo.code }})</strong>
+              成功导入 {{ importResult ? importResult.success : previewData.length }} 条销售记录到产品 <strong v-if="selectedProductInfo">{{ selectedProductInfo.name }} ({{ selectedProductInfo.code }})</strong>
             </div>
             <el-button type="primary" @click="resetWizard">完成</el-button>
           </div>
@@ -265,6 +300,37 @@ const uploading = ref(false)
 const importing = ref(false)
 const previewData = ref([])
 const importResult = ref(null)
+// 预览视图：'summary' 人员汇总 / 'detail' 明细
+const previewView = ref('summary')
+
+// 按销售人员汇总的预览数据（按销量降序）
+const summaryData = computed(() => {
+  const map = new Map()
+  previewData.value.forEach(row => {
+    const name = row['销售人员']
+    if (!name) return
+    const amount = parseFloat(row['销售金额']) || 0
+    const date = row['交易日期'] || ''
+    if (!map.has(name)) {
+      map.set(name, {
+        '销售人员': name,
+        '所属营业部': row['所属营业部'] || '-',
+        '销售金额': 0,
+        '记录数': 0,
+        '最早日期': date,
+        '最晚日期': date
+      })
+    }
+    const item = map.get(name)
+    item['销售金额'] += amount
+    item['记录数'] += 1
+    if (date && (item['最早日期'] === '' || date < item['最早日期'])) item['最早日期'] = date
+    if (date && date > item['最晚日期']) item['最晚日期'] = date
+  })
+  return Array.from(map.values())
+    .map(item => ({ ...item, '销售金额': item['销售金额'].toFixed(2) }))
+    .sort((a, b) => parseFloat(b['销售金额']) - parseFloat(a['销售金额']))
+})
 
 // 预览数据汇总统计
 const previewTotalAmount = computed(() => {
@@ -543,10 +609,12 @@ async function executeImport() {
     })
 
     if (res.failed > 0) {
-      ElMessage.warning(`导入完成：成功${res.success}条，失败${res.failed}条`)
+      ElMessage.warning(`导入完成：成功${res.success}条，失败${res.failed}条，请查看下方失败详情`)
       importResult.value = res
+      nextStep()
     } else {
       ElMessage.success(`导入成功！成功${res.success}条`)
+      importResult.value = res
       nextStep()
     }
   } catch (error) {
@@ -564,6 +632,7 @@ function resetWizard() {
   selectedProduct.value = null
   uploadFileRaw.value = null
   previewData.value = []
+  previewView.value = 'summary'
   codeValidationResult.value = null
   rowFilterStats.value = { total: 0, valid: 0, skipped: 0 }
   importResult.value = null
@@ -853,6 +922,38 @@ function downloadTemplate() {
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 12px;
   margin-bottom: 24px;
+}
+
+/* 预览视图切换按钮 */
+.preview-view-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: #F5F5F7;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.preview-view-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6E6E73;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.preview-view-btn:hover {
+  color: #1D1D1F;
+}
+
+.preview-view-btn.active {
+  background: #FFFFFF;
+  color: #007AFF;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .success-check {
